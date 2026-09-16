@@ -5,7 +5,7 @@ import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
 import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
 import Modal from "./components/ui/Modal";
 import Logo from "./components/ui/Logo";
-import { initialsFromName, todayISODate, formatDateLabel } from "./lib/utils";
+import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath } from "./lib/utils";
 import { parseCsv, inferFieldMap, splitName, isEmail, cleanLinkedIn, cleanPhone } from "./lib/csvHelper";
 import { parsePdfToText, parsePdfFromUrl } from "./lib/resumeUtils";
 import AuthPage from "./pages/AuthPage";
@@ -24,28 +24,6 @@ import JdScorerPage from "./pages/JdScorerPage";
 /* =============================== App =============================== */
 
 export default function App() {
-  if (supabaseMisconfigured) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-depth-0 p-8 text-white">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-2xl font-bold text-danger">Configuration Error</h1>
-          <p className="text-white/50">
-            Required environment variables are missing. Set the following in your{" "}
-            <code className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-sm text-glow">.env.local</code> file:
-          </p>
-          <ul className="space-y-1 rounded-input bg-depth-1 p-4 text-left text-sm font-mono text-glow">
-            <li>VITE_SUPABASE_URL</li>
-            <li>VITE_SUPABASE_ANON_KEY</li>
-          </ul>
-          <p className="text-sm text-white/30">
-            Copy <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">.env.example</code> to{" "}
-            <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">.env.local</code> and fill in the values.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const [session, setSession] = useState<any>(null);
 
   const [authEmail, setAuthEmail] = useState("");
@@ -212,8 +190,6 @@ export default function App() {
 
   async function signUp() {
     if (!signupName.trim()) { toast.error("Full name is required."); return; }
-    if (!signupPhone.trim()) { toast.error("Phone number is required."); return; }
-    if (!signupLinkedIn.trim()) { toast.error("LinkedIn URL is required."); return; }
 
     const { error } = await supabase.auth.signUp({ email: authEmail, password });
     if (error) { toast.error(error.message); return; }
@@ -330,14 +306,20 @@ export default function App() {
       return;
     }
 
-    if (!data) {
-      // Check for pending sign-up data from localStorage
-      let pending: { full_name?: string; phone?: string; my_linkedin_url?: string; career_interests?: string | null } | null = null;
-      try {
-        const raw = localStorage.getItem("coffee_pending_signup");
-        if (raw) pending = JSON.parse(raw);
-      } catch { /* ignore */ }
+    // Check for pending sign-up data (name/phone/LinkedIn/career interests captured by the
+    // sign-up wizard, stashed in localStorage before the profile existed). A DB trigger
+    // (handle_new_user) inserts a blank profiles row the moment the auth user is created —
+    // before this ever runs — so `data` is virtually never null here even for a brand-new
+    // signup. We still have to explicitly merge the pending data in, or it's silently lost.
+    let pending: { full_name?: string; phone?: string; my_linkedin_url?: string; career_interests?: string | null } | null = null;
+    try {
+      const raw = localStorage.getItem("coffee_pending_signup");
+      if (raw) pending = JSON.parse(raw);
+    } catch { /* ignore */ }
 
+    let row: Record<string, any> | null = data;
+
+    if (!row) {
       const insertPayload: Record<string, any> = {
         id: session.user.id,
         full_name: pending?.full_name || null,
@@ -347,66 +329,55 @@ export default function App() {
         resume_url: null,
         avatar_url: null,
       };
-
-      const { error: insErr } = await supabase.from("profiles").insert(insertPayload);
+      const { data: inserted, error: insErr } = await supabase
+        .from("profiles")
+        .insert(insertPayload)
+        .select()
+        .single();
       if (insErr) toast.error("Failed to create profile.");
+      row = inserted ?? insertPayload;
+    } else if (pending && (pending.full_name || pending.phone || pending.my_linkedin_url || pending.career_interests)) {
+      // Row already existed (created blank by the DB trigger) — merge the pending data in
+      // rather than leaving it stranded in localStorage and the row permanently blank.
+      const updatePayload: Record<string, any> = {};
+      if (pending.full_name) updatePayload.full_name = pending.full_name;
+      if (pending.my_linkedin_url) updatePayload.my_linkedin_url = pending.my_linkedin_url;
+      if (pending.phone) updatePayload.phone = pending.phone;
+      if (pending.career_interests) updatePayload.career_interests = pending.career_interests;
 
-      const newProfile: Profile = {
-        id: session.user.id,
-        full_name: pending?.full_name || null,
-        my_linkedin_url: pending?.my_linkedin_url || null,
-        phone: pending?.phone || null,
-        career_interests: pending?.career_interests || null,
-        resume_url: null,
-        avatar_url: null,
-        resume_text: null,
-        google_calendar_token: null,
-        google_calendar_refresh_token: null,
-        google_calendar_token_expiry: null,
-      };
-      setProfile(newProfile);
-      setDisplayName(newProfile.full_name ?? "");
-      setMyLinkedInUrl(newProfile.my_linkedin_url ?? "");
-      setUserPhone(newProfile.phone ?? "");
-      setUserCareerInterests(newProfile.career_interests ?? "");
-      setNewEmail(session?.user?.email ?? "");
+      const { data: updated, error: updErr } = await supabase
+        .from("profiles")
+        .update(updatePayload)
+        .eq("id", session.user.id)
+        .select()
+        .single();
+      if (updErr) toast.error("Failed to save your sign-up details.");
+      else if (updated) row = updated;
+    }
 
-      // Upload resume if pending
+    if (pending) {
       if (signupResumeFile) {
         await uploadResume(signupResumeFile);
         setSignupResumeFile(null);
       }
-
       localStorage.removeItem("coffee_pending_signup");
-
-      // Skip onboarding if name was provided via sign-up, or the user has already been through it.
-      const alreadySeen = (() => {
-        try { return localStorage.getItem(onboardingSeenKey(session.user.id)) === "1"; }
-        catch { return false; }
-      })();
-      if (!pending?.full_name?.trim() && !alreadySeen) {
-        setPage("onboarding");
-      } else {
-        // Name captured during sign-up counts as completing onboarding.
-        markOnboardingSeen();
-      }
-      return;
     }
 
-    setProfile(data as Profile);
-    setDisplayName((data as any)?.full_name ?? "");
-    setMyLinkedInUrl((data as any)?.my_linkedin_url ?? "");
-    setUserPhone((data as any)?.phone ?? "");
-    setUserCareerInterests((data as any)?.career_interests ?? "");
+    setProfile(row as Profile);
+    setDisplayName(row?.full_name ?? "");
+    setMyLinkedInUrl(row?.my_linkedin_url ?? "");
+    setUserPhone(row?.phone ?? "");
+    setUserCareerInterests(row?.career_interests ?? "");
     setNewEmail(session?.user?.email ?? "");
 
+    // Skip onboarding if the profile already has a name, or the user has already been through it.
     const alreadySeen = (() => {
       try { return localStorage.getItem(onboardingSeenKey(session.user.id)) === "1"; }
       catch { return false; }
     })();
-    if (!(data as any)?.full_name?.trim() && !alreadySeen) {
+    if (!row?.full_name?.trim() && !alreadySeen) {
       setPage("onboarding");
-    } else if ((data as any)?.full_name?.trim()) {
+    } else if (row?.full_name?.trim()) {
       // User has a name — onboarding is done; make sure we don't show it again.
       markOnboardingSeen();
     }
@@ -481,10 +452,9 @@ export default function App() {
       const { error: upErr } = await supabase.storage.from("resumes").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
 
-      const { data } = supabase.storage.from("resumes").getPublicUrl(path);
-      const publicUrl = data.publicUrl;
-
-      const updatePayload: { resume_url: string; resume_text?: string } = { resume_url: publicUrl };
+      // resume_url stores the bare Storage object path — the `resumes` bucket is private,
+      // so callers must sign a fresh URL (see getResumeUrl) rather than fetching this directly.
+      const updatePayload: { resume_url: string; resume_text?: string } = { resume_url: path };
 
       if (ext === "pdf") {
         try {
@@ -531,11 +501,28 @@ export default function App() {
       const msg =
         e?.message ||
         e?.error_description ||
-        "Resume upload failed. Make sure the Storage bucket 'resumes' exists (public) and profiles RLS allows updates.";
+        "Resume upload failed. Make sure the Storage bucket 'resumes' exists and profiles RLS allows updates.";
       toast.error(msg);
     } finally {
       setSavingProfile(false);
     }
+  }
+
+  /** Signs a fresh, short-lived URL for the current resume — the bucket is private. */
+  async function getResumeUrl(expiresInSeconds = 3600): Promise<string | null> {
+    if (!profile?.resume_url) return null;
+    const path = resumeStoragePath(profile.resume_url);
+    const { data, error } = await supabase.storage.from("resumes").createSignedUrl(path, expiresInSeconds);
+    if (error || !data?.signedUrl) {
+      toast.error(error?.message ?? "Failed to access resume.");
+      return null;
+    }
+    return data.signedUrl;
+  }
+
+  async function openResume() {
+    const url = await getResumeUrl();
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function reparseResume() {
@@ -548,7 +535,9 @@ export default function App() {
 
     setSavingProfile(true);
     try {
-      const text = await parsePdfFromUrl(profile.resume_url);
+      const url = await getResumeUrl();
+      if (!url) return;
+      const text = await parsePdfFromUrl(url);
       const { error } = await supabase
         .from("profiles")
         .update({ resume_text: text })
@@ -831,9 +820,7 @@ export default function App() {
     setPage("contact_details");
   }
 
-  function handleFollowUp(_contact: Contact) {
-    // Navigate to outreach emails page, with the contact context ready
-    // The OutreachEmailsPage will have access to the contact via the contacts prop
+  function handleFollowUp() {
     setPage("outreach_emails");
   }
 
@@ -1128,7 +1115,6 @@ export default function App() {
         signIn={signIn}
         signUp={signUp}
         requestPasswordReset={requestPasswordReset}
-        inputCls={inputCls}
         signupName={signupName}
         setSignupName={setSignupName}
         signupPhone={signupPhone}
@@ -1153,6 +1139,32 @@ export default function App() {
         ? "text-glow bg-glow/[0.08]"
         : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
     }`;
+
+  // Checked after every hook above has run (not as an early return before them) — React
+  // requires the same hooks to run on every render of a given mounted component, and since
+  // `supabaseMisconfigured` is a static, module-level value that never changes at runtime,
+  // gating only the rendered output here is equivalent in practice and satisfies that rule.
+  if (supabaseMisconfigured) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-depth-0 p-8 text-white">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-bold text-danger">Configuration Error</h1>
+          <p className="text-white/50">
+            Required environment variables are missing. Set the following in your{" "}
+            <code className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-sm text-glow">.env.local</code> file:
+          </p>
+          <ul className="space-y-1 rounded-input bg-depth-1 p-4 text-left text-sm font-mono text-glow">
+            <li>VITE_SUPABASE_URL</li>
+            <li>VITE_SUPABASE_ANON_KEY</li>
+          </ul>
+          <p className="text-sm text-white/30">
+            Copy <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">.env.example</code> to{" "}
+            <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">.env.local</code> and fill in the values.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen text-white">
@@ -1543,6 +1555,7 @@ export default function App() {
             savingProfile={savingProfile}
             saveProfile={saveProfile}
             uploadResume={uploadResume}
+            openResume={openResume}
             importFileName={importFileName}
             importRows={importRows}
             importMap={importMap}

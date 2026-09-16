@@ -55,8 +55,49 @@ create policy "profiles_select_own" on public.profiles for select using (auth.ui
 create policy "profiles_insert_own" on public.profiles for insert with check (auth.uid() = id);
 create policy "profiles_update_own" on public.profiles for update using (auth.uid() = id);
 
--- Resumes storage bucket (set to public in Supabase dashboard)
--- insert into storage.buckets (id, name, public) values ('resumes', 'resumes', true);
+-- Auto-provisions a blank profiles row the moment a new auth user is created, so a row
+-- always exists even if the client never gets to run its own insert. IMPORTANT: this means
+-- app code must never assume "no profiles row yet" implies "brand new user" — treat any
+-- sign-up-time data (name, phone, LinkedIn, etc.) as something to UPDATE into an existing
+-- row, not something to INSERT with. This trigger already existed live in the database
+-- but was undocumented here; loadProfile()'s original insert-only logic silently discarded
+-- every new user's sign-up data as a result. See src/App.tsx's loadProfile().
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (id, full_name)
+  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''));
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Resumes storage bucket — PRIVATE. Objects are keyed by `<user_id>/resume.<ext>`; the app
+-- reads/writes them via signed URLs (see getResumeUrl() in src/App.tsx), never a public URL.
+insert into storage.buckets (id, name, public)
+  values ('resumes', 'resumes', false)
+  on conflict (id) do update set public = false;
+
+drop policy if exists "resumes_select_own" on storage.objects;
+create policy "resumes_select_own" on storage.objects for select
+  using (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "resumes_insert_own" on storage.objects;
+create policy "resumes_insert_own" on storage.objects for insert
+  with check (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "resumes_update_own" on storage.objects;
+create policy "resumes_update_own" on storage.objects for update
+  using (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "resumes_delete_own" on storage.objects;
+create policy "resumes_delete_own" on storage.objects for delete
+  using (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ── contact_meetings ──────────────────────────────────────────────────────────
 create table if not exists public.contact_meetings (

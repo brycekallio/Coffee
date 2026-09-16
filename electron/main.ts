@@ -6,7 +6,6 @@ import {
   nativeImage,
   Notification,
   ipcMain,
-  shell,
   NativeImage,
 } from "electron";
 import path from "path";
@@ -153,27 +152,6 @@ async function sendSMS(contact: Contact, message: string) {
   `;
 
   await execPromise(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
-}
-
-async function sendLinkedIn(contact: Contact, message: string) {
-  if (!contact.linkedin_url) throw new Error("No LinkedIn URL for contact");
-
-  // For LinkedIn, we'll open the profile and copy the message to clipboard
-  // Full automation is complex and against LinkedIn ToS
-  const { clipboard } = await import("electron");
-  clipboard.writeText(message);
-
-  // Open LinkedIn profile
-  shell.openExternal(contact.linkedin_url);
-
-  // Show notification to user
-  showNotification(
-    "LinkedIn Message Ready",
-    `Message copied to clipboard. Paste it in LinkedIn chat with ${contact.first_name || "contact"}.`
-  );
-
-  // We'll mark this as "sent" since we've done what we can
-  return true;
 }
 
 // ── Notifications ────────────────────────────────────────────────────────────

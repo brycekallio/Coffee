@@ -186,7 +186,7 @@ async function processQueue() {
   
   console.log(`Found ${messages?.length || 0} messages due.`);
   
-  for (const msg of (messages || [])) {
+  for (const msg of (messages || []) as ScheduledOutreach[]) {
     console.log(`Processing message ${msg.id} for channel ${msg.channel}`);
     
     try {

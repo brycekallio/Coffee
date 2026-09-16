@@ -1,9 +1,17 @@
-export default function AuthIllustration() {
-  const particles = Array.from({ length: 35 }, (_, i) => {
+import { useRef } from "react";
+
+/**
+ * Generates the decorative particle field once. Deliberately non-deterministic (random
+ * size/position/timing per particle) — must run exactly once per mount, via the lazy-ref
+ * pattern below, rather than during render (useMemo's callback still counts as render).
+ */
+function generateParticles() {
+  return Array.from({ length: 35 }, (_, i) => {
     const size = 2 + Math.random() * 3;
     const left = Math.random() * 100;
     const delay = Math.random() * 20;
     const duration = 15 + Math.random() * 25;
+    const riseHeight = 10 + Math.random() * 20;
     const isAlt = i % 3 === 0;
     const colors = [
       "rgba(0, 229, 255, 0.7)",
@@ -23,7 +31,7 @@ export default function AuthIllustration() {
           width: size,
           height: size,
           left: `${left}%`,
-          bottom: `-${10 + Math.random() * 20}px`,
+          bottom: `-${riseHeight}px`,
           backgroundColor: color,
           boxShadow: `0 0 ${size * 2}px ${color}`,
           animation: `${isAlt ? "particle-rise-alt" : "particle-rise"} ${duration}s linear ${delay}s infinite`,
@@ -31,6 +39,12 @@ export default function AuthIllustration() {
       />
     );
   });
+}
+
+export default function AuthIllustration() {
+  const particlesRef = useRef<ReturnType<typeof generateParticles> | null>(null);
+  if (particlesRef.current === null) particlesRef.current = generateParticles();
+  const particles = particlesRef.current;
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">

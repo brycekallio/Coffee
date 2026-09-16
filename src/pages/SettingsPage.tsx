@@ -25,6 +25,7 @@ interface SettingsPageProps {
   savingProfile: boolean;
   saveProfile: () => void;
   uploadResume: (file: File) => void;
+  openResume: () => void;
   importFileName: string;
   importRows: Record<string, string>[];
   importMap: FieldMap;
@@ -55,6 +56,7 @@ export default function SettingsPage({
   savingProfile,
   saveProfile,
   uploadResume,
+  openResume,
   importFileName,
   importRows,
   importMap,
@@ -166,14 +168,12 @@ export default function SettingsPage({
                     }}
                   />
                   {profile?.resume_url ? (
-                    <a
-                      href={profile.resume_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-button bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08]"
+                    <button
+                      onClick={openResume}
+                      className="rounded-button bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
                     >
                       View resume
-                    </a>
+                    </button>
                   ) : null}
                 </div>
               </div>

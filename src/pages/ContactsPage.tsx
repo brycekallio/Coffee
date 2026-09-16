@@ -28,7 +28,7 @@ interface ContactsPageProps {
   openDetails: (contactId: string) => void;
   openEdit: (c: Contact) => void;
   deleteContact: (contactId: string) => void;
-  onFollowUp?: (contact: Contact) => void;
+  onFollowUp?: () => void;
   inputCls: string;
 }
 
@@ -225,7 +225,7 @@ export default function ContactsPage({
 
                       {stale && onFollowUp ? (
                         <button
-                          onClick={() => onFollowUp(c)}
+                          onClick={() => onFollowUp()}
                           className="w-full rounded-button bg-glow/10 px-3 py-2 text-sm font-medium text-glow transition-colors hover:bg-glow/20 cursor-pointer"
                           title="Start a follow-up outreach"
                         >

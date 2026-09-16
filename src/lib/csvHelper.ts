@@ -48,7 +48,7 @@ export function parseCsv(text: string): ParsedCsv {
   const looksLikeHeader =
     !firstJoined.includes("@") &&
     !/linkedin\.com\/(in|company|pub)\//.test(firstJoined) &&
-    !/(\+?1[\s\-\.]?)?\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4}/.test(firstJoined) &&
+    !/(\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}/.test(firstJoined) &&
     first.filter(Boolean).length >= Math.max(2, Math.floor(first.length * 0.5));
 
   const headers = looksLikeHeader
@@ -83,7 +83,7 @@ export function isEmail(v: any) {
 
 export function isPhone(v: any) {
   const s = String(v ?? "").trim();
-  return /(\+?1[\s\-\.]?)?\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4}/.test(s);
+  return /(\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}/.test(s);
 }
 
 export function isLinkedInUrl(v: any) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import AuthIllustration from "../components/ui/AuthIllustration";
 import Logo from "../components/ui/Logo";
 
@@ -13,7 +13,6 @@ interface AuthPageProps {
   signIn: () => void;
   signUp: () => void;
   requestPasswordReset: () => void;
-  inputCls: string;
   signupName: string;
   setSignupName: (v: string) => void;
   signupPhone: string;
@@ -95,7 +94,6 @@ export default function AuthPage({
   signIn,
   signUp,
   requestPasswordReset,
-  inputCls: _inputCls,
   signupName,
   setSignupName,
   signupPhone,
@@ -143,11 +141,11 @@ export default function AuthPage({
   const nextStep = () => animateStep(1, () => setSignupStep((s) => Math.min(s + 1, 2)));
   const prevStep = () => animateStep(-1, () => setSignupStep((s) => Math.max(s - 1, 0)));
 
-  /* Reset on mode switch */
-  useEffect(() => {
+  function switchMode(next: "signin" | "signup") {
+    setMode(next);
     setSignupStep(0);
     setResumeFileName(null);
-  }, [mode]);
+  }
 
   const canAdvanceStep0 =
     signupName.trim().length > 0 &&
@@ -223,10 +221,10 @@ export default function AuthPage({
 
           {/* Mode toggle */}
           <div className="auth-form-enter mb-6 flex gap-1 rounded-xl bg-white/[0.04] p-1 backdrop-blur-sm">
-            <button className={tabCls(mode === "signin")} onClick={() => setMode("signin")}>
+            <button className={tabCls(mode === "signin")} onClick={() => switchMode("signin")}>
               Sign In
             </button>
-            <button className={tabCls(mode === "signup")} onClick={() => setMode("signup")}>
+            <button className={tabCls(mode === "signup")} onClick={() => switchMode("signup")}>
               Sign Up
             </button>
           </div>
@@ -273,7 +271,7 @@ export default function AuthPage({
 
               <div className="pt-4 text-center">
                 <button
-                  onClick={() => setMode("signup")}
+                  onClick={() => switchMode("signup")}
                   className="text-sm text-white/30 transition-colors hover:text-white/60 cursor-pointer"
                 >
                   Don't have an account?{" "}
@@ -438,7 +436,7 @@ export default function AuthPage({
 
               <div className="mt-5 text-center">
                 <button
-                  onClick={() => setMode("signin")}
+                  onClick={() => switchMode("signin")}
                   className="text-sm text-white/30 transition-colors hover:text-white/60 cursor-pointer"
                 >
                   Already have an account?{" "}
