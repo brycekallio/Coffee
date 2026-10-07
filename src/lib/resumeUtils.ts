@@ -1,39 +1,55 @@
 import * as pdfjsLib from "pdfjs-dist";
+import { supabase } from "./supabase";
+// pdf.js refuses to run an API build against a mismatched worker build — getDocument()
+// throws "The API version <x> does not match the Worker version <y>". This used to point
+// at a hardcoded CDN worker (pdf.js 4.10.38) while package.json installed pdfjs-dist 5.x,
+// so every parse threw and profiles.resume_text was never populated.
+//
+// Importing the worker out of the installed package with Vite's `?url` makes the worker
+// version *be* the installed version: bump pdfjs-dist and the worker follows automatically.
+// It is also bundled and served from our own origin, so parsing no longer depends on a CDN.
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-export async function parsePdfToText(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+/** Extracts the text layer from every page of an in-memory PDF. */
+async function extractPdfText(data: Uint8Array): Promise<string> {
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
   const pages: string[] = [];
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items
-      .map((item: any) => item.str)
-      .join(" ");
-    pages.push(text);
+  try {
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const text = content.items
+        .map((item: any) => ("str" in item ? item.str : ""))
+        .join(" ");
+      pages.push(text);
+    }
+  } finally {
+    await pdf.destroy();
   }
 
   return pages.join("\n\n");
 }
 
+export async function parsePdfToText(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  return extractPdfText(new Uint8Array(buffer));
+}
+
+/**
+ * Downloads a PDF and extracts its text. Takes the bytes in one request rather than
+ * letting pdf.js issue HTTP Range requests, which keeps it working against Supabase
+ * signed URLs (the `resumes` bucket is private) without depending on range support.
+ */
 export async function parsePdfFromUrl(url: string): Promise<string> {
-  const pdf = await pdfjsLib.getDocument(url).promise;
-  const pages: string[] = [];
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items
-      .map((item: any) => item.str)
-      .join(" ");
-    pages.push(text);
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Could not download the resume (HTTP ${res.status}).`);
   }
-
-  return pages.join("\n\n");
+  const buffer = await res.arrayBuffer();
+  return extractPdfText(new Uint8Array(buffer));
 }
 
 export async function checkOllamaAvailable(): Promise<boolean> {
@@ -66,6 +82,47 @@ export async function getOllamaModels(): Promise<string[]> {
   }
 }
 
+/**
+ * Default path for resume-vs-JD suggestions: the `adjust-resume` Edge Function, which
+ * calls Claude server-side. This replaces adjustResumeWithOllama() as the primary route —
+ * Ollama lives at localhost:11434, so it only ever worked on a machine running Ollama and
+ * was dead for every invited user. Ollama is kept below as a local-only fallback.
+ */
+export async function adjustResumeWithClaude(
+  resumeText: string,
+  jobDescription: string
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("adjust-resume", {
+    body: { resume_text: resumeText, job_description: jobDescription },
+  });
+
+  // A non-2xx Edge Function response surfaces as `error` with the body unread, so pull
+  // the server's own message out of it rather than showing a bare "non-2xx status code".
+  if (error) {
+    let detail = error.message;
+    const res = (error as { context?: Response }).context;
+    if (res && typeof res.json === "function") {
+      try {
+        const body = await res.json();
+        if (body?.error) detail = body.error;
+      } catch {
+        // keep the generic message
+      }
+    }
+    throw new Error(detail);
+  }
+  if ((data as { error?: string })?.error) {
+    throw new Error((data as { error: string }).error);
+  }
+
+  const suggestions = (data as { suggestions?: string })?.suggestions?.trim();
+  if (!suggestions) {
+    throw new Error("The server returned no suggestions.");
+  }
+  return suggestions;
+}
+
+/** Local-only fallback. Requires Ollama running at localhost:11434 on the user's machine. */
 export async function adjustResumeWithOllama(
   resumeText: string,
   jobDescription: string,

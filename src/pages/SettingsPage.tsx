@@ -5,6 +5,7 @@ import type { Profile, FieldMap } from "../types";
 import {
   checkOllamaAvailable,
   getOllamaModels,
+  adjustResumeWithClaude,
   adjustResumeWithOllama,
 } from "../lib/resumeUtils";
 
@@ -104,22 +105,31 @@ export default function SettingsPage({
       toast.error("Paste a job description first.");
       return;
     }
-    if (!selectedModel) {
-      toast.error("No Ollama model selected.");
-      return;
-    }
 
     setAdjusting(true);
     setAdjustResult("");
     try {
-      const result = await adjustResumeWithOllama(
-        profile.resume_text,
-        jobDescription,
-        selectedModel
-      );
+      // Server-side Claude is the default so this works for everyone, not just a machine
+      // running Ollama. Ollama stays as a local-only fallback if the function is down.
+      const result = await adjustResumeWithClaude(profile.resume_text, jobDescription);
       setAdjustResult(result);
     } catch (e: any) {
-      toast.error(e?.message ?? "Ollama request failed.");
+      const serverMsg = e?.message ?? "Request failed.";
+      if (ollamaStatus === "available" && selectedModel) {
+        try {
+          const result = await adjustResumeWithOllama(
+            profile.resume_text,
+            jobDescription,
+            selectedModel
+          );
+          setAdjustResult(result);
+          toast.info(`Server unavailable (${serverMsg}) — used local Ollama instead.`);
+        } catch (localErr: any) {
+          toast.error(localErr?.message ?? serverMsg);
+        }
+      } else {
+        toast.error(serverMsg);
+      }
     } finally {
       setAdjusting(false);
     }
@@ -283,23 +293,13 @@ export default function SettingsPage({
             subtitle="Paste a job description and get AI-powered keyword suggestions to tailor your resume."
             right={
               <div className="flex items-center gap-3">
-                {/* Ollama status indicator */}
+                {/* Runs server-side by default; the chip reports the optional local fallback. */}
                 <div className="flex items-center gap-1.5">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      ollamaStatus === "available"
-                        ? "bg-green-400"
-                        : ollamaStatus === "unavailable"
-                          ? "bg-danger"
-                          : "bg-white/30 animate-pulse"
-                    }`}
-                  />
+                  <div className="h-2 w-2 rounded-full bg-glow" />
                   <span className="text-xs text-white/40">
                     {ollamaStatus === "available"
-                      ? "Connected"
-                      : ollamaStatus === "unavailable"
-                        ? "Offline"
-                        : "Checking..."}
+                      ? "Cloud AI · local Ollama ready"
+                      : "Cloud AI"}
                   </span>
                 </div>
 
@@ -365,7 +365,7 @@ export default function SettingsPage({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleAdjust}
-                  disabled={adjusting || ollamaStatus !== "available" || !profile?.resume_text}
+                  disabled={adjusting || !profile?.resume_text}
                   className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
                 >
                   {adjusting ? "Adjusting..." : "Adjust Resume"}
@@ -391,19 +391,13 @@ export default function SettingsPage({
                 </div>
               )}
 
-              {/* Ollama offline help */}
+              {/* Optional: a local Ollama install is used only if the server call fails. */}
               {ollamaStatus === "unavailable" && (
-                <div className="rounded-input bg-depth-0/30 border border-white/[0.06] p-4">
-                  <p className="text-sm text-white/50">
-                    Ollama is not running. Start it with:
-                  </p>
-                  <code className="mt-2 block rounded-badge bg-white/[0.06] px-3 py-2 text-sm text-glow font-mono">
-                    ollama serve
-                  </code>
-                  <p className="mt-2 text-xs text-white/30">
-                    If you haven't installed Ollama yet: <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">brew install ollama</code> then <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">ollama pull llama3.2</code>
-                  </p>
-                </div>
+                <p className="text-xs text-white/25">
+                  Suggestions are generated in the cloud, so this works anywhere. Optionally
+                  run <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">ollama serve</code>{" "}
+                  locally and Coffee? will fall back to it if the server is unreachable.
+                </p>
               )}
             </div>
           </Card>
