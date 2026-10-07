@@ -24,3 +24,6 @@ CLAUDE.md
 TASKS.md
 task.md
 .claude/
+
+# Supabase CLI scratch
+supabase/.temp/
