@@ -34,6 +34,7 @@ create table if not exists public.profiles (
   resume_url text,
   avatar_url text,
   resume_text text,
+  onboarding_completed_at timestamptz,
   phone text,
   career_interests text,
   google_calendar_token text,

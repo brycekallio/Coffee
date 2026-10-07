@@ -23,6 +23,7 @@ export type ContactMeeting = {
 };
 
 export type Profile = {
+  onboarding_completed_at?: string | null;
   id: string;
   full_name: string | null;
   my_linkedin_url: string | null;

@@ -283,13 +283,27 @@ export default function App() {
     return `coffee_onboarding_seen_${userId}`;
   }
 
+  /**
+   * Records that onboarding is done. The database column is the source of truth —
+   * localStorage is only a same-browser fast path, so a new browser, a new device,
+   * or cleared site data can't resurrect the flow for someone who already finished.
+   */
   function markOnboardingSeen() {
-    if (!session?.user?.id) return;
+    const userId = session?.user?.id;
+    if (!userId) return;
     try {
-      localStorage.setItem(onboardingSeenKey(session.user.id), "1");
+      localStorage.setItem(onboardingSeenKey(userId), "1");
     } catch {
-      /* localStorage blocked — non-fatal */
+      /* localStorage blocked - non-fatal, the DB write below is what matters */
     }
+    void supabase
+      .from("profiles")
+      .update({ onboarding_completed_at: new Date().toISOString() })
+      .eq("id", userId)
+      .is("onboarding_completed_at", null)
+      .then(({ error }) => {
+        if (error) console.error("[markOnboardingSeen] could not persist", error);
+      });
   }
 
   async function loadProfile() {
@@ -297,7 +311,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text, phone, career_interests, google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry")
+      .select("id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text, phone, career_interests, onboarding_completed_at, google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry")
       .eq("id", session.user.id)
       .maybeSingle();
 
@@ -370,15 +384,17 @@ export default function App() {
     setUserCareerInterests(row?.career_interests ?? "");
     setNewEmail(session?.user?.email ?? "");
 
-    // Skip onboarding if the profile already has a name, or the user has already been through it.
-    const alreadySeen = (() => {
+    // onboarding_completed_at is durable and cross-device; the localStorage flag and a
+    // non-empty full_name are legacy signals kept so existing users aren't re-onboarded.
+    const seenLocally = (() => {
       try { return localStorage.getItem(onboardingSeenKey(session.user.id)) === "1"; }
       catch { return false; }
     })();
-    if (!row?.full_name?.trim() && !alreadySeen) {
+    const finished = Boolean(row?.onboarding_completed_at) || seenLocally || Boolean(row?.full_name?.trim());
+    if (!finished) {
       setPage("onboarding");
-    } else if (row?.full_name?.trim()) {
-      // User has a name — onboarding is done; make sure we don't show it again.
+    } else if (!row?.onboarding_completed_at) {
+      // Finished earlier, before the column existed - persist it so this is the last time we guess.
       markOnboardingSeen();
     }
   }
