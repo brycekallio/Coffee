@@ -6,12 +6,8 @@ import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
 import { toast } from "sonner";
 import { ensureUrl } from "../lib/utils";
-import {
-  checkOllamaAvailable,
-  getOllamaModels,
-  fetchLinkedInPreview,
-  personalizeOutreachWithOllama,
-} from "../lib/resumeUtils";
+import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
+import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 
 interface OutreachEmailsPageProps {
   contacts: Contact[];
@@ -131,8 +127,8 @@ export default function OutreachEmailsPage({
 
   /* ── AI personalization ─────────────────────────────── */
   const [personalizing, setPersonalizing] = useState(false);
-  const [ollamaAvailable, setOllamaAvailable] = useState(false);
-  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  // Personalization is a power-tier tool, so the button's state follows the AI tier.
+  const [isPowerTier, setIsPowerTier] = useState(false);
 
   /* ── watchlist targets ─────────────────────────────── */
   const [watchlistTargets, setWatchlistTargets] = useState<WatchlistTarget[]>([]);
@@ -413,10 +409,9 @@ export default function OutreachEmailsPage({
   useEffect(() => {
     loadItems();
     loadWatchlistTargets();
-    checkOllamaAvailable().then((ok) => {
-      setOllamaAvailable(ok);
-      if (ok) getOllamaModels().then(setOllamaModels);
-    });
+    fetchAiStatus()
+      .then((status) => setIsPowerTier(status.tier === "power"))
+      .catch(() => setIsPowerTier(false));
   }, [loadItems, loadWatchlistTargets]);
 
   async function handlePersonalize() {
@@ -424,16 +419,6 @@ export default function OutreachEmailsPage({
       toast.error("Write or apply a template message first.");
       return;
     }
-    if (!ollamaAvailable) {
-      toast.error("Ollama is not running. Start it with: ollama serve");
-      return;
-    }
-    const model = ollamaModels[0];
-    if (!model) {
-      toast.error("No Ollama model found. Run: ollama pull llama3.2");
-      return;
-    }
-
     setPersonalizing(true);
     try {
       // Build contact info string
@@ -467,14 +452,13 @@ export default function OutreachEmailsPage({
         linkedInPreview = await fetchLinkedInPreview(linkedInUrl);
       }
 
-      const result = await personalizeOutreachWithOllama(
-        profile?.resume_text ?? null,
-        contactInfo || "No contact selected",
+      const result = await personalizeOutreach({
+        resumeText: profile?.resume_text ?? null,
+        contactInfo: contactInfo || "No contact selected",
         linkedInPreview,
-        message,
-        model
-      );
-      setMessage(result);
+        currentMessage: message,
+      });
+      setMessage(result.message);
       if (linkedInPreview) {
         toast.success("Message personalized using your resume and their LinkedIn profile.");
       } else if (linkedInUrl) {
@@ -482,8 +466,13 @@ export default function OutreachEmailsPage({
       } else {
         toast.success("Message personalized using your resume and contact info.");
       }
-    } catch (e: any) {
-      toast.error(e?.message ?? "Personalization failed.");
+    } catch (e) {
+      if (e instanceof PowerTierRequiredError) {
+        setIsPowerTier(false);
+        toast.error(e.message);
+      } else {
+        toast.error(e instanceof Error ? e.message : "Personalization failed.");
+      }
     } finally {
       setPersonalizing(false);
     }
@@ -659,7 +648,7 @@ export default function OutreachEmailsPage({
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs font-medium text-white/35">Message</span>
-                {ollamaAvailable && (
+                {isPowerTier ? (
                   <button
                     onClick={handlePersonalize}
                     disabled={personalizing || !message.trim()}
@@ -669,6 +658,20 @@ export default function OutreachEmailsPage({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
                     </svg>
                     {personalizing ? "Personalizing..." : "AI Personalize"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() =>
+                      toast.info(
+                        "AI Personalize needs your own API key. Add one under Settings → AI engine."
+                      )
+                    }
+                    className="flex items-center gap-1.5 rounded-button bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-white/35 transition-colors hover:bg-white/[0.08] cursor-pointer"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                    AI Personalize
                   </button>
                 )}
               </div>

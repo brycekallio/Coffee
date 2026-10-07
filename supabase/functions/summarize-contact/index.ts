@@ -1,8 +1,11 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { errorResponse, json, preflight } from "../_shared/http.ts";
+import { HttpError, resolveTier } from "../_shared/tier.ts";
+import { callLLM } from "../_shared/llm.ts";
 
-const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY");
+// Short "who is this person" brief before reaching out. Available on every tier.
+//
+// Deploy: supabase functions deploy summarize-contact --project-ref ypyvkqysnowgegcjydnd
 
 interface Contact {
   id: string;
@@ -23,141 +26,81 @@ interface Meeting {
 }
 
 interface RequestBody {
-  contact: Contact;
-  meetings: Meeting[];
+  contact?: Contact;
+  meetings?: Meeting[];
 }
 
-serve(async (req) => {
-  // Handle CORS
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+function buildPrompt(contact: Contact, meetings: Meeting[]): string {
+  const contactName =
+    [contact.first_name, contact.last_name].filter(Boolean).join(" ") || "Unknown";
 
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
+  const contactInfo = [
+    `Name: ${contactName}`,
+    contact.title && `Title: ${contact.title}`,
+    contact.company && `Company: ${contact.company}`,
+    contact.email && `Email: ${contact.email}`,
+    contact.linkedin_url && `LinkedIn: ${contact.linkedin_url}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  // ── Auth: reject unauthenticated callers before spending Anthropic API credits ──
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const userClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-  const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const meetingsSummary = meetings.length > 0
+    ? `Recent meetings:\n${
+      meetings
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.meeting_date).getTime() - new Date(a.meeting_date).getTime(),
+        )
+        .slice(0, 5)
+        .map(
+          (m) =>
+            `- ${m.meeting_date}: ${m.title || "Meeting"}\n  Notes: ${
+              m.notes || "No notes"
+            }`,
+        )
+        .join("\n")
+    }`
+    : "No meetings recorded yet.";
 
-  try {
-    if (!anthropicApiKey) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
-    }
-
-    const body: RequestBody = await req.json();
-    const { contact, meetings } = body;
-
-    if (!contact) {
-      return new Response(JSON.stringify({ error: "Contact data is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Build context from contact and meetings
-    const contactName = [contact.first_name, contact.last_name]
-      .filter(Boolean)
-      .join(" ") || "Unknown";
-
-    const contactInfo = [
-      `Name: ${contactName}`,
-      contact.title && `Title: ${contact.title}`,
-      contact.company && `Company: ${contact.company}`,
-      contact.email && `Email: ${contact.email}`,
-      contact.linkedin_url && `LinkedIn: ${contact.linkedin_url}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const meetingsSummary =
-      meetings.length > 0
-        ? `Recent meetings:\n${meetings
-            .sort(
-              (a, b) =>
-                new Date(b.meeting_date).getTime() -
-                new Date(a.meeting_date).getTime()
-            )
-            .slice(0, 5)
-            .map(
-              (m) =>
-                `- ${m.meeting_date}: ${m.title || "Meeting"}\n  Notes: ${m.notes || "No notes"}`
-            )
-            .join("\n")}`
-        : "No meetings recorded yet.";
-
-    const prompt = `Based on the following contact information and meeting history, write a concise 2-3 sentence summary of who this person is and what's important to know before reaching out. Focus on their role, company, and any key takeaways from meetings.
+  return `Based on the following contact information and meeting history, write a concise 2-3 sentence summary of who this person is and what's important to know before reaching out. Focus on their role, company, and any key takeaways from meetings.
 
 Contact Information:
 ${contactInfo}
 
 ${meetingsSummary}
 
-Write the summary in a conversational, friendly tone. Keep it brief and actionable.`;
+Write the summary in a conversational, friendly tone. Keep it brief and actionable. Output the summary text only — no preamble, no headings.`;
+}
 
-    // Call Anthropic API
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicApiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 200,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
+serve(async (req) => {
+  if (req.method === "OPTIONS") return preflight();
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("Anthropic API error:", error);
-      throw new Error(`Anthropic API error: ${response.statusText}`);
+  try {
+    if (req.method !== "POST") {
+      throw new HttpError("Method not allowed", 405);
     }
 
-    const result = await response.json();
-    const summary =
-      result.content && result.content.length > 0
-        ? result.content[0].text
-        : "Unable to generate summary";
+    const resolved = await resolveTier(req);
+    const body: RequestBody = await req.json().catch(() => ({}));
 
-    return new Response(JSON.stringify({ summary }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!body.contact) {
+      throw new HttpError("Contact data is required", 400);
+    }
+
+    const result = await callLLM(resolved.creds, {
+      prompt: buildPrompt(body.contact, body.meetings ?? []),
+      // The summary is 2–3 sentences, but reasoning models think first — hence the gap
+      // between the visible answer and the budget.
+      maxTokens: 2000,
     });
-  } catch (error) {
-    console.error("Error:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+
+    return json({
+      summary: result.text,
+      model: result.model,
+      tier: resolved.tier,
+    });
+  } catch (e) {
+    return errorResponse(e);
   }
 });

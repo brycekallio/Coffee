@@ -1,17 +1,11 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { errorResponse, json, preflight } from "../_shared/http.ts";
+import { HttpError, resolveTier } from "../_shared/tier.ts";
+import { callLLM, parseJsonObject } from "../_shared/llm.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
-}
+// Scores a resume against a job description. Available on every tier.
+//
+// Deploy: supabase functions deploy score-jd --project-ref ypyvkqysnowgegcjydnd
 
 function buildPrompt(resumeText: string, jdText: string): string {
   const resumeSection = resumeText.trim()
@@ -44,27 +38,10 @@ Analyze the fit and respond with ONLY a valid JSON object — no markdown fences
 }
 
 serve(async (req) => {
-  // CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS });
-  }
-
-  // ── Auth: reject unauthenticated callers before spending Anthropic API credits ──
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return json({ error: "Missing Authorization header" }, 401);
-  }
-  const userClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-  const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  if (req.method === "OPTIONS") return preflight();
 
   try {
+    const resolved = await resolveTier(req);
     const body = await req.json().catch(() => ({}));
     const { resume_text = "", jd_text = "" } = body as {
       resume_text?: string;
@@ -72,48 +49,20 @@ serve(async (req) => {
     };
 
     if (!jd_text?.trim()) {
-      return json({ error: "jd_text is required" }, 400);
+      throw new HttpError("jd_text is required", 400);
     }
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) {
-      return json({ error: "ANTHROPIC_API_KEY is not configured in Supabase secrets." }, 500);
-    }
-
-    const prompt = buildPrompt(resume_text, jd_text);
-
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const result = await callLLM(resolved.creds, {
+      prompt: buildPrompt(resume_text, jd_text),
+      // Open-weight reasoning models spend output tokens thinking before the JSON,
+      // so this needs far more headroom than the JSON payload itself.
+      maxTokens: 8000,
+      json: true,
     });
 
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
-      throw new Error(`Anthropic API error (${anthropicRes.status}): ${errText}`);
-    }
-
-    const anthropicData = await anthropicRes.json();
-    const rawText: string = anthropicData.content?.[0]?.text ?? "";
-
-    // Extract the JSON object from the response (handles any stray whitespace)
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Model did not return parseable JSON. Raw: " + rawText.slice(0, 200));
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-    return json(result);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    return json({ error: msg }, 500);
+    const parsed = parseJsonObject<Record<string, unknown>>(result.text);
+    return json({ ...parsed, model: result.model, tier: resolved.tier });
+  } catch (e) {
+    return errorResponse(e);
   }
 });

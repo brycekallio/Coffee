@@ -1,16 +1,26 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { errorResponse, json, preflight } from "../_shared/http.ts";
+import {
+  FREE_TRANSCRIPT_CHAR_LIMIT,
+  HttpError,
+  requirePower,
+  resolveTier,
+} from "../_shared/tier.ts";
+import { callLLM, parseJsonObject } from "../_shared/llm.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Turns a networking-call transcript into fun facts / action items / details.
+//
+// Transcripts are the most token-hungry input Coffee has, so full-length ones are a
+// power-tier tool. Short notes (under FREE_TRANSCRIPT_CHAR_LIMIT) still run on the
+// shared free model so the feature is not a hard paywall for casual use.
+//
+// Deploy: supabase functions deploy process-meeting-notes --project-ref ypyvkqysnowgegcjydnd
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+interface ParsedResult {
+  suggested_title?: string;
+  fun_facts?: string[];
+  action_items?: string[];
+  important_details?: string[];
 }
 
 function buildPrompt(
@@ -21,7 +31,9 @@ function buildPrompt(
 ): string {
   return `You are a personal CRM assistant helping someone track their professional networking relationships.
 
-Analyze this meeting transcript from a networking call on ${meetingDate} with ${contactName}${contactCompany ? ` at ${contactCompany}` : ""}.
+Analyze this meeting transcript from a networking call on ${meetingDate} with ${contactName}${
+    contactCompany ? ` at ${contactCompany}` : ""
+  }.
 
 <transcript>
 ${transcript.trim()}
@@ -35,7 +47,7 @@ Extract exactly three categories of information and respond with ONLY a valid JS
     "<interesting personal detail about ${contactName} that humanizes them — hobbies, background, family, fun story they told, etc.>"
   ],
   "action_items": [
-    "<specific thing YOU need to do as a follow-up — be concrete, e.g. 'Send them the McKinsey article on tech strategy' or 'Intro them to Sarah at Deloitte'>",
+    "<specific thing YOU need to do as a follow-up — be concrete, e.g. 'Send them the McKinsey article on tech strategy' or 'Intro them to Sarah at Deloitte'>"
   ],
   "important_details": [
     "<professional context worth remembering — their current role, career goals, what they're working on, their perspective on the industry, etc.>"
@@ -51,57 +63,28 @@ Rules:
 - If the transcript is too short or unclear to extract meaningful info, return whatever you can with short arrays.`;
 }
 
-function formatNotesFromResult(result: {
-  fun_facts: string[];
-  action_items: string[];
-  important_details: string[];
-}, meetingDate: string): string {
-  const lines: string[] = [];
+function formatNotesFromResult(result: ParsedResult, meetingDate: string): string {
+  const lines: string[] = [`📅 ${meetingDate}`, ""];
 
-  lines.push(`📅 ${meetingDate}`);
-  lines.push("");
-
-  if (result.fun_facts.length > 0) {
-    lines.push("✨ Fun Facts");
-    for (const f of result.fun_facts) lines.push(`• ${f}`);
+  const section = (heading: string, items: string[] | undefined) => {
+    if (!items?.length) return;
+    lines.push(heading);
+    for (const item of items) lines.push(`• ${item}`);
     lines.push("");
-  }
+  };
 
-  if (result.action_items.length > 0) {
-    lines.push("📋 Action Items");
-    for (const a of result.action_items) lines.push(`• ${a}`);
-    lines.push("");
-  }
-
-  if (result.important_details.length > 0) {
-    lines.push("💡 Important Details");
-    for (const d of result.important_details) lines.push(`• ${d}`);
-  }
+  section("✨ Fun Facts", result.fun_facts);
+  section("📋 Action Items", result.action_items);
+  section("💡 Important Details", result.important_details);
 
   return lines.join("\n").trim();
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS });
-  }
-
-  // ── Auth: reject unauthenticated callers before spending Anthropic API credits ──
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return json({ error: "Missing Authorization header" }, 401);
-  }
-  const userClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-  const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  if (req.method === "OPTIONS") return preflight();
 
   try {
+    const resolved = await resolveTier(req);
     const body = await req.json().catch(() => ({}));
     const {
       transcript = "",
@@ -116,55 +99,44 @@ serve(async (req) => {
     };
 
     if (!transcript?.trim()) {
-      return json({ error: "transcript is required" }, 400);
+      throw new HttpError("transcript is required", 400);
     }
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) {
-      return json({ error: "ANTHROPIC_API_KEY is not configured in Supabase secrets." }, 500);
+    // Long transcripts are the power-tier tool; short ones stay free.
+    if (transcript.length > FREE_TRANSCRIPT_CHAR_LIMIT) {
+      if (resolved.tier !== "power") {
+        throw new HttpError(
+          `This transcript is ${transcript.length.toLocaleString()} characters. The free engine handles up to ${FREE_TRANSCRIPT_CHAR_LIMIT.toLocaleString()} — add your own API key under Settings → AI engine to process full-length transcripts, or paste a shorter excerpt.`,
+          402,
+          {
+            tool: "meeting-transcripts",
+            tier: resolved.tier,
+            limit: FREE_TRANSCRIPT_CHAR_LIMIT,
+            length: transcript.length,
+          },
+        );
+      }
+      requirePower(resolved, "meeting-transcripts");
     }
 
-    const prompt = buildPrompt(transcript, contact_name, contact_company, meeting_date);
-
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const result = await callLLM(resolved.creds, {
+      prompt: buildPrompt(transcript, contact_name, contact_company, meeting_date),
+      maxTokens: 8000,
+      json: true,
     });
 
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
-      throw new Error(`Anthropic API error (${anthropicRes.status}): ${errText}`);
-    }
-
-    const anthropicData = await anthropicRes.json();
-    const rawText: string = anthropicData.content?.[0]?.text ?? "";
-
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Model did not return parseable JSON. Raw: " + rawText.slice(0, 200));
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-    const formattedNotes = formatNotesFromResult(result, meeting_date);
+    const parsed = parseJsonObject<ParsedResult>(result.text);
 
     return json({
-      suggested_title: result.suggested_title ?? "",
-      fun_facts: result.fun_facts ?? [],
-      action_items: result.action_items ?? [],
-      important_details: result.important_details ?? [],
-      formatted_notes: formattedNotes,
+      suggested_title: parsed.suggested_title ?? "",
+      fun_facts: parsed.fun_facts ?? [],
+      action_items: parsed.action_items ?? [],
+      important_details: parsed.important_details ?? [],
+      formatted_notes: formatNotesFromResult(parsed, meeting_date),
+      model: result.model,
+      tier: resolved.tier,
     });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    return json({ error: msg }, 500);
+  } catch (e) {
+    return errorResponse(e);
   }
 });

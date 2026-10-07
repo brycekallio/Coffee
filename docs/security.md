@@ -51,3 +51,48 @@ npm audit
 ```
 
 All findings will be documented in this file with dates.
+
+
+---
+
+## 2026-10-07 — AI provider swap
+
+Moved the default AI engine off Anthropic and onto free open-weight models on OpenRouter,
+and added a per-user bring-your-own-key tier. Three security-relevant notes:
+
+### Shared key is no longer a blank cheque
+
+Previously every AI call spent `ANTHROPIC_API_KEY` at Anthropic's per-token rates, so an
+authenticated-but-abusive user could run up a real bill. The default engine now costs
+nothing per token and OpenRouter caps the shared key at 20 requests/minute and 50/day, so
+the worst case is denial of service against other users rather than an invoice. The
+auth checks added in the previous audit still apply — `resolveTier()` rejects
+unauthenticated callers before any provider call, in all six AI functions.
+
+### BYO keys are not readable by the browser
+
+`user_ai_settings.api_key` holds a user's own provider key in plaintext. RLS is row-level,
+so the owner-scoped select policy on that table would have returned the key to the client.
+Closed with column privileges: the table-level grant is revoked and SELECT re-granted
+column by column with `api_key` omitted, leaving `key_hint` (last 4 chars) for the UI.
+Users have no INSERT/UPDATE privilege or policy on the table at all — writes go only
+through the `ai-settings` function under the service role.
+
+Two ways this silently fails open, both worth re-checking after any DDL change to the
+table (`select grantee, privilege_type, column_name from information_schema.column_privileges
+where table_name = 'user_ai_settings'`):
+1. A table-wide SELECT grant covers every column, making a column-level REVOKE a no-op.
+2. Supabase re-grants ALL on new public tables from an event trigger that fires at the end
+   of the DDL transaction, overwriting a revoke issued in the same batch.
+
+### Keys are verified before storage
+
+`ai-settings` makes a 16-token probe call against the provider before writing a key, so a
+bad key fails loudly at save time instead of breaking every AI feature later with an
+opaque provider error.
+
+### Not yet verified
+
+The OpenRouter request shape is built from the provider's documentation and has not been
+exercised against a live key — `OPENROUTER_API_KEY` is not yet set in Supabase secrets.
+Until it is, the free tier returns a 500 explaining that; the BYO path is untested too.

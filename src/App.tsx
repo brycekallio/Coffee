@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { invokeAi, PowerTierRequiredError } from "./features/ai/client";
 import { supabase, supabaseMisconfigured } from "./lib/supabase";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
 import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
@@ -955,24 +956,28 @@ export default function App() {
       : "";
     const contactCompany = contact?.company ?? "";
 
-    const { data: fnData, error: fnError } = await supabase.functions.invoke(
-      "process-meeting-notes",
-      {
-        body: {
-          transcript,
-          contact_name: contactName,
-          contact_company: contactCompany,
-          meeting_date: meetingDate,
-        },
-      },
-    );
-
-    if (fnError) {
-      toast.error("Transcript processing failed: " + fnError.message);
-      return;
-    }
-    if (fnData?.error) {
-      toast.error("Transcript processing failed: " + fnData.error);
+    // invokeAi surfaces the server's own message (a bare invoke only reports
+    // "non-2xx status code") and turns the free-tier length cap into a 402.
+    let fnData: {
+      suggested_title?: string;
+      formatted_notes?: string;
+    };
+    try {
+      fnData = await invokeAi("process-meeting-notes", {
+        transcript,
+        contact_name: contactName,
+        contact_company: contactCompany,
+        meeting_date: meetingDate,
+      });
+    } catch (e) {
+      if (e instanceof PowerTierRequiredError) {
+        toast.error(e.message);
+      } else {
+        toast.error(
+          "Transcript processing failed: " +
+            (e instanceof Error ? e.message : "Unknown error"),
+        );
+      }
       return;
     }
 

@@ -11,7 +11,7 @@ Job searching and professional networking both come down to the same unglamorous
 - **Contact tracking** — every person in your network, with company, title, meeting history, and notes
 - **Application tracker** — table and Kanban views (Bookmarked → Applied → Interview → Offer → Rejected)
 - **Stale contact alerts** — contacts you haven't logged a meeting with in 30+ days get flagged with a one-click follow-up draft
-- **AI contact summaries** — Claude-generated 2–3 sentence summaries of a contact's history, via a Supabase Edge Function
+- **AI contact summaries** — 2–3 sentence summaries of a contact's history, via a Supabase Edge Function
 - **Resume-to-JD matching** — paste a job description, get AI keyword suggestions against your stored resume
 - **Outreach composer + scheduling** — draft email/SMS/LinkedIn messages and schedule them for later; a local background worker (`scripts/worker.ts`) delivers scheduled sends through your own logged-in sessions and Mac's Messages/Mail apps, so nothing routes through a third-party server
 - **Analytics dashboard** — applications by status, contacts added over time, outreach by channel, top companies applied to
@@ -26,7 +26,7 @@ Job searching and professional networking both come down to the same unglamorous
 | Frontend | React 19 + TypeScript + Vite 7 |
 | Styling | Tailwind CSS 4 — custom "Bioluminescent Depth" dark theme |
 | Backend | Supabase (Postgres, Auth, Storage, Edge Functions, Row-Level Security) |
-| AI | Claude (contact summaries), Ollama (local resume/JD matching) |
+| AI | Free open-weight models on OpenRouter by default; bring-your-own key (OpenRouter or Anthropic) unlocks the power tools |
 | Desktop | Electron 40 + electron-builder |
 | Browser extension | Chrome Manifest V3 |
 | Charts | Recharts |

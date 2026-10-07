@@ -1,13 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Card from "../components/ui/Card";
 import type { Profile, FieldMap } from "../types";
-import {
-  checkOllamaAvailable,
-  getOllamaModels,
-  adjustResumeWithClaude,
-  adjustResumeWithOllama,
-} from "../lib/resumeUtils";
+import { adjustResume } from "../lib/resumeUtils";
+import AiEngineSettings from "../features/ai/AiEngineSettings";
+import { type AiStatus, PowerTierRequiredError } from "../features/ai/client";
 
 interface SettingsPageProps {
   displayName: string;
@@ -73,28 +70,11 @@ export default function SettingsPage({
   const [jobDescription, setJobDescription] = useState("");
   const [adjustResult, setAdjustResult] = useState("");
   const [adjusting, setAdjusting] = useState(false);
-  const [ollamaStatus, setOllamaStatus] = useState<
-    "checking" | "available" | "unavailable"
-  >("checking");
-  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState("");
+  const [adjustMode, setAdjustMode] = useState<"suggestions" | "rewrite">("suggestions");
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
+  const [resultModel, setResultModel] = useState("");
 
-  useEffect(() => {
-    async function check() {
-      setOllamaStatus("checking");
-      const available = await checkOllamaAvailable();
-      setOllamaStatus(available ? "available" : "unavailable");
-      if (available) {
-        const models = await getOllamaModels();
-        setOllamaModels(models);
-        if (models.length > 0 && !selectedModel) {
-          setSelectedModel(models[0]);
-        }
-      }
-    }
-    check();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const isPowerTier = aiStatus?.tier === "power";
 
   async function handleAdjust() {
     if (!profile?.resume_text?.trim()) {
@@ -108,27 +88,22 @@ export default function SettingsPage({
 
     setAdjusting(true);
     setAdjustResult("");
+    setResultModel("");
     try {
-      // Server-side Claude is the default so this works for everyone, not just a machine
-      // running Ollama. Ollama stays as a local-only fallback if the function is down.
-      const result = await adjustResumeWithClaude(profile.resume_text, jobDescription);
-      setAdjustResult(result);
-    } catch (e: any) {
-      const serverMsg = e?.message ?? "Request failed.";
-      if (ollamaStatus === "available" && selectedModel) {
-        try {
-          const result = await adjustResumeWithOllama(
-            profile.resume_text,
-            jobDescription,
-            selectedModel
-          );
-          setAdjustResult(result);
-          toast.info(`Server unavailable (${serverMsg}) — used local Ollama instead.`);
-        } catch (localErr: any) {
-          toast.error(localErr?.message ?? serverMsg);
-        }
+      const result = await adjustResume(
+        profile.resume_text,
+        jobDescription,
+        adjustMode
+      );
+      setAdjustResult(result.suggestions);
+      setResultModel(result.model);
+    } catch (e) {
+      if (e instanceof PowerTierRequiredError) {
+        // Fall back to the mode that works on the free engine rather than dead-ending.
+        setAdjustMode("suggestions");
+        toast.error(e.message);
       } else {
-        toast.error(serverMsg);
+        toast.error(e instanceof Error ? e.message : "Request failed.");
       }
     } finally {
       setAdjusting(false);
@@ -138,7 +113,11 @@ export default function SettingsPage({
   function copyResult() {
     if (!adjustResult) return;
     navigator.clipboard.writeText(adjustResult);
-    toast.success("Suggestions copied to clipboard.");
+    toast.success(
+      adjustMode === "rewrite"
+        ? "Rewritten resume copied to clipboard."
+        : "Suggestions copied to clipboard."
+    );
   }
 
   return (
@@ -286,6 +265,15 @@ export default function SettingsPage({
           </Card>
         </div>
 
+        {/* AI engine — full width. Sits above the AI tools it powers. */}
+        <div className="lg:col-span-3">
+          <AiEngineSettings
+            inputCls={inputCls}
+            selectCls={selectCls}
+            onTierChange={setAiStatus}
+          />
+        </div>
+
         {/* Resume Adjuster — full width */}
         <div className="lg:col-span-3">
           <Card
@@ -293,13 +281,15 @@ export default function SettingsPage({
             subtitle="Paste a job description and get AI-powered keyword suggestions to tailor your resume."
             right={
               <div className="flex items-center gap-3">
-                {/* Runs server-side by default; the chip reports the optional local fallback. */}
+                {/* Reports the engine actually in use — see the AI engine card above. */}
                 <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-glow" />
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      isPowerTier ? "bg-glow" : "bg-glow/40"
+                    }`}
+                  />
                   <span className="text-xs text-white/40">
-                    {ollamaStatus === "available"
-                      ? "Cloud AI · local Ollama ready"
-                      : "Cloud AI"}
+                    {isPowerTier ? "Your key" : "Free engine"}
                   </span>
                 </div>
 
@@ -335,23 +325,47 @@ export default function SettingsPage({
                 </div>
               )}
 
-              {/* Model selector */}
-              {ollamaModels.length > 1 && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-white/40">Ollama model</label>
-                  <select
-                    className={selectCls}
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
+              {/* Output mode — a full rewrite is a power-tier tool. */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-white/40">
+                  What should the AI produce?
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    onClick={() => setAdjustMode("suggestions")}
+                    className={`flex-1 rounded-input px-4 py-3 text-left transition-colors cursor-pointer ${
+                      adjustMode === "suggestions"
+                        ? "bg-glow/[0.08] text-white"
+                        : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
+                    }`}
                   >
-                    {ollamaModels.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                    <div className="text-sm font-medium">Keyword suggestions</div>
+                    <div className="mt-0.5 text-xs text-white/30">
+                      5–10 targeted phrase swaps. Works on the free engine.
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setAdjustMode("rewrite")}
+                    className={`flex-1 rounded-input px-4 py-3 text-left transition-colors cursor-pointer ${
+                      adjustMode === "rewrite"
+                        ? "bg-glow/[0.08] text-white"
+                        : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      Full rewrite
+                      {!isPowerTier && (
+                        <span className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-white/40">
+                          Your key
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 text-xs text-white/30">
+                      The whole resume, retargeted at this one posting.
+                    </div>
+                  </button>
                 </div>
-              )}
+              </div>
 
               {/* Job description textarea */}
               <textarea
@@ -368,7 +382,13 @@ export default function SettingsPage({
                   disabled={adjusting || !profile?.resume_text}
                   className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
                 >
-                  {adjusting ? "Adjusting..." : "Adjust Resume"}
+                  {adjusting
+                    ? adjustMode === "rewrite"
+                      ? "Rewriting..."
+                      : "Adjusting..."
+                    : adjustMode === "rewrite"
+                    ? "Rewrite Resume"
+                    : "Adjust Resume"}
                 </button>
 
                 {adjustResult && (
@@ -376,7 +396,7 @@ export default function SettingsPage({
                     onClick={copyResult}
                     className="rounded-button bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
                   >
-                    Copy Suggestions
+                    {adjustMode === "rewrite" ? "Copy Resume" : "Copy Suggestions"}
                   </button>
                 )}
               </div>
@@ -384,21 +404,22 @@ export default function SettingsPage({
               {/* AI output area */}
               {adjustResult && (
                 <div className="rounded-input bg-depth-0/30 p-4">
-                  <div className="mb-2 text-xs font-medium text-white/40">AI Suggestions</div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <span className="text-xs font-medium text-white/40">
+                      {adjustMode === "rewrite" ? "Rewritten Resume" : "AI Suggestions"}
+                    </span>
+                    {resultModel && (
+                      <span className="font-data text-[10px] text-white/25">
+                        {resultModel}
+                      </span>
+                    )}
+                  </div>
                   <div className="max-h-96 overflow-y-auto text-sm text-white/70 whitespace-pre-wrap">
                     {adjustResult}
                   </div>
                 </div>
               )}
 
-              {/* Optional: a local Ollama install is used only if the server call fails. */}
-              {ollamaStatus === "unavailable" && (
-                <p className="text-xs text-white/25">
-                  Suggestions are generated in the cloud, so this works anywhere. Optionally
-                  run <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">ollama serve</code>{" "}
-                  locally and Coffee? will fall back to it if the server is unreachable.
-                </p>
-              )}
             </div>
           </Card>
         </div>
