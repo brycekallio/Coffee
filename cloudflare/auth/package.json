@@ -1,0 +1,14 @@
+{
+  "name": "coffee-auth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "keygen": "node scripts/generate-signing-key.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260901.0",
+    "wrangler": "4.45.0"
+  }
+}

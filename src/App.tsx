@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { invokeAi, PowerTierRequiredError } from "./features/ai/client";
 import { supabase, supabaseMisconfigured } from "./lib/supabase";
+import {
+  loadSession,
+  signIn as startSignIn,
+  signOut as endSession,
+  startSessionRefresh,
+  subscribe as subscribeToAuth,
+  takeAuthError,
+  type AuthProvider,
+  type CoffeeSession,
+} from "./lib/authClient";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
 import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
 import Modal from "./components/ui/Modal";
@@ -10,7 +20,6 @@ import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath } fr
 import { parseCsv, inferFieldMap, splitName, isEmail, cleanLinkedIn, cleanPhone } from "./lib/csvHelper";
 import { parsePdfToText, parsePdfFromUrl } from "./lib/resumeUtils";
 import AuthPage from "./pages/AuthPage";
-import PasswordRecoveryPage from "./pages/PasswordRecoveryPage";
 import ContactsPage from "./pages/ContactsPage";
 import ContactDetailsPage from "./pages/ContactDetailsPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
@@ -25,17 +34,11 @@ import JdScorerPage from "./pages/JdScorerPage";
 /* =============================== App =============================== */
 
 export default function App() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<CoffeeSession | null>(null);
+  // Distinguishes "not signed in" from "we have not asked yet", so the sign-in
+  // screen does not flash for someone who is already signed in.
+  const [authChecked, setAuthChecked] = useState(false);
 
-  const [authEmail, setAuthEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Sign-up extra fields
-  const [signupName, setSignupName] = useState("");
-  const [signupPhone, setSignupPhone] = useState("");
-  const [signupLinkedIn, setSignupLinkedIn] = useState("");
-  const [signupCareerInterests, setSignupCareerInterests] = useState("");
-  const [signupResumeFile, setSignupResumeFile] = useState<File | null>(null);
 
   const [page, setPage] = useState<Page>("contacts");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -50,8 +53,6 @@ export default function App() {
   const [myLinkedInUrl, setMyLinkedInUrl] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [userCareerInterests, setUserCareerInterests] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -116,12 +117,9 @@ export default function App() {
   /* ----------------------------- Scheduled Outreach State ----------------------------- */
   const [scheduledOutreach, setScheduledOutreach] = useState<ScheduledOutreach[]>([]);
 
-  // Forgot password / recovery
-  const [resettingPw, setResettingPw] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
-  const [recoveryMode, setRecoveryMode] = useState(false);
-  const [recoveryNewPassword, setRecoveryNewPassword] = useState("");
-  const [recoverySaving, setRecoverySaving] = useState(false);
+  // Which provider button is mid-redirect, so it can show a spinner rather
+  // than letting someone click both.
+  const [signingInWith, setSigningInWith] = useState<AuthProvider | null>(null);
 
   const inputCls =
     "w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 border border-white/[0.06] focus:border-glow/30 focus:bg-white/[0.06] focus:ring-1 focus:ring-glow/15";
@@ -131,20 +129,31 @@ export default function App() {
   /* ----------------------------- Auth session ----------------------------- */
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const message = takeAuthError();
+    if (message) toast.error(message);
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setRecoveryMode(true);
-        setResetSent(false);
-      }
-      setSession(session);
-      if (window.electronAPI && session?.access_token) {
-        window.electronAPI.setAuthSession(session.access_token);
+    const unsubscribe = subscribeToAuth((next) => {
+      setSession(next);
+      if (window.electronAPI && next?.access_token) {
+        window.electronAPI.setAuthSession(next.access_token);
       }
     });
 
-    return () => sub.subscription.unsubscribe();
+    void loadSession().then((next) => {
+      setSession(next);
+      setAuthChecked(true);
+      if (window.electronAPI && next?.access_token) {
+        window.electronAPI.setAuthSession(next.access_token);
+      }
+    });
+
+    // Tokens last an hour; this keeps a long-open tab ahead of the boundary.
+    const stopRefresh = startSessionRefresh();
+
+    return () => {
+      unsubscribe();
+      stopRefresh();
+    };
   }, []);
 
   /* ── Google Calendar OAuth callback ───────────────────────────────── */
@@ -189,29 +198,15 @@ export default function App() {
     }
   }
 
-  async function signUp() {
-    if (!signupName.trim()) { toast.error("Full name is required."); return; }
-
-    const { error } = await supabase.auth.signUp({ email: authEmail, password });
-    if (error) { toast.error(error.message); return; }
-
-    localStorage.setItem("coffee_pending_signup", JSON.stringify({
-      full_name: signupName.trim(),
-      phone: signupPhone.trim(),
-      my_linkedin_url: signupLinkedIn.trim(),
-      career_interests: signupCareerInterests.trim() || null,
-    }));
-
-    toast.success("Signed up. If email confirmation is enabled, confirm your email, then sign in.");
-  }
-
-  async function signIn() {
-    const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password });
-    if (error) toast.error(error.message);
+  function beginSignIn(provider: AuthProvider) {
+    setSigningInWith(provider);
+    // Full-page redirect to the Worker, which hands off to the provider. A popup
+    // would be blocked on iOS Safari, which is most of this app's traffic.
+    startSignIn(provider, window.location.pathname);
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await endSession();
     setSession(null);
     setContacts([]);
     setProfile(null);
@@ -220,62 +215,7 @@ export default function App() {
     setMeetingEdits({});
     setMeetingDirty({});
     setProfileMenuOpen(false);
-
-    setResetSent(false);
-    setResettingPw(false);
-    setRecoveryMode(false);
-    setRecoveryNewPassword("");
-    setAuthEmail("");
-    setPassword("");
-  }
-
-  async function requestPasswordReset() {
-    const email = authEmail.trim().toLowerCase();
-
-    if (!email) {
-      toast.error("Enter your email first, then click Forgot my password.");
-      return;
-    }
-    if (!isEmail(email)) {
-      toast.error("Enter a valid email address (example: name@gmail.com).");
-      return;
-    }
-
-    setResettingPw(true);
-    try {
-      const redirectTo = window.location.origin;
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-      if (error) throw error;
-
-      setResetSent(true);
-      toast.info("Password reset email sent. Check your inbox (and spam).");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to send password reset email.");
-    } finally {
-      setResettingPw(false);
-    }
-  }
-
-  async function completePasswordRecovery() {
-    const pw = recoveryNewPassword.trim();
-    if (pw.length < 6) {
-      toast.error("Password must be at least 6 characters.");
-      return;
-    }
-
-    setRecoverySaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: pw });
-      if (error) throw error;
-
-      setRecoveryMode(false);
-      setRecoveryNewPassword("");
-      toast.success("Password updated. You're signed in.");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to update password.");
-    } finally {
-      setRecoverySaving(false);
-    }
+    setSigningInWith(null);
   }
 
   /* ----------------------------- Profile load/save ----------------------------- */
@@ -332,6 +272,14 @@ export default function App() {
       if (raw) pending = JSON.parse(raw);
     } catch { /* ignore */ }
 
+    // Sign-up is now a provider redirect with no form, so the only detail we
+    // start with is the display name Google or Microsoft returns. Everything
+    // else is collected in onboarding. A leftover pending blob from a
+    // password-era sign-up still wins, so nobody loses what they typed.
+    if (!pending?.full_name && session.user.name) {
+      pending = { ...(pending ?? {}), full_name: session.user.name };
+    }
+
     let row: Record<string, any> | null = data;
 
     if (!row) {
@@ -370,20 +318,13 @@ export default function App() {
       else if (updated) row = updated;
     }
 
-    if (pending) {
-      if (signupResumeFile) {
-        await uploadResume(signupResumeFile);
-        setSignupResumeFile(null);
-      }
-      localStorage.removeItem("coffee_pending_signup");
-    }
+    if (pending) localStorage.removeItem("coffee_pending_signup");
 
     setProfile(row as Profile);
     setDisplayName(row?.full_name ?? "");
     setMyLinkedInUrl(row?.my_linkedin_url ?? "");
     setUserPhone(row?.phone ?? "");
     setUserCareerInterests(row?.career_interests ?? "");
-    setNewEmail(session?.user?.email ?? "");
 
     // onboarding_completed_at is durable and cross-device; the localStorage flag and a
     // non-empty full_name are legacy signals kept so existing users aren't re-onboarded.
@@ -437,18 +378,9 @@ export default function App() {
 
       if (error) throw error;
 
-      if (newEmail && newEmail !== session.user.email) {
-        const { error: eErr } = await supabase.auth.updateUser({ email: newEmail });
-        if (eErr) throw eErr;
-        toast.info("Email update requested. Supabase may require email confirmation.");
-      }
-
-      if (newPassword.trim().length >= 6) {
-        const { error: pErr } = await supabase.auth.updateUser({ password: newPassword.trim() });
-        if (pErr) throw pErr;
-        setNewPassword("");
-        toast.success("Password updated.");
-      }
+      // Email and password are no longer ours to change. The address is whatever
+      // Google or Microsoft asserts on each sign-in, and there is no password to
+      // set — Coffee never receives one. Settings shows the address read-only.
 
       await loadProfile();
     } catch (e: any) {
@@ -981,7 +913,7 @@ export default function App() {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = session?.user;
     if (!user) { toast.error("Not signed in."); return; }
 
     const title = label.trim() || fnData.suggested_title || "Meeting";
@@ -1106,47 +1038,20 @@ export default function App() {
     }
   }
 
-  /* =============================== Password Recovery Screen =============================== */
+  /* =============================== Auth Screen =============================== */
 
-  if (recoveryMode) {
+  // Hold the first paint until the Worker has answered. Without this, anyone
+  // with a valid session cookie sees the sign-in screen for one frame.
+  if (!authChecked) {
     return (
-      <PasswordRecoveryPage
-        recoveryNewPassword={recoveryNewPassword}
-        setRecoveryNewPassword={setRecoveryNewPassword}
-        recoverySaving={recoverySaving}
-        completePasswordRecovery={completePasswordRecovery}
-        signOut={signOut}
-        inputCls={inputCls}
-      />
+      <div className="flex min-h-screen items-center justify-center bg-base">
+        <div className="animate-pulse opacity-60"><Logo /></div>
+      </div>
     );
   }
 
-  /* =============================== Auth Screen =============================== */
-
   if (!session) {
-    return (
-      <AuthPage
-        authEmail={authEmail}
-        setAuthEmail={setAuthEmail}
-        password={password}
-        setPassword={setPassword}
-        resetSent={resetSent}
-        setResetSent={setResetSent}
-        resettingPw={resettingPw}
-        signIn={signIn}
-        signUp={signUp}
-        requestPasswordReset={requestPasswordReset}
-        signupName={signupName}
-        setSignupName={setSignupName}
-        signupPhone={signupPhone}
-        setSignupPhone={setSignupPhone}
-        signupLinkedIn={signupLinkedIn}
-        setSignupLinkedIn={setSignupLinkedIn}
-        signupCareerInterests={signupCareerInterests}
-        setSignupCareerInterests={setSignupCareerInterests}
-        setSignupResumeFile={setSignupResumeFile}
-      />
-    );
+    return <AuthPage onSignIn={beginSignIn} signingInWith={signingInWith} />;
   }
 
   /* =============================== App Shell =============================== */
@@ -1568,10 +1473,8 @@ export default function App() {
             setUserPhone={setUserPhone}
             userCareerInterests={userCareerInterests}
             setUserCareerInterests={setUserCareerInterests}
-            newEmail={newEmail}
-            setNewEmail={setNewEmail}
-            newPassword={newPassword}
-            setNewPassword={setNewPassword}
+            accountEmail={session.user.email}
+            accountProvider={session.user.provider}
             profile={profile}
             savingProfile={savingProfile}
             saveProfile={saveProfile}

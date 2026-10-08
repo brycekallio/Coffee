@@ -42,6 +42,9 @@ const store = new Store({
 
 // Supabase setup - will be initialized after loading env
 let supabase: SupabaseClient | null = null;
+// Set by the renderer after it signs in through the Cloudflare Worker. The main
+// process never signs anyone in itself; it only borrows the renderer's token.
+let rendererAccessToken: string | null = null;
 
 // References
 let mainWindow: BrowserWindow | null = null;
@@ -89,7 +92,10 @@ function initSupabase() {
     return false;
   }
 
-  supabase = createClient(url, key);
+  // Same contract as the browser client: a function the SDK calls for a token.
+  // supabase.auth is disabled by setting this, which is correct here — GoTrue
+  // issued none of these tokens and would reject every one of them.
+  supabase = createClient(url, key, { accessToken: async () => rendererAccessToken });
   return true;
 }
 
@@ -434,9 +440,9 @@ function setupIPC() {
   });
 
   ipcMain.handle("set-auth-session", async (_, accessToken: string) => {
-    if (supabase && accessToken) {
-      await supabase.auth.setSession({ access_token: accessToken, refresh_token: "" });
-    }
+    // The renderer re-sends this roughly hourly as it refreshes, so a long-running
+    // background queue never ends up signing requests with an expired token.
+    rendererAccessToken = accessToken || null;
   });
 }
 

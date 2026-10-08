@@ -1,0 +1,24 @@
+name = "coffee-auth"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Routed on the app's own hostname so the session cookie stays first-party.
+# Fill in the zone once the domain is attached to Cloudflare:
+#
+# [[routes]]
+# pattern = "coffee.<your-domain>/auth/*"
+# zone_name = "<your-domain>"
+
+[vars]
+APP_ORIGIN = "https://coffee.example.com"
+SUPABASE_URL = "https://ypyvkqysnowgegcjydnd.supabase.co"
+
+# Everything below is a secret, set with `wrangler secret put <NAME>`:
+#   SUPABASE_SERVICE_ROLE_KEY
+#   SUPABASE_JWT_PRIVATE_JWK
+#   SUPABASE_JWT_KID
+#   SESSION_SECRET
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#   MICROSOFT_CLIENT_ID
+#   MICROSOFT_CLIENT_SECRET

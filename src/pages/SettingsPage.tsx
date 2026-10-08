@@ -15,10 +15,8 @@ interface SettingsPageProps {
   setUserPhone: (v: string) => void;
   userCareerInterests: string;
   setUserCareerInterests: (v: string) => void;
-  newEmail: string;
-  setNewEmail: (v: string) => void;
-  newPassword: string;
-  setNewPassword: (v: string) => void;
+  accountEmail: string;
+  accountProvider: string;
   profile: Profile | null;
   savingProfile: boolean;
   saveProfile: () => void;
@@ -46,10 +44,8 @@ export default function SettingsPage({
   setUserPhone,
   userCareerInterests,
   setUserCareerInterests,
-  newEmail,
-  setNewEmail,
-  newPassword,
-  setNewPassword,
+  accountEmail,
+  accountProvider,
   profile,
   savingProfile,
   saveProfile,
@@ -182,25 +178,22 @@ export default function SettingsPage({
 
         {/* Account — 1/3 */}
         <div className="lg:col-span-1">
-          <Card title="Account" subtitle="Optional: update email and password.">
+          <Card title="Account" subtitle="Managed by your sign-in provider.">
             <div className="grid gap-3">
-              <input className={inputCls} placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-              <input
-                className={inputCls}
-                placeholder="New password (min 6 chars)"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <button
-                onClick={saveProfile}
-                disabled={savingProfile}
-                className="rounded-button bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] disabled:opacity-50 cursor-pointer"
-              >
-                {savingProfile ? "Saving..." : "Update account"}
-              </button>
-
-              <p className="text-xs text-white/25">Supabase may require confirmation when changing email.</p>
+              <div className="rounded-input border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+                <div className="text-[10px] uppercase tracking-wide text-white/25">Signed in with</div>
+                <div className="mt-0.5 text-sm capitalize text-white/70">{accountProvider}</div>
+              </div>
+              <div className="rounded-input border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+                <div className="text-[10px] uppercase tracking-wide text-white/25">Email</div>
+                <div className="mt-0.5 truncate text-sm text-white/70">{accountEmail}</div>
+              </div>
+              {/* Nothing to edit here on purpose: the address comes from the provider
+                  on every sign-in, and Coffee never holds a password to change. */}
+              <p className="text-xs leading-relaxed text-white/25">
+                Change your email with your provider and it updates here next time you sign in.
+                Coffee never stores a password.
+              </p>
             </div>
           </Card>
         </div>

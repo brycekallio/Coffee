@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { getUser } from "../lib/authClient";
 import { createCalendarEvent } from "../lib/googleCalendar";
 import type { Contact, Profile, ScheduledOutreach, WatchlistTarget } from "../types";
 import Card from "../components/ui/Card";
@@ -237,9 +238,7 @@ export default function OutreachEmailsPage({
     }
 
     setSaving(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getUser();
 
     if (!user) {
       toast.error("You must be signed in.");
