@@ -26,12 +26,13 @@ export const GCAL_OAUTH_STATE = "gcal_connect";
  * Requires VITE_GOOGLE_CLIENT_ID to be set in .env.local
  */
 export function buildGCalOAuthUrl(): string {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-  if (!clientId) {
-    throw new Error(
-      "VITE_GOOGLE_CLIENT_ID is not set. Add it to your .env.local file."
-    );
-  }
+  // Public by design: an OAuth client ID identifies the app and is visible in
+  // every authorisation URL. Committed with an env override for the same reason
+  // as the Clerk key -- a missing build variable fails silently, and that has
+  // already cost a deploy.
+  const clientId =
+    (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ||
+    "915763641909-m92u6u6anv5dckj7is6u4ahv1tj9f2ks.apps.googleusercontent.com";
 
   // The redirect_uri must exactly match one of the URIs registered in
   // Google Cloud Console → OAuth 2.0 Client IDs.
