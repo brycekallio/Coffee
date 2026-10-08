@@ -3,7 +3,7 @@
 A relationship manager for people job searching. It flags contacts you haven't
 talked to in 30 days and hands you a draft to send.
 
-**[coffee-35f.pages.dev](https://coffee-35f.pages.dev)** · open signup
+**[coffee-app-network.netlify.app](https://coffee-app-network.netlify.app)** · open signup
 
 Generic CRMs are built for sales pipelines, and a spreadsheet won't tell you a
 contact has gone quiet. Coffee tracks the people in your network, the
@@ -27,27 +27,25 @@ applications you've sent, and the follow-ups you meant to do.
 | Layer | |
 |---|---|
 | Frontend | React 19 · TypeScript · Vite 7 · Tailwind 4 |
-| Hosting + auth | Cloudflare Pages, with a Pages Function for sign-in |
+| Auth | Clerk |
+| Hosting | Netlify |
 | Database | Supabase — Postgres, Storage, Edge Functions, RLS |
 | AI | Free open-weight models on OpenRouter; bring your own key for the power tools |
 | Desktop | Electron 40 |
 
 ## How auth works
 
-Sign-in is Google OAuth, handled by a Pages Function at `/auth/*` — same origin
-as the app, so the session cookie is first-party rather than fighting browser
-cookie blocking.
+Clerk handles sign-in. Supabase is configured to trust Clerk as a third-party
+auth provider, so it verifies Clerk's tokens against Clerk's published JWKS — no
+key is shared in either direction and nothing mints tokens on our behalf.
 
-The function does the OAuth exchange, then asks Supabase for a real session
-(`admin/generate_link` → `auth/v1/verify`, both server-side and back to back, so
-the one-time code never reaches the browser). What the client gets is an ordinary
-Supabase session. Nothing downstream has to trust a token we minted ourselves,
-and `auth.uid()`, RLS and storage policies work exactly as they always did.
+The one piece worth knowing: Clerk's `sub` is its own user id, but every row here
+is keyed on a Supabase UUID that predates Clerk. `link_clerk_identity()` binds
+the two on the email Clerk verified, and `app_user_id()` resolves it inside every
+RLS policy. That is what lets existing accounts keep their data rather than
+finding an empty app beside it.
 
-The browser holds no password and no long-lived credential — just an HttpOnly
-cookie carrying the refresh token, which the function rotates on every use.
-
-Details and the migration are in [`docs/auth-cloudflare.md`](docs/auth-cloudflare.md).
+Migration: [`docs/migration_clerk_auth.sql`](docs/migration_clerk_auth.sql).
 
 ## Running it locally
 
@@ -80,7 +78,6 @@ the deployed origin rather than localhost.
 
 ```
 src/              React app — App.tsx holds state, pages/ render it
-functions/        Cloudflare Pages Functions (auth)
 supabase/functions/   Edge Functions (AI, calendar, email tracking)
 electron/         desktop shell
 extension/        Chrome extension
@@ -94,9 +91,6 @@ a user only ever sees their own rows.
 
 ## Deploying
 
-```bash
-npm run build
-npx wrangler pages deploy dist --project-name=coffee
-```
-
-Secrets are set with `wrangler pages secret put`; the list is in the auth runbook.
+Netlify builds from `main`. `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and
+`VITE_CLERK_PUBLISHABLE_KEY` are set in the site's environment — all three are
+public by design; RLS is what protects the data.
