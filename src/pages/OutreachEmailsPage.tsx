@@ -84,7 +84,14 @@ const SCHEDULABLE = new Set(["email"]);
 // scheduled or sent unattended. A channel that silently means "do it yourself"
 // does not belong beside channels that actually send.
 
-const isAutoSendChannel = (ch: string) => SCHEDULABLE.has(ch);
+/**
+ * Connecting Google is the opt-in, rather than a separate tier flag: the only
+ * thing that makes unattended sending possible is a stored refresh token, so the
+ * connection itself is the honest gate. Without it, email behaves like iMessage
+ * -- drafted here, sent by you.
+ */
+const canAutoSend = (profile: Profile | null, ch: string) =>
+  SCHEDULABLE.has(ch) && Boolean(profile?.google_calendar_refresh_token);
 
 /* ── Deep link helpers ────────────────────────────────── */
 
@@ -665,8 +672,8 @@ export default function OutreachEmailsPage({
               />
             </div>
 
-            {/* Schedule date/time */}
-            {isAutoSendChannel(channel) && (
+            {/* Schedule date/time — only when Gmail can actually deliver it */}
+            {canAutoSend(profile, channel) && (
               <div>
                 <div className="mb-1 text-xs font-medium text-white/35">Schedule for</div>
                 <input
@@ -679,6 +686,15 @@ export default function OutreachEmailsPage({
             )}
 
 
+            {channel === "email" && !canAutoSend(profile, channel) && (
+              <div className="rounded-input bg-glow/[0.04] px-3 py-2.5 text-xs leading-relaxed text-white/45">
+                Connect Google in Settings to schedule email. Once connected, Coffee
+                sends from your own Gmail at the time you pick — your computer does
+                not need to be on, and it lands in your Sent folder. Until then,
+                Coffee drafts the message and you send it.
+              </div>
+            )}
+
             {channel === "sms" && (
               <div className="rounded-input bg-glow/[0.04] px-3 py-2 text-xs leading-relaxed text-white/45">
                 iMessage can't be sent for you — Apple provides no way for an app to
@@ -688,8 +704,8 @@ export default function OutreachEmailsPage({
               </div>
             )}
 
-            {/* Disclosure callout — auto-send channels only */}
-            {isAutoSendChannel(channel) && (
+            {/* Disclosure callout */}
+            {canAutoSend(profile, channel) && (
               <div className="rounded-input bg-depth-1/60 px-3 py-2.5">
                 <button
                   onClick={toggleInfoCollapsed}
@@ -716,7 +732,7 @@ export default function OutreachEmailsPage({
 
             {/* Action buttons */}
             <div className="mt-2 flex gap-2">
-              {isAutoSendChannel(channel) ? (
+              {canAutoSend(profile, channel) ? (
                 <>
                   <button
                     onClick={handleScheduleClick}
