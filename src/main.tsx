@@ -5,9 +5,17 @@ import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.tsx'
 
-// Publishable by design -- it identifies the Clerk instance and ships in every
-// client. The secret key is Clerk's side only and never appears in this app.
-const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+// Publishable by design: it identifies the Clerk instance and is already visible
+// in the JavaScript every visitor downloads. Nothing is protected by hiding it --
+// RLS is what guards the data.
+//
+// Committed rather than left to the build environment because a missing env var
+// renders a blank page with no error, and that failure has already happened
+// twice. An env var still wins when set, which is how the production instance
+// gets its pk_live_ key later.
+const CLERK_KEY =
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
+  "pk_test_bW9kZWwtYW50ZWxvcGUtMzkzNS5jbGVyay5hY2NvdW50cy5kZXYk"
 
 // Register service worker for offline PWA support
 if ('serviceWorker' in navigator) {
