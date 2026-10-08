@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import { getUser } from "../lib/authClient";
+import { currentUserId } from "../lib/appSession";
 import type { WatchlistTarget } from "../types";
 import Card from "../components/ui/Card";
 import { toast } from "sonner";
@@ -79,16 +79,16 @@ export default function WatchlistPage({ inputCls, selectCls }: WatchlistPageProp
     }
 
     setSaving(true);
-    const user = await getUser();
+    const userId = await currentUserId();
 
-    if (!user) {
+    if (!userId) {
       toast.error("You must be signed in.");
       setSaving(false);
       return;
     }
 
     const { error } = await supabase.from("watchlist_targets").insert({
-      owner_id: user.id,
+      owner_id: userId,
       person_name: personName.trim(),
       company: company.trim(),
       role: role.trim() || null,

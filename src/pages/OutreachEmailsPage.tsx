@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import { getUser } from "../lib/authClient";
+import { currentUserId } from "../lib/appSession";
 import { createCalendarEvent } from "../lib/googleCalendar";
 import type { Contact, Profile, ScheduledOutreach, WatchlistTarget } from "../types";
 import Card from "../components/ui/Card";
@@ -238,16 +238,16 @@ export default function OutreachEmailsPage({
     }
 
     setSaving(true);
-    const user = await getUser();
+    const userId = await currentUserId();
 
-    if (!user) {
+    if (!userId) {
       toast.error("You must be signed in.");
       setSaving(false);
       return;
     }
 
     const payload = {
-      owner_id: user.id,
+      owner_id: userId,
       contact_id: isWatchlistSelection ? null : selectedContactId || null,
       channel,
       subject: channel === "email" ? subject.trim() || null : null,

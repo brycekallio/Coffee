@@ -2,16 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { invokeAi, PowerTierRequiredError } from "./features/ai/client";
 import { supabase, supabaseMisconfigured } from "./lib/supabase";
-import {
-  loadSession,
-  signIn as startSignIn,
-  signOut as endSession,
-  startSessionRefresh,
-  subscribe as subscribeToAuth,
-  takeAuthError,
-  type AuthProvider,
-  type CoffeeSession,
-} from "./lib/authClient";
+import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
+import { clearCachedUserId, linkIdentity, NoAccountError, type AppUser } from "./lib/appSession";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
 import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
 import Modal from "./components/ui/Modal";
@@ -34,9 +26,9 @@ import JdScorerPage from "./pages/JdScorerPage";
 /* =============================== App =============================== */
 
 export default function App() {
-  const [session, setSession] = useState<CoffeeSession | null>(null);
-  // Distinguishes "not signed in" from "we have not asked yet", so the sign-in
-  // screen does not flash for someone who is already signed in.
+  // Clerk owns authentication; this is the Supabase identity it maps to. The two
+  // are distinct: Clerk knows who you are, this says which rows are yours.
+  const [session, setSession] = useState<{ user: AppUser } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
 
@@ -117,9 +109,6 @@ export default function App() {
   /* ----------------------------- Scheduled Outreach State ----------------------------- */
   const [scheduledOutreach, setScheduledOutreach] = useState<ScheduledOutreach[]>([]);
 
-  // Which provider button is mid-redirect, so it can show a spinner rather
-  // than letting someone click both.
-  const [signingInWith, setSigningInWith] = useState<AuthProvider | null>(null);
 
   const inputCls =
     "w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 border border-white/[0.06] focus:border-glow/30 focus:bg-white/[0.06] focus:ring-1 focus:ring-glow/15";
@@ -128,33 +117,57 @@ export default function App() {
 
   /* ----------------------------- Auth session ----------------------------- */
 
+  const { isLoaded: clerkLoaded, isSignedIn, user: clerkUser } = useUser();
+  const { getToken } = useAuth();
+  const clerk = useClerk();
+
   useEffect(() => {
-    const message = takeAuthError();
-    if (message) toast.error(message);
+    if (!clerkLoaded) return;
 
-    const unsubscribe = subscribeToAuth((next) => {
-      setSession(next);
-      if (window.electronAPI && next?.access_token) {
-        window.electronAPI.setAuthSession(next.access_token);
-      }
-    });
-
-    void loadSession().then((next) => {
-      setSession(next);
+    if (!isSignedIn || !clerkUser) {
+      setSession(null);
       setAuthChecked(true);
-      if (window.electronAPI && next?.access_token) {
-        window.electronAPI.setAuthSession(next.access_token);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const user = await linkIdentity({
+          email: clerkUser.primaryEmailAddress?.emailAddress ?? "",
+          name: clerkUser.fullName ?? undefined,
+          avatar_url: clerkUser.imageUrl ?? undefined,
+        });
+        if (cancelled) return;
+        setSession({ user });
+
+        // The desktop shell makes its own Supabase calls from the main process,
+        // so it needs a token too. Re-sent on each sign-in; Clerk refreshes the
+        // underlying session on its own.
+        if (window.electronAPI) {
+          const token = await getToken();
+          if (token) window.electronAPI.setAuthSession(token);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        // No Supabase row holds this email. Signing out is deliberate: leaving
+        // them half-authenticated with no data reads as a broken app rather than
+        // an account that was never set up.
+        if (e instanceof NoAccountError) {
+          toast.error("No Coffee account is linked to that email yet.");
+          void clerk.signOut();
+        } else {
+          toast.error("Couldn't load your account. Try signing in again.");
+        }
+        setSession(null);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
       }
-    });
+    })();
 
-    // Tokens last an hour; this keeps a long-open tab ahead of the boundary.
-    const stopRefresh = startSessionRefresh();
-
-    return () => {
-      unsubscribe();
-      stopRefresh();
-    };
-  }, []);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clerkLoaded, isSignedIn, clerkUser?.id]);
 
   /* ── Google Calendar OAuth callback ───────────────────────────────── */
   useEffect(() => {
@@ -198,15 +211,9 @@ export default function App() {
     }
   }
 
-  function beginSignIn(provider: AuthProvider) {
-    setSigningInWith(provider);
-    // Full-page redirect to the Worker, which hands off to the provider. A popup
-    // would be blocked on iOS Safari, which is most of this app's traffic.
-    startSignIn(provider, window.location.pathname);
-  }
-
   async function signOut() {
-    await endSession();
+    await clerk.signOut();
+    clearCachedUserId();
     setSession(null);
     setContacts([]);
     setProfile(null);
@@ -215,7 +222,6 @@ export default function App() {
     setMeetingEdits({});
     setMeetingDirty({});
     setProfileMenuOpen(false);
-    setSigningInWith(null);
   }
 
   /* ----------------------------- Profile load/save ----------------------------- */
@@ -1051,7 +1057,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <AuthPage onSignIn={beginSignIn} signingInWith={signingInWith} />;
+    return <AuthPage />;
   }
 
   /* =============================== App Shell =============================== */
@@ -1474,7 +1480,7 @@ export default function App() {
             userCareerInterests={userCareerInterests}
             setUserCareerInterests={setUserCareerInterests}
             accountEmail={session.user.email}
-            accountProvider={session.user.provider}
+            accountProvider="Clerk"
             profile={profile}
             savingProfile={savingProfile}
             saveProfile={saveProfile}

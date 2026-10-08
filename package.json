@@ -19,6 +19,7 @@
     "electron:start": "npm run electron:compile && electron ."
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.10",
     "@supabase/supabase-js": "2.89.0",
     "@tailwindcss/vite": "4.1.18",
     "auto-launch": "5.0.6",

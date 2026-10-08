@@ -1,8 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { ClerkProvider } from '@clerk/clerk-react'
 import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.tsx'
+
+// Publishable by design -- it identifies the Clerk instance and ships in every
+// client. The secret key is Clerk's side only and never appears in this app.
+const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 // Register service worker for offline PWA support
 if ('serviceWorker' in navigator) {
@@ -13,6 +18,19 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <ClerkProvider
+      publishableKey={CLERK_KEY}
+      afterSignOutUrl="/"
+      appearance={{
+        variables: {
+          colorBackground: '#0b1420',
+          colorPrimary: '#00e5ff',
+          colorText: '#ffffff',
+          colorInputBackground: 'rgba(255,255,255,0.04)',
+          borderRadius: '0.75rem',
+        },
+      }}
+    >
     <Toaster
       theme="dark"
       position="top-right"
@@ -26,5 +44,6 @@ createRoot(document.getElementById('root')!).render(
       }}
     />
     <App />
+    </ClerkProvider>
   </StrictMode>,
 )
