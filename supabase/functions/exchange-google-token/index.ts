@@ -29,8 +29,12 @@ Deno.serve(async (req: Request) => {
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
+    // Resolve the user through app_user_id(), not auth.getUser(). getUser asks
+    // GoTrue, which has never seen a Clerk token and answers 401 for every real
+    // user. app_user_id() is the same function every RLS policy uses, so this
+    // cannot disagree with what the database enforces a moment later.
+    const { data: appUserId, error: userError } = await userClient.rpc("app_user_id");
+    if (userError || !appUserId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...CORS, "Content-Type": "application/json" },
@@ -89,7 +93,7 @@ Deno.serve(async (req: Request) => {
         google_calendar_refresh_token: tokenData.refresh_token ?? null,
         google_calendar_token_expiry: expiry,
       })
-      .eq("id", user.id);
+      .eq("id", appUserId);
 
     if (updateError) {
       return new Response(JSON.stringify({ error: updateError.message }), {

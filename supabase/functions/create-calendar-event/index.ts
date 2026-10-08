@@ -102,8 +102,12 @@ Deno.serve(async (req: Request) => {
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
+    // Resolve the user through app_user_id(), not auth.getUser(). getUser asks
+    // GoTrue, which has never seen a Clerk token and answers 401 for every real
+    // user. app_user_id() is the same function every RLS policy uses, so this
+    // cannot disagree with what the database enforces a moment later.
+    const { data: appUserId, error: userError } = await userClient.rpc("app_user_id");
+    if (userError || !appUserId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...CORS, "Content-Type": "application/json" },
@@ -115,7 +119,7 @@ Deno.serve(async (req: Request) => {
     const { data: profile, error: profileError } = await serviceClient
       .from("profiles")
       .select("google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry")
-      .eq("id", user.id)
+      .eq("id", appUserId)
       .single();
 
     if (profileError || !profile) {
@@ -149,7 +153,7 @@ Deno.serve(async (req: Request) => {
       ? new Date(profile.google_calendar_token_expiry).getTime()
       : null;
     if (expiry && expiry - Date.now() < 60_000 && profile.google_calendar_refresh_token) {
-      const refreshed = await refreshAndPersist(serviceClient, user.id, profile.google_calendar_refresh_token);
+      const refreshed = await refreshAndPersist(serviceClient, appUserId, profile.google_calendar_refresh_token);
       if (refreshed) token = refreshed;
     }
 
@@ -157,7 +161,7 @@ Deno.serve(async (req: Request) => {
 
     // If 401, attempt one token refresh and retry
     if (result.status === 401 && profile.google_calendar_refresh_token) {
-      const refreshed = await refreshAndPersist(serviceClient, user.id, profile.google_calendar_refresh_token);
+      const refreshed = await refreshAndPersist(serviceClient, appUserId, profile.google_calendar_refresh_token);
       if (refreshed) {
         result = await postEvent(refreshed, body);
       }
