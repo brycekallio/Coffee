@@ -2,7 +2,19 @@ import { supabase } from "./supabase";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 
-const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+/**
+ * Calendar events plus Gmail send, requested together so connecting Google is one
+ * consent screen rather than two.
+ *
+ * gmail.send is a restricted scope: it permits sending only, never reading, and
+ * Google shows an unverified-app warning until the app passes review. That is
+ * acceptable while this is opt-in for power users and is the reason it is not on
+ * by default.
+ */
+const GCAL_SCOPE = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/gmail.send",
+].join(" ");
 
 /** State value embedded in the OAuth redirect so App.tsx knows it's a GCal callback. */
 export const GCAL_OAUTH_STATE = "gcal_connect";
