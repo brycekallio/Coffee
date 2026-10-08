@@ -6,7 +6,6 @@ import type { Contact, Profile, ScheduledOutreach, WatchlistTarget } from "../ty
 import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
 import { toast } from "sonner";
-import { ensureUrl } from "../lib/utils";
 import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 
@@ -69,9 +68,10 @@ const AUTO_SEND_CHANNELS = [
   { value: "sms", label: "iMessage", description: "Auto-sends via Messages" },
 ] as const;
 
-const MANUAL_CHANNELS = [
-  { value: "linkedin", label: "LinkedIn", description: "Opens chat, you paste" },
-] as const;
+// LinkedIn was removed: it has no messaging API, so it could never be more than
+// "copy to clipboard and open a tab", and unlike email and iMessage it cannot be
+// scheduled or sent unattended. A channel that silently means "do it yourself"
+// does not belong beside channels that actually send.
 
 const isAutoSendChannel = (ch: string) => AUTO_SEND_CHANNELS.some(c => c.value === ch);
 
@@ -89,16 +89,6 @@ function openOutreach(
   } else if (channel === "sms") {
     const sms = `sms:${contact?.phone ?? ""}&body=${encodeURIComponent(message)}`;
     window.open(sms, "_self");
-  } else if (channel === "linkedin") {
-    navigator.clipboard.writeText(message);
-    const contactName = [contact?.first_name, contact?.last_name].filter(Boolean).join(" ") || "contact";
-    toast.success(`Message copied! Opening ${contactName}'s profile \u2014 click Message and paste.`);
-    if (contact?.linkedin_url) {
-      window.open(ensureUrl(contact.linkedin_url), "_blank");
-    } else {
-      toast.error("No LinkedIn URL for this contact. Opening LinkedIn messaging.");
-      window.open("https://www.linkedin.com/messaging/", "_blank");
-    }
   }
 }
 
@@ -504,7 +494,6 @@ export default function OutreachEmailsPage({
     // Pick the first available channel
     if (channel === "email" && hasPhone) setChannel("sms");
     else if (channel === "sms" && hasEmail) setChannel("email");
-    else setChannel("linkedin");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId, hasEmail, hasPhone]);
 
@@ -609,27 +598,6 @@ export default function OutreachEmailsPage({
               </div>
             </div>
 
-            {/* Channel - Manual (LinkedIn) */}
-            <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Manual Channels</div>
-              <div className="flex gap-2">
-                {MANUAL_CHANNELS.map((ch) => (
-                  <button
-                    key={ch.value}
-                    onClick={() => setChannel(ch.value)}
-                    className={`flex-1 rounded-input border px-3 py-2 text-sm font-medium transition-all cursor-pointer ${
-                      channel === ch.value
-                        ? "border-glow/30 bg-glow/[0.08] text-glow"
-                        : "border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">{channelIcon(ch.value)} {ch.label}</div>
-                    <div className="mt-0.5 text-[10px] font-normal text-white/25">{ch.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Subject (email only) */}
             {channel === "email" && (
               <div>
@@ -695,12 +663,6 @@ export default function OutreachEmailsPage({
               </div>
             )}
 
-            {/* LinkedIn info banner */}
-            {channel === "linkedin" && (
-              <div className="rounded-input bg-glow/[0.04] px-3 py-2 text-xs text-white/40">
-                LinkedIn doesn't support auto-sending. We'll open the chat and copy your message to clipboard \u2014 just paste and send.
-              </div>
-            )}
 
             {/* Disclosure callout — auto-send channels only */}
             {isAutoSendChannel(channel) && (
