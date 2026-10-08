@@ -1,112 +1,102 @@
-# Coffee ☕
+# Coffee
 
-A personal relationship management (PRM) platform for intentional networking and job-search tracking — built because spreadsheets don't remind you to follow up.
+A relationship manager for people job searching. It flags contacts you haven't
+talked to in 30 days and hands you a draft to send.
 
-## Why I built this
+**[coffee-35f.pages.dev](https://coffee-35f.pages.dev)** · open signup
 
-Job searching and professional networking both come down to the same unglamorous problem: staying in touch with the right people at the right time. Generic CRMs are built for sales pipelines, not relationships, and a spreadsheet doesn't nudge you when a contact's gone quiet for a month. Coffee is a single place to track the people in your network, the applications you've sent, and the follow-ups you actually meant to do — with the AI and automation glue to make that upkeep close to effortless.
+Generic CRMs are built for sales pipelines, and a spreadsheet won't tell you a
+contact has gone quiet. Coffee tracks the people in your network, the
+applications you've sent, and the follow-ups you meant to do.
 
 ## What it does
 
-- **Contact tracking** — every person in your network, with company, title, meeting history, and notes
-- **Application tracker** — table and Kanban views (Bookmarked → Applied → Interview → Offer → Rejected)
-- **Stale contact alerts** — contacts you haven't logged a meeting with in 30+ days get flagged with a one-click follow-up draft
-- **AI contact summaries** — 2–3 sentence summaries of a contact's history, via a Supabase Edge Function
-- **Resume-to-JD matching** — paste a job description, get AI keyword suggestions against your stored resume
-- **Outreach composer + scheduling** — draft email/SMS/LinkedIn messages and schedule them for later; a local background worker (`scripts/worker.ts`) delivers scheduled sends through your own logged-in sessions and Mac's Messages/Mail apps, so nothing routes through a third-party server
-- **Analytics dashboard** — applications by status, contacts added over time, outreach by channel, top companies applied to
-- **CSV import** — smart field-inference parser for bulk-importing an existing contact list
-- **Chrome extension** — one click on any LinkedIn profile pre-fills a new contact
-- **Desktop app** — Electron build with tray icon and native notifications, alongside the web app
+- **Contacts** — company, title, meeting history, notes
+- **Stale alerts** — nobody logged in 30+ days gets flagged with a one-click draft
+- **Applications** — table and Kanban, Bookmarked → Applied → Interview → Offer
+- **Outreach** — compose email/SMS/LinkedIn and schedule it; a local worker
+  delivers through your own logged-in sessions, so nothing routes through a
+  third party
+- **AI** — contact summaries, resume-to-JD matching, meeting-note processing
+- **Analytics** — applications by status, contacts over time, outreach by channel
+- **Chrome extension** — one click on a LinkedIn profile pre-fills a contact
+- **Desktop app** — Electron build with tray icon and native notifications
 
-## Tech stack
+## Stack
 
-| Layer | Technology |
+| Layer | |
 |---|---|
-| Frontend | React 19 + TypeScript + Vite 7 |
-| Styling | Tailwind CSS 4 — custom "Bioluminescent Depth" dark theme |
-| Backend | Supabase (Postgres, Auth, Storage, Edge Functions, Row-Level Security) |
-| AI | Free open-weight models on OpenRouter by default; bring-your-own key (OpenRouter or Anthropic) unlocks the power tools |
-| Desktop | Electron 40 + electron-builder |
-| Browser extension | Chrome Manifest V3 |
-| Charts | Recharts |
-| Hosting | Netlify (web), local install (desktop) |
+| Frontend | React 19 · TypeScript · Vite 7 · Tailwind 4 |
+| Hosting + auth | Cloudflare Pages, with a Pages Function for sign-in |
+| Database | Supabase — Postgres, Storage, Edge Functions, RLS |
+| AI | Free open-weight models on OpenRouter; bring your own key for the power tools |
+| Desktop | Electron 40 |
 
-## Architecture
+## How auth works
 
-```
-┌─────────────────────┐     ┌──────────────────────┐
-│   React SPA (Vite)   │────▶│  Supabase             │
-│   web + Electron shell│     │  Postgres + Auth + RLS│
-└─────────────────────┘     │  Edge Functions:       │
-          ▲                  │  - summarize-contact   │
-          │                  │  - score-jd            │
-   Chrome extension          │  - process-meeting-notes│
-   (LinkedIn → contact)      │  - email-open-tracker  │
-                              │  - create-calendar-event│
-                              │  - exchange-google-token│
-                              └──────────────────────┘
-          ▲
-          │
-  scripts/worker.ts — local polling worker
-  for scheduled outreach delivery
-```
+Sign-in is Google OAuth, handled by a Pages Function at `/auth/*` — same origin
+as the app, so the session cookie is first-party rather than fighting browser
+cookie blocking.
 
-State lives in `App.tsx` and flows down via props — no Redux/Zustand, just direct Supabase calls from handlers. Every table is scoped with Row-Level Security to `auth.uid() = owner_id`, so a user only ever sees their own data.
+The function does the OAuth exchange, then asks Supabase for a real session
+(`admin/generate_link` → `auth/v1/verify`, both server-side and back to back, so
+the one-time code never reaches the browser). What the client gets is an ordinary
+Supabase session. Nothing downstream has to trust a token we minted ourselves,
+and `auth.uid()`, RLS and storage policies work exactly as they always did.
 
-## Local Development
+The browser holds no password and no long-lived credential — just an HttpOnly
+cookie carrying the refresh token, which the function rotates on every use.
+
+Details and the migration are in [`docs/auth-cloudflare.md`](docs/auth-cloudflare.md).
+
+## Running it locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Required Environment Variables
-
-Create a `.env.local` file:
+`.env.local`:
 
 ```
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-Database schema lives in [`docs/schema.sql`](docs/schema.sql) (safe to re-run against a fresh Supabase project).
+Schema is in [`docs/schema.sql`](docs/schema.sql), safe to re-run against a fresh
+project. Auth runs on the deployed Pages Function, so local dev signs in against
+the deployed origin rather than localhost.
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | TypeScript check + production build |
+| Command | |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | typecheck + production build |
 | `npm run lint` | ESLint |
-| `npm run preview` | Preview production build |
-| `npm run verify` | Preflight env check + build |
-| `npm run worker` | Run the local scheduled-outreach delivery worker |
-| `npm run electron:dev` | Run the desktop app in dev mode |
-| `npm run electron:build` | Build the packaged desktop app |
+| `npm run worker` | local scheduled-outreach worker |
+| `npm run electron:dev` | desktop app, dev mode |
+| `npm run electron:build` | packaged desktop app |
 
-## Deploying to Netlify
-
-1. Connect the repo to Netlify (via Git or `netlify-cli`).
-2. Set the following environment variables in Netlify's site settings:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3. Build settings are configured via `netlify.toml`:
-   - **Build command:** `npm run build`
-   - **Publish directory:** `dist`
-   - SPA routing is handled by a catch-all redirect to `/index.html`.
-
-## Project structure
+## Layout
 
 ```
-src/
-├── App.tsx              # App shell — state, handlers, routing
-├── components/ui/        # Card, Modal, and other shared UI
-├── lib/                  # Supabase client, CSV parsing, utils
-└── pages/                 # Contacts, Applications, Outreach, Settings, Analytics...
-electron/                 # Desktop app main + preload processes
-extension/                 # Chrome extension (LinkedIn → contact import)
-supabase/functions/        # Edge Functions (AI summaries, JD scoring, calendar, email tracking)
-scripts/worker.ts          # Local scheduled-outreach worker
-docs/                      # Database schema + security notes
+src/              React app — App.tsx holds state, pages/ render it
+functions/        Cloudflare Pages Functions (auth)
+supabase/functions/   Edge Functions (AI, calendar, email tracking)
+electron/         desktop shell
+extension/        Chrome extension
+scripts/worker.ts local scheduled-outreach worker
+docs/             schema, auth runbook, security notes
 ```
+
+State lives in `App.tsx` and flows down through props — no Redux, just Supabase
+calls from handlers. Every table is scoped by RLS to `auth.uid() = owner_id`, so
+a user only ever sees their own rows.
+
+## Deploying
+
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name=coffee
+```
+
+Secrets are set with `wrangler pages secret put`; the list is in the auth runbook.
