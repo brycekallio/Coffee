@@ -1,4 +1,4 @@
-// Coffee's auth Worker.
+// Coffee's auth routes, as a Pages Function.
 //
 //   GET  /auth/providers      what the sign-in screen should offer
 //   GET  /auth/start          -> provider consent screen
@@ -6,9 +6,14 @@
 //   GET  /auth/session        fresh Supabase access token, or 401
 //   POST /auth/logout         drops the cookie
 //
-// Mounted on the app's own origin (a Worker route on /auth/*), so the session
-// cookie is first-party. A separate auth.<domain> subdomain would make it
-// third-party to the app and put it in front of every browser's cookie blocking.
+// A Pages Function rather than a standalone Worker, for one reason: it runs on
+// the same origin as the app it serves, so the session cookie is first-party.
+//
+// A standalone Worker needs a route on a zone you own, which means buying a
+// domain before anything can be tested. Pages Functions serve /auth/* on
+// <project>.pages.dev from day one, and attaching a custom domain later changes
+// no code at all. A separate auth.<domain> would have made the cookie
+// third-party to the app and put it behind every browser's cookie blocking.
 
 import {
   PROVIDERS,
@@ -19,8 +24,8 @@ import {
   randomString,
   readIdToken,
   type ProviderId,
-} from "./oauth";
-import { ACCESS_TOKEN_TTL, mintAccessToken, resolveUser, type Env } from "./supabase";
+} from "../_lib/oauth";
+import { ACCESS_TOKEN_TTL, mintAccessToken, resolveUser, type Env } from "../_lib/supabase";
 import {
   OAUTH_COOKIE,
   SESSION_COOKIE,
@@ -32,7 +37,7 @@ import {
   sign,
   unsign,
   type SessionPayload,
-} from "./session";
+} from "../_lib/session";
 
 interface OAuthState {
   state: string;
@@ -47,6 +52,14 @@ function credentials(env: Env, provider: ProviderId): { id: string; secret: stri
     : { id: env.MICROSOFT_CLIENT_ID, secret: env.MICROSOFT_CLIENT_SECRET };
 }
 
+/**
+ * The origin to build redirect URIs from. APP_ORIGIN wins when set, because the
+ * redirect_uri must match what is registered with Google and Microsoft exactly.
+ * Falling back to the request's own origin is what lets a preview deployment run
+ * without its own configuration.
+ */
+const originOf = (env: Env, url: URL) => env.APP_ORIGIN || url.origin;
+
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
     status,
@@ -55,8 +68,8 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
 
 /** Bounces the user back to the app with a readable reason instead of showing a
  *  Worker stack trace to a freshman trying to sign in. */
-function failTo(env: Env, reason: string): Response {
-  const url = new URL("/", env.APP_ORIGIN);
+function failTo(origin: string, reason: string): Response {
+  const url = new URL("/", origin);
   url.searchParams.set("auth_error", reason);
   return Response.redirect(url.toString(), 302);
 }
@@ -68,32 +81,34 @@ function safeNext(raw: string | null): string {
   return raw;
 }
 
-export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
-    const url = new URL(req.url);
+async function handle(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
 
-    switch (url.pathname) {
-      case "/auth/providers":
-        return json({ providers: ["google", "microsoft"] });
+  switch (url.pathname) {
+    case "/auth/providers":
+      return json({ providers: ["google", "microsoft"] });
 
-      case "/auth/start":
-        return start(req, env, url);
+    case "/auth/start":
+      return start(req, env, url);
 
-      case "/auth/callback":
-        return callback(req, env, url);
+    case "/auth/callback":
+      return callback(req, env, url);
 
-      case "/auth/session":
-        return session(req, env);
+    case "/auth/session":
+      return session(req, env);
 
-      case "/auth/logout":
-        if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-        return json({ ok: true }, 200, { "set-cookie": clearCookie(SESSION_COOKIE) });
+    case "/auth/logout":
+      if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+      return json({ ok: true }, 200, { "set-cookie": clearCookie(SESSION_COOKIE) });
 
-      default:
-        return json({ error: "not_found" }, 404);
-    }
-  },
-};
+    default:
+      return json({ error: "not_found" }, 404);
+  }
+}
+
+// [[route]] catches everything under /auth/. Pages serves the SPA for every other
+// path, so the app and its auth share one origin and one deploy.
+export const onRequest: PagesFunction<Env> = (ctx) => handle(ctx.request, ctx.env);
 
 async function start(req: Request, env: Env, url: URL): Promise<Response> {
   const provider = url.searchParams.get("provider");
@@ -103,7 +118,7 @@ async function start(req: Request, env: Env, url: URL): Promise<Response> {
   const { id: clientId } = credentials(env, provider);
   const state = randomString();
   const verifier = randomString(48);
-  const redirectUri = new URL("/auth/callback", env.APP_ORIGIN).toString();
+  const redirectUri = new URL("/auth/callback", originOf(env, url)).toString();
 
   const authorize = new URL(def.authorizeUrl);
   authorize.search = new URLSearchParams({
@@ -132,17 +147,18 @@ async function start(req: Request, env: Env, url: URL): Promise<Response> {
 }
 
 async function callback(req: Request, env: Env, url: URL): Promise<Response> {
+  const origin = originOf(env, url);
   const providerError = url.searchParams.get("error");
-  if (providerError) return failTo(env, providerError);
+  if (providerError) return failTo(origin, providerError);
 
   const pending = await unsign<OAuthState>(readCookie(req, OAUTH_COOKIE), env.SESSION_SECRET);
-  if (!pending) return failTo(env, "expired_request");
+  if (!pending) return failTo(origin, "expired_request");
 
   // The state check is what stops a third party from feeding us their own code.
-  if (url.searchParams.get("state") !== pending.state) return failTo(env, "state_mismatch");
+  if (url.searchParams.get("state") !== pending.state) return failTo(origin, "state_mismatch");
 
   const code = url.searchParams.get("code");
-  if (!code) return failTo(env, "missing_code");
+  if (!code) return failTo(origin, "missing_code");
 
   const def = PROVIDERS[pending.provider];
   const { id: clientId, secret } = credentials(env, pending.provider);
@@ -154,19 +170,19 @@ async function callback(req: Request, env: Env, url: URL): Promise<Response> {
       clientSecret: secret,
       code,
       verifier: pending.verifier,
-      redirectUri: new URL("/auth/callback", env.APP_ORIGIN).toString(),
+      redirectUri: new URL("/auth/callback", origin).toString(),
     });
 
     const claims = readIdToken(id_token, def, clientId);
     const email = emailFrom(claims);
-    if (!email) return failTo(env, "no_email");
+    if (!email) return failTo(origin, "no_email");
 
     // Google reports verification explicitly. Microsoft work/school accounts do
     // not carry email_verified at all — the tenant owns the mailbox, which is a
     // stronger guarantee than a verification click — so absent is accepted and
     // only an explicit false is rejected.
     if (claims.email_verified === false || claims.email_verified === "false") {
-      return failTo(env, "email_unverified");
+      return failTo(origin, "email_unverified");
     }
 
     const user = await resolveUser(env, email, pending.provider, {
@@ -175,13 +191,13 @@ async function callback(req: Request, env: Env, url: URL): Promise<Response> {
     });
 
     const payload: SessionPayload = { ...user, iat: Math.floor(Date.now() / 1000) };
-    const headers = new Headers({ location: new URL(pending.next, env.APP_ORIGIN).toString() });
+    const headers = new Headers({ location: new URL(pending.next, origin).toString() });
     headers.append("set-cookie", setCookie(SESSION_COOKIE, await sign(payload, env.SESSION_SECRET), SESSION_TTL));
     headers.append("set-cookie", clearCookie(OAUTH_COOKIE));
     return new Response(null, { status: 302, headers });
   } catch (err) {
     console.error("auth callback failed", err);
-    return failTo(env, "signin_failed");
+    return failTo(origin, "signin_failed");
   }
 }
 

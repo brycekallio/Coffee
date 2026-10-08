@@ -1,0 +1,22 @@
+# Coffee on Cloudflare Pages.
+#
+# The app is a static SPA; everything under /auth/* is handled by the Pages
+# Function in functions/auth/. Same origin, so the session cookie is first-party
+# and no separate auth domain is needed.
+name = "coffee"
+compatibility_date = "2026-09-01"
+pages_build_output_dir = "dist"
+
+[vars]
+SUPABASE_URL = "https://ypyvkqysnowgegcjydnd.supabase.co"
+# Canonical origin. Must match the redirect URI registered with Google and
+# Microsoft exactly -- preview deployments get their own hostname, and the
+# function falls back to the request origin there, which is why OAuth only works
+# against this one.
+APP_ORIGIN = "https://coffee-35f.pages.dev"
+
+# Secrets (wrangler pages secret put <NAME>):
+#   SUPABASE_SERVICE_ROLE_KEY  SUPABASE_JWT_PRIVATE_JWK  SUPABASE_JWT_KID
+#   SESSION_SECRET
+#   GOOGLE_CLIENT_ID     GOOGLE_CLIENT_SECRET
+#   MICROSOFT_CLIENT_ID  MICROSOFT_CLIENT_SECRET

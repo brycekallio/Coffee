@@ -23,7 +23,11 @@ export interface Env {
   GOOGLE_CLIENT_SECRET: string;
   MICROSOFT_CLIENT_ID: string;
   MICROSOFT_CLIENT_SECRET: string;
-  APP_ORIGIN: string;
+  /** Canonical origin. Optional: falls back to the request's own origin, which
+   *  is what makes preview deployments work without reconfiguration. It must be
+   *  set in production, because the redirect_uri has to match what is registered
+   *  with Google and Microsoft exactly, and a preview URL is not registered. */
+  APP_ORIGIN?: string;
 }
 
 /** One hour, matching Supabase's own default access-token lifetime. The browser
