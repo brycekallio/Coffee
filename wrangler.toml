@@ -1,8 +1,0 @@
-# Coffee on Cloudflare Pages.
-#
-# Static hosting only. Authentication is Clerk's, verified by Supabase directly
-# against Clerk's JWKS -- there is no function here any more, and nothing on this
-# side holds a credential.
-name = "coffee"
-compatibility_date = "2026-09-01"
-pages_build_output_dir = "dist"
