@@ -56,7 +56,7 @@ async function refreshAndPersist(
 async function postEvent(
   accessToken: string,
   body: EventBody
-): Promise<{ ok: boolean; status: number }> {
+): Promise<{ ok: boolean; status: number; body?: string }> {
   const tz = body.timezone ?? "UTC";
   const event = {
     summary: body.title,
@@ -77,7 +77,9 @@ async function postEvent(
     }
   );
 
-  return { ok: res.ok, status: res.status };
+  // Keep the body on failure: Google explains refusals clearly, and discarding
+  // that turned a one-line diagnosis into a guessing game.
+  return { ok: res.ok, status: res.status, body: res.ok ? undefined : await res.text() };
 }
 
 Deno.serve(async (req: Request) => {
@@ -168,8 +170,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!result.ok) {
+      // Pass Google's own message through. "returned 403" sent us looking at
+      // tokens and scopes when the actual cause was the Calendar API being
+      // disabled on the project -- which Google says plainly if you let it.
+      const detail = typeof result.body === "string"
+        ? result.body.slice(0, 300)
+        : JSON.stringify(result.body ?? {}).slice(0, 300);
+      console.error("Google Calendar rejected the event", result.status, detail);
       return new Response(
-        JSON.stringify({ error: `Google Calendar API returned ${result.status}` }),
+        JSON.stringify({ error: `Google Calendar API returned ${result.status}`, detail }),
         { status: 502, headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }
