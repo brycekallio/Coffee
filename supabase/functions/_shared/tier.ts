@@ -63,6 +63,18 @@ export function serviceClient(): SupabaseClient {
 }
 
 /** Rejects unauthenticated callers before any provider credits are spent. */
+/**
+ * The Supabase user id behind this request.
+ *
+ * Does NOT call auth.getUser(): that asks GoTrue, which has never seen a Clerk
+ * token and answers 401 for every real user. Supabase trusts Clerk as a
+ * third-party provider at the API layer, so the token is valid -- it just maps to
+ * a Clerk subject rather than a Supabase uuid.
+ *
+ * app_user_id() is the same function every RLS policy uses to resolve that
+ * subject back to the uuid the user's rows are keyed on, so this cannot drift
+ * from what the database itself will enforce a moment later.
+ */
 export async function requireUser(req: Request): Promise<string> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
@@ -73,11 +85,11 @@ export async function requireUser(req: Request): Promise<string> {
     Deno.env.get("SUPABASE_ANON_KEY")!,
     { global: { headers: { Authorization: authHeader } } },
   );
-  const { data: { user }, error } = await userClient.auth.getUser();
-  if (error || !user) {
+  const { data, error } = await userClient.rpc("app_user_id");
+  if (error || !data) {
     throw new HttpError("Unauthorized", 401);
   }
-  return user.id;
+  return data as string;
 }
 
 export interface StoredSettings {
