@@ -252,3 +252,9 @@ drop trigger if exists user_ai_settings_touch on public.user_ai_settings;
 create trigger user_ai_settings_touch
   before insert or update on public.user_ai_settings
   for each row execute function public.touch_user_ai_settings();
+
+-- NOTE: policies in this file predate the Clerk migration and still read
+-- auth.uid(). Applying it to a fresh project requires running
+-- docs/migration_clerk_auth.sql afterwards, which rewrites every policy to
+-- app_user_id(). Creating a table from here without that step silently gives it
+-- a policy that denies every real user.
