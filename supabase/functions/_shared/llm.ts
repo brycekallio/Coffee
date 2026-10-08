@@ -20,12 +20,15 @@ export const FREE_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
 /**
  * Fallback chain for the free tier. OpenRouter walks this list on *any* error from
  * the current model — including the 429 that a shared free key will hit regularly —
- * and bills/reports whichever model actually answered. Ordered JSON-capable first.
+ * and reports whichever model actually answered. Ordered JSON-capable first.
+ *
+ * Exactly three entries, and that is a hard API limit: OpenRouter rejects a
+ * `models` array longer than three with a 400, so a fourth fallback does not
+ * degrade gracefully — it fails every request before any model is tried.
  */
 export const FREE_MODEL_CHAIN = [
   FREE_MODEL,
   "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
   "openrouter/free",
 ];
 
