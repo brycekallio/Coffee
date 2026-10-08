@@ -14,9 +14,13 @@ SUPABASE_URL = "https://ypyvkqysnowgegcjydnd.supabase.co"
 # function falls back to the request origin there, which is why OAuth only works
 # against this one.
 APP_ORIGIN = "https://coffee-35f.pages.dev"
+# Public by design -- this is the same key the browser already ships. It is here
+# rather than in secrets because /auth/v1/verify and the refresh grant are the
+# calls a browser would make; we only make them server-side so the one-time OTP
+# never reaches the client.
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlweXZrcXlzbm93Z2VnY2p5ZG5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYyOTE0MDksImV4cCI6MjA4MTg2NzQwOX0.TO-MCSk6Mby5fx4pGvgVuHcVHpfSDLiZGjbq61pwUAI"
 
 # Secrets (wrangler pages secret put <NAME>):
-#   SUPABASE_SERVICE_ROLE_KEY  SUPABASE_JWT_PRIVATE_JWK  SUPABASE_JWT_KID
-#   SESSION_SECRET
+#   SUPABASE_SERVICE_ROLE_KEY  SESSION_SECRET
 #   GOOGLE_CLIENT_ID     GOOGLE_CLIENT_SECRET
 #   MICROSOFT_CLIENT_ID  MICROSOFT_CLIENT_SECRET

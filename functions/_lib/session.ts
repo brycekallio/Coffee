@@ -87,6 +87,9 @@ export interface SessionPayload {
   id: string;
   email: string;
   provider: string;
+  /** Supabase's refresh token. HttpOnly and signed, so script cannot read it and
+   *  a tampered cookie fails the HMAC before it reaches Supabase. */
+  refresh_token: string;
   name?: string;
   avatar_url?: string;
   /** Issued-at, so a cookie that outlives SESSION_TTL in a stale browser is

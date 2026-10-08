@@ -25,7 +25,7 @@ import {
   readIdToken,
   type ProviderId,
 } from "../_lib/oauth";
-import { ACCESS_TOKEN_TTL, mintAccessToken, resolveUser, type Env } from "../_lib/supabase";
+import { createSession, refreshSession, resolveUser, type Env } from "../_lib/supabase";
 import {
   OAUTH_COOKIE,
   SESSION_COOKIE,
@@ -46,7 +46,7 @@ interface OAuthState {
   next: string;
 }
 
-function credentials(env: Env, provider: ProviderId): { id: string; secret: string } {
+function credentials(env: Env, provider: ProviderId): { id?: string; secret?: string } {
   return provider === "google"
     ? { id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET }
     : { id: env.MICROSOFT_CLIENT_ID, secret: env.MICROSOFT_CLIENT_SECRET };
@@ -123,6 +123,7 @@ async function start(req: Request, env: Env, url: URL): Promise<Response> {
 
   const def = PROVIDERS[provider];
   const { id: clientId } = credentials(env, provider);
+  if (!clientId) return json({ error: "provider_not_configured" }, 503);
   const state = randomString();
   const verifier = randomString(48);
   const redirectUri = new URL("/auth/callback", originOf(env, url)).toString();
@@ -169,6 +170,7 @@ async function callback(req: Request, env: Env, url: URL): Promise<Response> {
 
   const def = PROVIDERS[pending.provider];
   const { id: clientId, secret } = credentials(env, pending.provider);
+  if (!clientId || !secret) return failTo(origin, "provider_not_configured");
 
   try {
     const { id_token } = await exchangeCode({
@@ -197,7 +199,14 @@ async function callback(req: Request, env: Env, url: URL): Promise<Response> {
       avatar_url: claims.picture,
     });
 
-    const payload: SessionPayload = { ...user, iat: Math.floor(Date.now() / 1000) };
+    // Supabase issues the session; we only carry its refresh token.
+    const supa = await createSession(env, user.email);
+
+    const payload: SessionPayload = {
+      ...user,
+      refresh_token: supa.refresh_token,
+      iat: Math.floor(Date.now() / 1000),
+    };
     const headers = new Headers({ location: new URL(pending.next, origin).toString() });
     headers.append("set-cookie", setCookie(SESSION_COOKIE, await sign(payload, env.SESSION_SECRET), SESSION_TTL));
     headers.append("set-cookie", clearCookie(OAUTH_COOKIE));
@@ -216,10 +225,23 @@ async function session(req: Request, env: Env): Promise<Response> {
     return json({ error: "session_expired" }, 401, { "set-cookie": clearCookie(SESSION_COOKIE) });
   }
 
-  const { iat: _iat, ...user } = payload;
-  return json({
-    user,
-    access_token: await mintAccessToken(env, user),
-    expires_at: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_TTL,
-  });
+  const supa = await refreshSession(env, payload.refresh_token);
+  // A refused refresh means the token was revoked, expired, or already spent.
+  // Nothing to recover: drop the cookie and let the user sign in again.
+  if (!supa) {
+    return json({ error: "refresh_failed" }, 401, { "set-cookie": clearCookie(SESSION_COOKIE) });
+  }
+
+  const { iat: _iat, refresh_token: _rt, ...user } = payload;
+
+  // Supabase rotates refresh tokens on use, so the cookie has to carry the new
+  // one. Storing the old would make the NEXT refresh fail and sign the user out
+  // mid-session, which is a maddening bug to chase: it only shows up an hour in.
+  const rotated: SessionPayload = { ...payload, refresh_token: supa.refresh_token };
+
+  return json(
+    { user, access_token: supa.access_token, expires_at: supa.expires_at },
+    200,
+    { "set-cookie": setCookie(SESSION_COOKIE, await sign(rotated, env.SESSION_SECRET), SESSION_TTL) },
+  );
 }

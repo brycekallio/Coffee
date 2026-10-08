@@ -1,52 +1,30 @@
-// Minting Supabase-compatible access tokens, and resolving a provider identity
-// to a row in auth.users.
+// Getting a real Supabase session for a user we have authenticated ourselves.
 //
-// The whole migration rests on one fact: Postgres RLS never talks to GoTrue. It
-// reads `sub` out of whatever JWT the request carries and hands it to auth.uid().
-// So if this Worker signs a JWT with a key Supabase trusts, carrying the same
-// `sub` the user already had, then all eight tables, every RLS policy and every
-// storage policy keep working untouched. Nothing in the database changes.
-
-import { b64url } from "./oauth";
+// The earlier design had this Worker sign its own ES256 JWTs with a key imported
+// into Supabase. That works in principle -- Postgres only reads `sub` out of the
+// token -- but it rests on being able to import a signing key, and the dashboard
+// did not offer it. Rather than forge tokens with a borrowed key, we ask Supabase
+// to issue real ones:
+//
+//   1. admin/generate_link  -> a one-time OTP for this email (service_role)
+//   2. auth/v1/verify       -> exchanges it for a genuine session (anon key)
+//
+// Both calls are server-side and back-to-back; the OTP never leaves this Worker
+// and is consumed immediately. What comes back is an ordinary Supabase session,
+// signed by Supabase, with a real refresh token -- so nothing downstream has to
+// trust anything we made up, and RLS, storage policies and auth.uid() behave
+// exactly as they always did.
 
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  /** Private key as a JWK JSON string. The SAME key is imported into Supabase,
-   *  which publishes its public half at /auth/v1/.well-known/jwks.json. */
-  SUPABASE_JWT_PRIVATE_JWK: string;
-  /** Must match the kid Supabase shows for the imported key, or verification
-   *  fails with a key-not-found rather than a signature error. */
-  SUPABASE_JWT_KID: string;
+  SUPABASE_ANON_KEY: string;
   SESSION_SECRET: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
-  MICROSOFT_CLIENT_ID: string;
-  MICROSOFT_CLIENT_SECRET: string;
-  /** Canonical origin. Optional: falls back to the request's own origin, which
-   *  is what makes preview deployments work without reconfiguration. It must be
-   *  set in production, because the redirect_uri has to match what is registered
-   *  with Google and Microsoft exactly, and a preview URL is not registered. */
+  MICROSOFT_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_SECRET?: string;
   APP_ORIGIN?: string;
-}
-
-/** One hour, matching Supabase's own default access-token lifetime. The browser
- *  silently re-fetches from /auth/session well before this. */
-export const ACCESS_TOKEN_TTL = 3600;
-
-let cachedKey: CryptoKey | null = null;
-
-async function signingKey(env: Env): Promise<CryptoKey> {
-  if (cachedKey) return cachedKey;
-  const jwk = JSON.parse(env.SUPABASE_JWT_PRIVATE_JWK) as JsonWebKey;
-  cachedKey = await crypto.subtle.importKey(
-    "jwk",
-    jwk,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"],
-  );
-  return cachedKey;
 }
 
 export interface SessionUser {
@@ -57,38 +35,10 @@ export interface SessionUser {
   avatar_url?: string;
 }
 
-export async function mintAccessToken(env: Env, user: SessionUser): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: "ES256", typ: "JWT", kid: env.SUPABASE_JWT_KID };
-  const payload = {
-    iss: `${env.SUPABASE_URL}/auth/v1`,
-    sub: user.id,
-    aud: "authenticated",
-    role: "authenticated",
-    email: user.email,
-    iat: now,
-    exp: now + ACCESS_TOKEN_TTL,
-    app_metadata: { provider: user.provider, providers: [user.provider] },
-    user_metadata: {
-      email: user.email,
-      ...(user.name ? { full_name: user.name } : {}),
-      ...(user.avatar_url ? { avatar_url: user.avatar_url } : {}),
-    },
-  };
-
-  const enc = new TextEncoder();
-  const signingInput = `${b64url(enc.encode(JSON.stringify(header)))}.${b64url(
-    enc.encode(JSON.stringify(payload)),
-  )}`;
-
-  // WebCrypto's ECDSA output is already the raw r||s pair JWS wants, so no
-  // DER unwrapping step here.
-  const sig = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    await signingKey(env),
-    enc.encode(signingInput),
-  );
-  return `${signingInput}.${b64url(sig)}`;
+export interface SupabaseSession {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
 }
 
 async function admin(env: Env, path: string, init: RequestInit = {}): Promise<Response> {
@@ -110,13 +60,12 @@ async function admin(env: Env, path: string, init: RequestInit = {}): Promise<Re
  * Creation goes through GoTrue's admin API rather than inserting a uuid of our
  * own, because every table in this schema has `references auth.users(id)` and
  * there is an `on_auth_user_created` trigger that seeds the profile row. A
- * locally-minted uuid would produce a token that passes RLS and then fails every
- * insert on a foreign key.
+ * locally-minted uuid would pass RLS and then fail every insert on a foreign key.
  *
- * `public.auth_identities` is a lookup index, not the source of truth — GoTrue's
- * admin list endpoint has no stable exact-match email filter, and scanning pages
- * of users on every sign-in is not a login path. See the migration for how it is
- * seeded from the existing auth.users rows.
+ * `public.auth_identities` is a lookup index, not the source of truth -- GoTrue's
+ * admin list endpoint has no stable exact-match email filter, and paging through
+ * users is not a login path. See the migration for how it is seeded from the
+ * existing auth.users rows, which is what preserves everyone's data.
  */
 export async function resolveUser(
   env: Env,
@@ -138,21 +87,21 @@ export async function resolveUser(
       method: "POST",
       body: JSON.stringify({
         email,
-        // The provider already proved control of this address; a second
-        // confirmation email would be a dead end, since there is no password
-        // flow left to confirm into.
+        // The provider already proved control of this address; a confirmation
+        // email would be a dead end, since there is no password flow to confirm
+        // into any more.
         email_confirm: true,
         user_metadata: { ...profile, email },
         app_metadata: { provider, providers: [provider] },
       }),
     });
     const body = await created.text();
-    if (!created.ok) throw new Error(`user creation failed (${created.status}): ${body.slice(0, 300)}`);
+    if (!created.ok) throw new Error(`user creation failed (${created.status}): ${body.slice(0, 200)}`);
     userId = (JSON.parse(body) as { id: string }).id;
   }
 
-  // Upsert the index entry. Failure here is logged, not fatal: the user already
-  // has a valid id and should get their session. The next sign-in retries.
+  // Index upsert. Failure is not fatal: the user has a valid id and should get
+  // their session; the next sign-in retries.
   await admin(env, "/rest/v1/auth_identities?on_conflict=email", {
     method: "POST",
     headers: { prefer: "resolution=merge-duplicates" },
@@ -165,4 +114,51 @@ export async function resolveUser(
   }).catch(() => {});
 
   return { id: userId, email, provider, ...profile };
+}
+
+const expiresAt = (expiresIn: number | undefined) =>
+  Math.floor(Date.now() / 1000) + (expiresIn ?? 3600);
+
+/** Issues a genuine Supabase session for an email we have already authenticated. */
+export async function createSession(env: Env, email: string): Promise<SupabaseSession> {
+  const linked = await admin(env, "/auth/v1/admin/generate_link", {
+    method: "POST",
+    body: JSON.stringify({ type: "magiclink", email }),
+  });
+  const linkBody = await linked.text();
+  if (!linked.ok) throw new Error(`generate_link failed (${linked.status}): ${linkBody.slice(0, 200)}`);
+
+  const { email_otp } = JSON.parse(linkBody) as { email_otp?: string };
+  if (!email_otp) throw new Error("generate_link returned no email_otp");
+
+  // verify takes the anon key, not service_role: it is the same call the browser
+  // would make, we are simply making it here so the OTP never reaches the client.
+  const verified = await fetch(`${env.SUPABASE_URL}/auth/v1/verify`, {
+    method: "POST",
+    headers: { apikey: env.SUPABASE_ANON_KEY, "content-type": "application/json" },
+    body: JSON.stringify({ type: "magiclink", email, token: email_otp }),
+  });
+  const body = await verified.text();
+  if (!verified.ok) throw new Error(`verify failed (${verified.status}): ${body.slice(0, 200)}`);
+
+  const s = JSON.parse(body) as { access_token?: string; refresh_token?: string; expires_in?: number };
+  if (!s.access_token || !s.refresh_token) throw new Error("verify returned no session");
+  return { access_token: s.access_token, refresh_token: s.refresh_token, expires_at: expiresAt(s.expires_in) };
+}
+
+/**
+ * Trades a refresh token for a fresh session. Supabase rotates refresh tokens on
+ * use, so the caller must store the one that comes back -- keeping the old one
+ * means the next refresh fails and the user is signed out mid-session.
+ */
+export async function refreshSession(env: Env, refreshToken: string): Promise<SupabaseSession | null> {
+  const res = await fetch(`${env.SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: { apikey: env.SUPABASE_ANON_KEY, "content-type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!res.ok) return null;                     // revoked, expired, or already used
+  const s = (await res.json()) as { access_token?: string; refresh_token?: string; expires_in?: number };
+  if (!s.access_token || !s.refresh_token) return null;
+  return { access_token: s.access_token, refresh_token: s.refresh_token, expires_at: expiresAt(s.expires_in) };
 }
