@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import AuthIllustration from "../components/ui/AuthIllustration";
 import Logo from "../components/ui/Logo";
-import { PROVIDER_HINT, PROVIDER_LABEL, type AuthProvider } from "../lib/authClient";
+import { fetchProviders, PROVIDER_HINT, PROVIDER_LABEL, type AuthProvider } from "../lib/authClient";
 
 interface AuthPageProps {
   onSignIn: (provider: AuthProvider) => void;
@@ -76,6 +77,15 @@ function ProviderButton({
 export default function AuthPage({ onSignIn, signingInWith }: AuthPageProps) {
   const busy = signingInWith !== null;
 
+  // Asked, not assumed. Microsoft is listed first when present, because
+  // colorado.edu is a Microsoft tenant and CU is this app's audience -- but it
+  // only appears once the Worker actually holds credentials for it.
+  const [available, setAvailable] = useState<AuthProvider[] | null>(null);
+  useEffect(() => { void fetchProviders().then(setAvailable); }, []);
+
+  const order: AuthProvider[] = ["microsoft", "google"];
+  const providers = available === null ? [] : order.filter(p => available.includes(p));
+
   return (
     <div className="relative flex min-h-screen text-white">
       {/* ── Left: Illustration (desktop only) ── */}
@@ -118,20 +128,23 @@ export default function AuthPage({ onSignIn, signingInWith }: AuthPageProps) {
           </div>
 
           <div className="auth-form-enter space-y-3">
-            {/* Microsoft first: colorado.edu is a Microsoft tenant, so for Coffee's
-                audience — CU freshmen and sophomores — this is the one that works. */}
-            <ProviderButton
-              provider="microsoft"
-              onSignIn={onSignIn}
-              busy={signingInWith === "microsoft"}
-              disabled={busy}
-            />
-            <ProviderButton
-              provider="google"
-              onSignIn={onSignIn}
-              busy={signingInWith === "google"}
-              disabled={busy}
-            />
+            {available === null ? (
+              <div className="h-[62px] animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.03]" />
+            ) : providers.length === 0 ? (
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5 text-[13px] text-white/50">
+                Sign-in is temporarily unavailable. Nothing is wrong with your account.
+              </div>
+            ) : (
+              providers.map(p => (
+                <ProviderButton
+                  key={p}
+                  provider={p}
+                  onSignIn={onSignIn}
+                  busy={signingInWith === p}
+                  disabled={busy}
+                />
+              ))
+            )}
           </div>
 
           <p className="mt-8 text-center text-[11px] leading-relaxed text-white/25">

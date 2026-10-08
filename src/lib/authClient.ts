@@ -127,6 +127,22 @@ export async function getUser(): Promise<CoffeeUser | null> {
   return (await loadSession())?.user ?? null;
 }
 
+/**
+ * Which providers the Worker actually has credentials for. Asking rather than
+ * hardcoding means adding Microsoft later is a secret and a redeploy, with no
+ * change here and no window where a dead button is on screen.
+ */
+export async function fetchProviders(): Promise<AuthProvider[]> {
+  try {
+    const res = await fetch("/auth/providers", { headers: { accept: "application/json" } });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { providers?: AuthProvider[] };
+    return body.providers ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export function signIn(provider: AuthProvider, next = "/"): void {
   const url = new URL("/auth/start", window.location.origin);
   url.searchParams.set("provider", provider);

@@ -86,7 +86,14 @@ async function handle(req: Request, env: Env): Promise<Response> {
 
   switch (url.pathname) {
     case "/auth/providers":
-      return json({ providers: ["google", "microsoft"] });
+      // Only what is actually configured. Rendering a button for a provider
+      // whose credentials are missing gives the user a 500 and no way to tell
+      // that it is our fault rather than theirs -- and providers get added one
+      // at a time, so there is always a window where this matters.
+      return json({
+        providers: (["google", "microsoft"] as ProviderId[])
+          .filter(p => { const c = credentials(env, p); return Boolean(c.id && c.secret); }),
+      });
 
     case "/auth/start":
       return start(req, env, url);
