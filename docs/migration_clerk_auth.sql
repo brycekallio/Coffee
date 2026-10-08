@@ -128,3 +128,29 @@ alter policy "user_ai_settings_select_own" on public.user_ai_settings using (pub
 -- Verify afterwards: every policy should mention app_user_id and none auth.uid.
 --   select tablename, policyname, qual, with_check from pg_policies
 --   where schemaname = 'public' and (qual like '%auth.uid%' or with_check like '%auth.uid%');
+
+-- ---------------------------------------------------------------------------
+-- 3. Storage
+-- ---------------------------------------------------------------------------
+-- Missed on the first pass. Resume files are foldered by the owner's UUID, and
+-- auth.uid() is null for a Clerk token, so every upload failed its WITH CHECK
+-- while the tables worked fine -- which is why it surfaced as "resume won't
+-- save" rather than as a broken sign-in.
+
+alter policy "resumes_select_own" on storage.objects
+  using ((bucket_id = 'resumes') and ((storage.foldername(name))[1] = (public.app_user_id())::text));
+
+alter policy "resumes_insert_own" on storage.objects
+  with check ((bucket_id = 'resumes') and ((storage.foldername(name))[1] = (public.app_user_id())::text));
+
+alter policy "resumes_update_own" on storage.objects
+  using ((bucket_id = 'resumes') and ((storage.foldername(name))[1] = (public.app_user_id())::text))
+  with check ((bucket_id = 'resumes') and ((storage.foldername(name))[1] = (public.app_user_id())::text));
+
+alter policy "resumes_delete_own" on storage.objects
+  using ((bucket_id = 'resumes') and ((storage.foldername(name))[1] = (public.app_user_id())::text));
+
+-- Verify across both schemas, not just public:
+--   select count(*) from pg_policies
+--   where schemaname in ('public','storage')
+--     and (qual like '%auth.uid%' or with_check like '%auth.uid%');
