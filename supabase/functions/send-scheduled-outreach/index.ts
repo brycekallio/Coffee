@@ -156,7 +156,15 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!send.ok) { await fail(`Gmail refused the message (${send.status})`); continue; }
+    if (!send.ok) {
+      // Google states the reason plainly -- a disabled API, a missing scope, a
+      // revoked grant. Recording only the status turned a one-line diagnosis
+      // into guesswork once already.
+      const detail = (await send.text()).slice(0, 200);
+      console.error("Gmail refused the message", send.status, detail);
+      await fail(`Gmail refused the message (${send.status}): ${detail}`);
+      continue;
+    }
 
     await db.from("scheduled_outreach")
       .update({ status: "sent", sent_at: new Date().toISOString() })
