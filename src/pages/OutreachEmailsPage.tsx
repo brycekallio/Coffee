@@ -63,17 +63,28 @@ const TEMPLATES: {
   },
 ];
 
-const AUTO_SEND_CHANNELS = [
-  { value: "email", label: "Email", description: "Auto-sends via Mail.app" },
-  { value: "sms", label: "iMessage", description: "Auto-sends via Messages" },
+/**
+ * Only email can be scheduled, and the distinction is not a product choice --
+ * iMessage has no API. Messages' automation dictionary exposes exactly one verb,
+ * `send`, with no scheduling of any kind, so nothing can queue an iMessage for
+ * later on your behalf. Apple's own Send Later is UI-only.
+ *
+ * So email schedules server-side and goes out whether or not your Mac is awake;
+ * iMessage hands you the text and lets Apple hold the queue if you want it held.
+ */
+const CHANNELS = [
+  { value: "email", label: "Email", description: "Schedules and sends on its own" },
+  { value: "sms", label: "iMessage", description: "Copy and send from Messages" },
 ] as const;
+
+const SCHEDULABLE = new Set(["email"]);
 
 // LinkedIn was removed: it has no messaging API, so it could never be more than
 // "copy to clipboard and open a tab", and unlike email and iMessage it cannot be
 // scheduled or sent unattended. A channel that silently means "do it yourself"
 // does not belong beside channels that actually send.
 
-const isAutoSendChannel = (ch: string) => AUTO_SEND_CHANNELS.some(c => c.value === ch);
+const isAutoSendChannel = (ch: string) => SCHEDULABLE.has(ch);
 
 /* ── Deep link helpers ────────────────────────────────── */
 
@@ -87,6 +98,10 @@ function openOutreach(
     const mailto = `mailto:${contact?.email ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
     window.open(mailto, "_self");
   } else if (channel === "sms") {
+    // Clipboard as well as the deep link: the sms: scheme drops long bodies and
+    // newlines on some clients, and a half-pasted message is worse than none.
+    void navigator.clipboard.writeText(message).catch(() => {});
+    toast.success("Message copied. In Messages you can hold Send to schedule it.");
     const sms = `sms:${contact?.phone ?? ""}&body=${encodeURIComponent(message)}`;
     window.open(sms, "_self");
   }
@@ -570,7 +585,7 @@ export default function OutreachEmailsPage({
             <div>
               <div className="mb-1 text-xs font-medium text-white/35">Auto-Send Channels</div>
               <div className="flex gap-2">
-                {AUTO_SEND_CHANNELS.map((ch) => {
+                {CHANNELS.map((ch) => {
                   const disabledReason = channelDisabledReason(ch.value);
                   const isDisabled = !!disabledReason;
                   return (
@@ -664,6 +679,15 @@ export default function OutreachEmailsPage({
             )}
 
 
+            {channel === "sms" && (
+              <div className="rounded-input bg-glow/[0.04] px-3 py-2 text-xs leading-relaxed text-white/45">
+                iMessage can't be sent for you — Apple provides no way for an app to
+                queue one. Coffee copies the message and opens the chat; in Messages,
+                hold the send arrow to use Send Later and Apple delivers it, even with
+                your Mac closed.
+              </div>
+            )}
+
             {/* Disclosure callout — auto-send channels only */}
             {isAutoSendChannel(channel) && (
               <div className="rounded-input bg-depth-1/60 px-3 py-2.5">
@@ -684,7 +708,7 @@ export default function OutreachEmailsPage({
                 </button>
                 {!infoCollapsed && (
                   <p className="mt-2 text-xs leading-relaxed text-white/50">
-                    Coffee sends your messages directly from your own Apple Mail and Messages app — not through Coffee's servers. Your email password and Apple ID are never stored or seen by Coffee. You control what sends and when — scheduled messages only go out if Coffee is running.
+                    Scheduled email sends from your own Gmail account, so it lands in your Sent folder and goes out whether or not your computer is on. Coffee never sees your password — you grant access through Google and can revoke it at any time.
                   </p>
                 )}
               </div>
