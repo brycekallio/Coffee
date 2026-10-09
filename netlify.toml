@@ -2,6 +2,25 @@
   command = "npm run build"
   publish = "dist"
 
+  # Skip the build entirely when a commit changes nothing the web bundle is made
+  # from. Edge Functions deploy through Supabase and docs ship nowhere, so a
+  # commit touching only those used to rebuild and republish a byte-identical
+  # bundle -- 9 of 26 builds over Oct 7-8. `git diff --quiet` exits 0 when there
+  # is no difference, which is Netlify's signal to skip. On the first deploy of a
+  # branch CACHED_COMMIT_REF is unset, git errors, and the build runs: fail open.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)supabase' ':(exclude)docs' ':(exclude)*.md'"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+  # electron and puppeteer have postinstall scripts that download a ~276MB
+  # Electron binary and ~512MB of Chromium. Both exist for the desktop build and
+  # scripts/worker.ts; neither is reachable from the web bundle. Netlify installs
+  # devDependencies, so without these flags every cold install pulls ~790MB that
+  # is then thrown away.
+  ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
+  PUPPETEER_SKIP_DOWNLOAD = "1"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
