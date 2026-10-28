@@ -1,6 +1,8 @@
-import Card from "../components/ui/Card";
-import type { Application, Contact, ScheduledOutreach } from "../types";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Card from "@/components/ui/Card";
+import type { Contact, ScheduledOutreach } from "@/types";
+import { useApplications } from "@/features/applications/useApplications";
+import { listScheduledOutreach } from "@/features/outreach/api";
 import {
   BarChart,
   Bar,
@@ -16,16 +18,20 @@ import {
 } from "recharts";
 
 interface AnalyticsPageProps {
-  applications: Application[];
   contacts: Contact[];
-  scheduledOutreach: ScheduledOutreach[];
 }
 
-export default function AnalyticsPage({
-  applications,
-  contacts,
-  scheduledOutreach,
-}: AnalyticsPageProps) {
+export default function AnalyticsPage({ contacts }: AnalyticsPageProps) {
+  const { applications } = useApplications();
+  const [scheduledOutreach, setScheduledOutreach] = useState<ScheduledOutreach[]>([]);
+
+  useEffect(() => {
+    // Charts degrade to empty rather than erroring, so a failed load is only logged.
+    listScheduledOutreach().then(setScheduledOutreach, (e) =>
+      console.error("Failed to load scheduled outreach:", e),
+    );
+  }, []);
+
   // Data: Applications by status
   const appsByStatus = useMemo(() => {
     const counts: Record<string, number> = {};
