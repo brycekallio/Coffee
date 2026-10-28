@@ -15,7 +15,7 @@ interface ContactDetailsPageProps {
 }
 
 export default function ContactDetailsPage({ contactId, onBack }: ContactDetailsPageProps) {
-  const { contacts, editContact: openEdit, deleteContact } = useContacts();
+  const { contacts, loading: loadingContacts, editContact: openEdit, deleteContact } = useContacts();
   const selectedContact = contacts.find((c) => c.id === contactId) ?? null;
   const {
     meetings,
@@ -107,7 +107,12 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
-      {!selectedContact ? (
+      {!selectedContact && loadingContacts ? (
+        // Opened straight from a URL: the list is still loading, so "not found" would be a lie.
+        <div className="flex justify-center py-24" role="status" aria-label="Loading">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-glow/20 border-t-glow/70" />
+        </div>
+      ) : !selectedContact ? (
         <Card
           title="Connection not found"
           subtitle="This can happen if the person was deleted or hasn't loaded yet."

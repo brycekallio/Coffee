@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { initialsFromName } from "@/lib/utils";
 import type { Page } from "@/types";
 import { useSession } from "./session";
+import { useRoute } from "./useRoute";
 
 // Contacts is the landing page, so it stays in the entry chunk. Everything else loads
 // on first visit — Analytics alone pulls in Recharts.
@@ -37,8 +38,10 @@ export default function AppShell() {
   const clerk = useClerk();
   const { profile, needsOnboarding } = useProfile();
 
-  const [page, setPage] = useState<Page>("contacts");
-  const [selectedContactId, setSelectedContactId] = useState("");
+  const { route, navigate } = useRoute();
+  const page = route.page;
+  const selectedContactId = route.contactId ?? "";
+  const setPage = (next: Page) => navigate({ page: next });
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -49,7 +52,8 @@ export default function AppShell() {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   if (profile && !onboardingChecked) {
     setOnboardingChecked(true);
-    if (needsOnboarding) setPage("onboarding");
+    // replace, not push: Back from onboarding shouldn't land on a page the user never chose.
+    if (needsOnboarding) navigate({ page: "onboarding" }, { replace: true });
   }
 
   useEffect(() => {
@@ -70,8 +74,7 @@ export default function AppShell() {
   }
 
   function openDetails(contactId: string) {
-    setSelectedContactId(contactId);
-    setPage("contact_details");
+    navigate({ page: "contact_details", contactId });
   }
 
   function handleFollowUp() {
@@ -100,7 +103,7 @@ export default function AppShell() {
           {/* Left: Logo + Nav Links */}
           <div className="flex items-center gap-1 md:gap-1.5">
             <button
-              onClick={() => { setPage("contacts"); setSelectedContactId(""); }}
+              onClick={() => { setPage("contacts"); }}
               className="mr-3 md:mr-5 cursor-pointer transition-opacity hover:opacity-80"
             >
               <Logo size="sm" />
@@ -127,7 +130,7 @@ export default function AppShell() {
                     <div className="absolute left-0 z-50 mt-2 w-52 overflow-hidden rounded-xl bg-depth-1/95 backdrop-blur-xl border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
                       <div className="p-1.5">
                         <button
-                          onClick={() => { setPage("contacts"); setSelectedContactId(""); setNetworkDropdownOpen(false); }}
+                          onClick={() => { setPage("contacts"); setNetworkDropdownOpen(false); }}
                           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${page === "contacts" || page === "contact_details" ? "bg-glow/[0.08] text-glow font-medium" : "text-white/60 hover:bg-white/[0.04] hover:text-white"}`}
                         >
                           <svg className={`h-4 w-4 ${page === "contacts" || page === "contact_details" ? "text-glow/70" : "text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -136,7 +139,7 @@ export default function AppShell() {
                           Contacts
                         </button>
                         <button
-                          onClick={() => { setPage("network_watchlist"); setSelectedContactId(""); setNetworkDropdownOpen(false); }}
+                          onClick={() => { setPage("network_watchlist"); setNetworkDropdownOpen(false); }}
                           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${page === "network_watchlist" ? "bg-glow/[0.08] text-glow font-medium" : "text-white/60 hover:bg-white/[0.04] hover:text-white"}`}
                         >
                           <svg className={`h-4 w-4 ${page === "network_watchlist" ? "text-glow/70" : "text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -152,7 +155,7 @@ export default function AppShell() {
               </div>
 
               <button
-                onClick={() => { setPage("outreach_emails"); setSelectedContactId(""); }}
+                onClick={() => { setPage("outreach_emails"); }}
                 className={`${navLinkCls(page === "outreach_emails")} relative`}
               >
                 Outreach
@@ -164,21 +167,21 @@ export default function AppShell() {
               </button>
 
               <button
-                onClick={() => { setPage("applications"); setSelectedContactId(""); }}
+                onClick={() => { setPage("applications"); }}
                 className={navLinkCls(page === "applications")}
               >
                 Applications
               </button>
 
               <button
-                onClick={() => { setPage("jd_scorer"); setSelectedContactId(""); }}
+                onClick={() => { setPage("jd_scorer"); }}
                 className={navLinkCls(page === "jd_scorer")}
               >
                 JD Comparison
               </button>
 
               <button
-                onClick={() => { setPage("analytics"); setSelectedContactId(""); }}
+                onClick={() => { setPage("analytics"); }}
                 className={navLinkCls(page === "analytics")}
               >
                 Analytics
@@ -190,7 +193,7 @@ export default function AppShell() {
           <div className="flex items-center gap-2">
             {/* Settings icon (desktop) */}
             <button
-              onClick={() => { setPage("settings"); setSelectedContactId(""); }}
+              onClick={() => { setPage("settings"); }}
               className={`hidden md:flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-200 cursor-pointer ${page === "settings" ? "bg-glow/[0.08] text-glow" : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"}`}
               title="Settings"
             >
@@ -231,7 +234,7 @@ export default function AppShell() {
                     </div>
                     <div className="p-1.5">
                       <button
-                        onClick={() => { setPage("settings"); setSelectedContactId(""); setProfileMenuOpen(false); }}
+                        onClick={() => { setPage("settings"); setProfileMenuOpen(false); }}
                         className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white cursor-pointer"
                       >
                         <svg className="h-4 w-4 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -275,45 +278,45 @@ export default function AppShell() {
           className={`overflow-hidden transition-all duration-300 ease-out md:hidden ${mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
         >
           <div className="border-t border-white/[0.04] px-4 pb-4 pt-2 space-y-0.5">
-            <button onClick={() => { setPage("contacts"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "contacts" || page === "contact_details")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("contacts"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "contacts" || page === "contact_details")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Network
               </span>
             </button>
-            <button onClick={() => { setPage("network_watchlist"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "network_watchlist")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("network_watchlist"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "network_watchlist")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 Watchlist
               </span>
             </button>
-            <button onClick={() => { setPage("outreach_emails"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "outreach_emails")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("outreach_emails"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "outreach_emails")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 Outreach
                 {dueOutreachCount > 0 && <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-glow px-1.5 text-[10px] font-bold text-depth-0">{dueOutreachCount}</span>}
               </span>
             </button>
-            <button onClick={() => { setPage("applications"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "applications")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("applications"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "applications")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 Applications
               </span>
             </button>
-            <button onClick={() => { setPage("jd_scorer"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "jd_scorer")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("jd_scorer"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "jd_scorer")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                 JD Comparison
               </span>
             </button>
-            <button onClick={() => { setPage("analytics"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "analytics")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("analytics"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "analytics")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 Analytics
               </span>
             </button>
             <div className="my-2 h-px bg-white/[0.04]" />
-            <button onClick={() => { setPage("settings"); setSelectedContactId(""); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "settings")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("settings"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "settings")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Settings
@@ -339,10 +342,7 @@ export default function AppShell() {
         {page === "contact_details" ? (
           <ContactDetailsPage
             contactId={selectedContactId}
-            onBack={() => {
-              setPage("contacts");
-              setSelectedContactId("");
-            }}
+            onBack={() => setPage("contacts")}
           />
         ) : null}
 
