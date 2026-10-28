@@ -15,8 +15,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  Legend,
 } from "recharts";
+
+/** The one data hue (brand cyan). Every chart uses it; status lives in the axis labels. */
+const CHART_HUE = "#00E5FF";
 
 export default function AnalyticsPage() {
   const { contacts } = useContacts();
@@ -86,30 +88,24 @@ export default function AnalyticsPage() {
   }, [applications]);
 
   // Colors for status bar chart
-  const STATUS_COLORS: Record<string, string> = {
-    Applied: "#00E5FF",
-    Interviewing: "#00FFC6",
-    Accepted: "#00A8A8",
-    Rejected: "#FF6B6B",
-  };
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8">
+    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6">
       {/* Applications by Status */}
-      <Card title="Applications by Status" subtitle={`${applications.length} total applications`}>
-        <div className="mt-4 h-80">
+      <Card title="Applications by status" subtitle={`${applications.length} total`}>
+        <div className="mt-2 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={appsByStatus}
-              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
               <XAxis
                 dataKey="status"
-                stroke="rgba(255,255,255,0.3)"
+                stroke="rgba(255,255,255,0.6)" tickLine={false}
                 style={{ fontSize: "12px" }}
               />
-              <YAxis stroke="rgba(255,255,255,0.3)" style={{ fontSize: "12px" }} />
+              <YAxis stroke="rgba(255,255,255,0.6)" tickLine={false} axisLine={false} allowDecimals={false} style={{ fontSize: "12px" }} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "rgba(11, 31, 42, 0.95)",
@@ -119,12 +115,9 @@ export default function AnalyticsPage() {
                 }}
                 formatter={(value) => `${value} apps`}
               />
-              <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                {appsByStatus.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={STATUS_COLORS[entry.status] || "#00E5FF"}
-                  />
+              <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={96}>
+                {appsByStatus.map((entry) => (
+                  <Cell key={entry.status} fill={CHART_HUE} />
                 ))}
               </Bar>
             </BarChart>
@@ -135,23 +128,23 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Contacts Added Over Time */}
         <Card
-          title="Contacts Added Over Time"
-          subtitle={`${contacts.length} total contacts`}
+          title="People added"
+          subtitle={`${contacts.length} in your network`}
         >
-          <div className="mt-4 h-64">
+          <div className="mt-2 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={contactsOverTime}
                 margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  stroke="rgba(255,255,255,0.3)"
+                  stroke="rgba(255,255,255,0.6)" tickLine={false}
                   style={{ fontSize: "11px" }}
                   tick={{ fontSize: 11 }}
                 />
-                <YAxis stroke="rgba(255,255,255,0.3)" style={{ fontSize: "12px" }} />
+                <YAxis stroke="rgba(255,255,255,0.6)" tickLine={false} axisLine={false} allowDecimals={false} style={{ fontSize: "12px" }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "rgba(11, 31, 42, 0.95)",
@@ -160,11 +153,10 @@ export default function AnalyticsPage() {
                     color: "white",
                   }}
                 />
-                <Legend />
                 <Line
-                  type="monotone"
+                  type="linear"
                   dataKey="cumulative"
-                  stroke="#00E5FF"
+                  stroke={CHART_HUE}
                   dot={false}
                   strokeWidth={2}
                   name="Total"
@@ -176,7 +168,7 @@ export default function AnalyticsPage() {
 
         {/* Outreach by Channel */}
         <Card
-          title="Outreach by Channel"
+          title="Outreach by channel"
           subtitle={`${scheduledOutreach.length} total outreach`}
         >
           <div className="mt-4 space-y-3">
@@ -185,7 +177,7 @@ export default function AnalyticsPage() {
                 <div key={item.channel} className="flex items-center gap-3">
                   <div className="flex-1">
                     <div className="text-sm font-medium text-white capitalize">
-                      {item.channel}
+                      {item.channel === "sms" ? "SMS" : item.channel}
                     </div>
                     <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/[0.06]">
                       <div
@@ -214,7 +206,7 @@ export default function AnalyticsPage() {
 
       {/* Top Companies Applied To */}
       <Card
-        title="Top Companies Applied To"
+        title="Companies applied to"
         subtitle={`Tracking ${topCompanies.length} top targets`}
       >
         <div className="mt-4 space-y-2">

@@ -69,7 +69,7 @@ export default function EditContactModal({ contact, onClose, onSaved }: Props) {
           </button>
           <button
             onClick={save}
-            className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
+            className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow cursor-pointer"
           >
             Save changes
           </button>

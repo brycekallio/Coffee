@@ -126,20 +126,7 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
-
-      {/* ── Header ── */}
-      <div className="mb-7">
-        <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-bold text-white">Job Description Comparison</h1>
-          <span className="rounded-full bg-glow/[0.10] px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-glow">
-            AI
-          </span>
-        </div>
-        <p className="text-sm text-white/40">
-          Paste any job description and get an instant AI-powered fit score against your resume.
-        </p>
-      </div>
+    <div className="mx-auto max-w-7xl px-4 pb-10 md:px-6 [&>*]:max-w-3xl">
 
       {/* ── Resume status card ── */}
       {hasResume ? (
@@ -175,7 +162,7 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
               </p>
               <button
                 onClick={onGoToSettings}
-                className="mt-3 rounded-lg bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/70 transition-all hover:bg-white/[0.10] hover:text-white cursor-pointer"
+                className="mt-3 rounded-lg bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.10] hover:text-white cursor-pointer"
               >
                 Go to Settings →
               </button>
@@ -186,7 +173,7 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
 
       {/* ── JD input ── */}
       <div className="mb-4">
-        <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/30">
+        <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-white/30">
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
@@ -205,7 +192,7 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
       <button
         onClick={scoreJd}
         disabled={loading || !jdText.trim() || !hasResume}
-        className="w-full rounded-xl bg-glow py-3 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(0,229,255,0.3)] hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+        className="w-full rounded-xl bg-glow py-3 text-sm font-semibold text-depth-0 transition duration-300 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -246,7 +233,7 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
 
           {/* Section breakdown */}
           <div className="rounded-xl border border-white/[0.06] bg-depth-1/80 p-5">
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-white/30">
+            <h3 className="mb-4 text-xs font-semibold text-white/30">
               Score Breakdown
             </h3>
             <div className="space-y-5">
@@ -260,7 +247,7 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
                   </div>
                   <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
                     <div
-                      className={`h-full rounded-full transition-all duration-1000 ${scoreBarColor(sec.score)}`}
+                      className={`h-full rounded-full transition duration-1000 ${scoreBarColor(sec.score)}`}
                       style={{ width: `${sec.score}%` }}
                     />
                   </div>
@@ -273,20 +260,20 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
           {/* Strengths & Gaps */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-white/[0.06] bg-depth-1/80 p-5">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-emerald-400/60">
+              <h3 className="mb-3 text-xs font-semibold text-emerald-400/60">
                 Strengths
               </h3>
               <ul className="space-y-2.5">
                 {result.strengths.map((s, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-white/50">
-                    <span className="mt-0.5 flex-shrink-0 text-emerald-400/80">✓</span>
+                    <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" />
                     <span>{s}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div className="rounded-xl border border-white/[0.06] bg-depth-1/80 p-5">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-red-400/60">
+              <h3 className="mb-3 text-xs font-semibold text-red-400/60">
                 Gaps to Address
               </h3>
               <ul className="space-y-2.5">

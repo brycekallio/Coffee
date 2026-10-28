@@ -107,14 +107,14 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
       <div className="lg:col-span-1">
         <Card title={editingAppId ? "Edit Application" : "Track Application"} subtitle="Keep tabs on where you've applied.">
           <div className="grid gap-3">
             <div>
               <div className="mb-1 text-xs font-medium text-white/35">Company Name</div>
-              <input className={inputCls} placeholder="e.g. Acme Corp" value={appCompany} onChange={(e) => setAppCompany(e.target.value)} />
+              <input className={inputCls} placeholder="e.g. FTI Consulting" value={appCompany} onChange={(e) => setAppCompany(e.target.value)} />
             </div>
 
             <div>
@@ -165,7 +165,7 @@ export default function ApplicationsPage() {
               <button
                 onClick={saveApplication}
                 disabled={savingApp}
-                className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all duration-300 hover:bg-glow active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition duration-300 hover:bg-glow active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 {savingApp ? "Saving..." : editingAppId ? "Update" : "Add Application"}
               </button>
@@ -192,7 +192,7 @@ export default function ApplicationsPage() {
               <div className="flex rounded-button bg-white/[0.04] p-1">
                 <button
                   onClick={() => setViewMode("table")}
-                  className={`px-2.5 py-1.5 text-xs font-medium rounded-badge transition-all ${
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-badge transition ${
                     viewMode === "table"
                       ? "bg-glow/20 text-glow"
                       : "text-white/60 hover:text-white"
@@ -202,7 +202,7 @@ export default function ApplicationsPage() {
                 </button>
                 <button
                   onClick={() => setViewMode("kanban")}
-                  className={`px-2.5 py-1.5 text-xs font-medium rounded-badge transition-all ${
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-badge transition ${
                     viewMode === "kanban"
                       ? "bg-glow/20 text-glow"
                       : "text-white/60 hover:text-white"
@@ -222,7 +222,7 @@ export default function ApplicationsPage() {
         >
           {viewMode === "table" ? (
             <div className="mt-2 rounded-section bg-depth-0/40">
-              <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-white/30 font-medium">
+              <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/30 font-medium">
                 <div>Company</div>
                 <div>Link</div>
                 <div>Date</div>
@@ -305,7 +305,7 @@ export default function ApplicationsPage() {
                           .map((app) => (
                             <div
                               key={app.id}
-                              className="rounded-input bg-depth-1/40 border border-white/[0.04] p-3 transition-all hover:border-glow/20"
+                              className="rounded-input bg-depth-1/40 border border-white/[0.04] p-3 transition hover:border-glow/20"
                             >
                               <div className="text-sm font-medium text-white truncate mb-2">
                                 {app.company}

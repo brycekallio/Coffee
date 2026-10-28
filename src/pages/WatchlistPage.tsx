@@ -176,7 +176,7 @@ export default function WatchlistPage() {
 
   /* ── render ────────────────────────────────────────────── */
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
       <div className="lg:col-span-1">
         <Card
@@ -198,7 +198,7 @@ export default function WatchlistPage() {
               <div className="mb-1 text-xs font-medium text-white/35">Company</div>
               <input
                 className={inputCls}
-                placeholder="e.g. Acme Corp"
+                placeholder="e.g. Evercore"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
               />
@@ -254,7 +254,7 @@ export default function WatchlistPage() {
               <button
                 onClick={editingId ? updateTarget : addTarget}
                 disabled={saving}
-                className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all duration-300 hover:bg-glow active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition duration-300 hover:bg-glow active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 {saving ? "Saving..." : editingId ? "Update" : "Add Target"}
               </button>
@@ -286,7 +286,7 @@ export default function WatchlistPage() {
           }
         >
           <div className="mt-2 rounded-section bg-depth-0/40">
-            <div className="grid grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-white/30 font-medium">
+            <div className="grid grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/30 font-medium">
               <div>Name</div>
               <div>Company</div>
               <div>Role</div>
