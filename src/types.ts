@@ -1,52 +1,34 @@
-export type Contact = {
-  id: string;
-  owner_id: string;
-  first_name: string | null;
-  last_name: string | null;
-  company: string | null;
-  title: string | null; // shown as "Job Title"
-  email: string | null;
-  phone: string | null;
-  linkedin_url: string | null;
-  status: string; // kept for DB compatibility; no longer shown in UI
-  created_at: string;
-};
+// Domain types derive from the generated table types, so they cannot drift from the live
+// schema. Where a page fetches only some columns, the type is a Pick of exactly those
+// columns — keep it in step with the .select() that loads it.
+import type { Tables } from "./lib/database.types";
 
-export type ContactMeeting = {
-  id: string;
-  owner_id: string;
-  contact_id: string;
-  meeting_date: string; // YYYY-MM-DD
-  title: string | null;
-  notes: string | null;
-  created_at: string;
-};
+/** Loaded in App.loadContacts. `status` is kept for DB compatibility; not shown in UI. */
+export type Contact = Pick<
+  Tables<"contacts">,
+  "id" | "owner_id" | "first_name" | "last_name" | "company" | "title" | "email" | "phone" | "linkedin_url" | "status" | "created_at"
+>;
 
-export type Profile = {
-  onboarding_completed_at?: string | null;
-  id: string;
-  full_name: string | null;
-  my_linkedin_url: string | null;
-  resume_url: string | null;
-  avatar_url: string | null;
-  resume_text: string | null;
-  phone: string | null;
-  career_interests: string | null;
-  google_calendar_token: string | null;
-  google_calendar_refresh_token: string | null;
-  google_calendar_token_expiry: string | null;
-};
+export type ContactMeeting = Tables<"contact_meetings">;
 
-export type Application = {
-  id: string;
-  owner_id: string;
-  company: string;
-  link: string | null;
-  date_applied: string | null; // YYYY-MM-DD
-  status: string;
-  contact_id: string | null;
-  created_at: string;
-};
+/** Loaded in App.loadProfile. */
+export type Profile = Pick<
+  Tables<"profiles">,
+  | "id"
+  | "full_name"
+  | "my_linkedin_url"
+  | "resume_url"
+  | "avatar_url"
+  | "resume_text"
+  | "phone"
+  | "career_interests"
+  | "onboarding_completed_at"
+  | "google_calendar_token"
+  | "google_calendar_refresh_token"
+  | "google_calendar_token_expiry"
+>;
+
+export type Application = Tables<"applications">;
 
 export type Page =
   | "contacts"
@@ -59,31 +41,11 @@ export type Page =
   | "outreach_emails"
   | "jd_scorer";
 
-export type WatchlistTarget = {
-  id: string;
-  owner_id: string;
-  person_name: string;
-  company: string;
-  role: string | null;
-  status: string; // "not_contacted" | "contacted" | "scheduled" | "completed" | "follow_up_sent"
-  next_action_date: string | null; // YYYY-MM-DD
-  notes: string | null;
-  created_at: string;
-};
+/** status: "not_contacted" | "contacted" | "scheduled" | "completed" | "follow_up_sent" */
+export type WatchlistTarget = Tables<"watchlist_targets">;
 
-export type ScheduledOutreach = {
-  id: string;
-  owner_id: string;
-  contact_id: string | null;
-  channel: string; // "sms" | "linkedin" | "email"
-  subject: string | null;
-  message: string;
-  scheduled_at: string; // ISO 8601 timestamptz
-  status: string; // "scheduled" | "sent" | "skipped" | "opened"
-  tracking_token: string | null;
-  opened_at: string | null;
-  created_at: string;
-};
+/** channel: "email" | "sms". status: "scheduled" | "sending" | "sent" | "failed" | "skipped" | "opened" */
+export type ScheduledOutreach = Tables<"scheduled_outreach">;
 
 export type FieldMap = {
   full_name?: string;

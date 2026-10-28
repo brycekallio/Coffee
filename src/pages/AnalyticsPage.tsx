@@ -50,6 +50,7 @@ export default function AnalyticsPage({
   const contactsOverTime = useMemo(() => {
     const byDate: Record<string, number> = {};
     contacts.forEach((c) => {
+      if (!c.created_at) return; // nullable in the schema
       const date = c.created_at.split("T")[0]; // YYYY-MM-DD
       byDate[date] = (byDate[date] || 0) + 1;
     });

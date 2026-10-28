@@ -67,7 +67,7 @@ export default function WatchlistPage({ inputCls, selectCls }: WatchlistPageProp
       if (error) {
         toast.error("Failed to load watchlist: " + error.message);
       } else {
-        setTargets(data as WatchlistTarget[]);
+        setTargets(data);
       }
       setLoading(false);
     },

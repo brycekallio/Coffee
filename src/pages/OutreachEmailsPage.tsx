@@ -227,9 +227,9 @@ export default function OutreachEmailsPage({
       }
       setItems([]);
     } else {
-      setItems(data as ScheduledOutreach[]);
+      setItems(data);
 
-      const dueCount = (data as ScheduledOutreach[]).filter(
+      const dueCount = data.filter(
         (i) => i.status === "scheduled" && new Date(i.scheduled_at) <= new Date(),
       ).length;
       if (dueCount > 0) {
@@ -412,7 +412,7 @@ export default function OutreachEmailsPage({
       .from("watchlist_targets")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) setWatchlistTargets(data as WatchlistTarget[]);
+    if (data) setWatchlistTargets(data);
   }, []);
 
   /* ── load on mount ──────────────────────────────────── */
