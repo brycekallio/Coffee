@@ -1,13 +1,14 @@
 import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
 import type { Contact, ContactMeeting } from "../types";
+import { useContacts } from "@/features/contacts/contactsContext";
 import { ensureUrl } from "../lib/utils";
 import { supabase } from "../lib/supabase";
 import { useState } from "react";
 import { toast } from "sonner";
 
 interface ContactDetailsPageProps {
-  selectedContact: Contact | null;
+  contactId: string;
   meetings: ContactMeeting[];
   loadingMeetings: boolean;
   meetingEdits: Record<string, { meeting_date: string; title: string; notes: string }>;
@@ -23,12 +24,10 @@ interface ContactDetailsPageProps {
   deleteMeeting: (meetingId: string) => void;
   setMeetingField: (meetingId: string, key: "meeting_date" | "title" | "notes", value: string) => void;
   loadMeetings: (contactId: string) => void;
-  openEdit: (c: Contact) => void;
-  deleteContact: (contactId: string) => void;
-  setPage: (page: "contacts") => void;
-  setSelectedContactId: (id: string) => void;
+  /** Back to the contact list; also called after the contact is deleted. */
+  onBack: () => void;
   importMeetingFromTranscript: (
-    contactId: string,
+    contact: Contact,
     transcript: string,
     meetingDate: string,
     label: string,
@@ -38,7 +37,7 @@ interface ContactDetailsPageProps {
 }
 
 export default function ContactDetailsPage({
-  selectedContact,
+  contactId,
   meetings,
   loadingMeetings,
   meetingEdits,
@@ -54,14 +53,13 @@ export default function ContactDetailsPage({
   deleteMeeting,
   setMeetingField,
   loadMeetings,
-  openEdit,
-  deleteContact,
-  setPage,
-  setSelectedContactId,
+  onBack,
   importMeetingFromTranscript,
   inputCls,
   formatDateLabel,
 }: ContactDetailsPageProps) {
+  const { contacts, editContact: openEdit, deleteContact } = useContacts();
+  const selectedContact = contacts.find((c) => c.id === contactId) ?? null;
   const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   // ── Transcript import modal ──────────────────────────────
@@ -79,7 +77,7 @@ export default function ContactDetailsPage({
     setImporting(true);
     try {
       await importMeetingFromTranscript(
-        selectedContact.id,
+        selectedContact,
         importTranscript,
         importDate,
         importLabel,
@@ -140,10 +138,7 @@ export default function ContactDetailsPage({
           subtitle="This can happen if the person was deleted or hasn't loaded yet."
           right={
             <button
-              onClick={() => {
-                setPage("contacts");
-                setSelectedContactId("");
-              }}
+              onClick={onBack}
               className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
             >
               Back
@@ -162,7 +157,7 @@ export default function ContactDetailsPage({
               title="Connection"
               right={
                 <button
-                  onClick={() => setPage("contacts")}
+                  onClick={onBack}
                   className="flex items-center gap-1.5 rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -218,7 +213,9 @@ export default function ContactDetailsPage({
                     Edit Contact
                   </button>
                   <button
-                    onClick={() => deleteContact(selectedContact.id)}
+                    onClick={async () => {
+                      if (await deleteContact(selectedContact.id)) onBack();
+                    }}
                     className="w-full rounded-button bg-danger/[0.06] px-4 py-2.5 text-sm font-medium text-danger/70 transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                   >
                     Delete

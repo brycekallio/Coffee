@@ -4,14 +4,10 @@ import Card from "@/components/ui/Card";
 import { inputCls, selectCls } from "@/components/ui/styles";
 import { useSession } from "@/app/session";
 import { errorMessage, todayISODate } from "@/lib/utils";
-import type { Application, Contact } from "@/types";
+import type { Application } from "@/types";
+import { useContacts } from "@/features/contacts/contactsContext";
 import * as api from "./api";
 import { useApplications } from "./useApplications";
-
-interface ApplicationsPageProps {
-  /** For the "Linked contact" dropdown. */
-  contacts: Contact[];
-}
 
 const STATUS_STYLE: Record<string, string> = {
   Applied: "bg-white/[0.04] text-white/50",
@@ -20,7 +16,8 @@ const STATUS_STYLE: Record<string, string> = {
   Rejected: "bg-danger/[0.08] text-danger/70",
 };
 
-export default function ApplicationsPage({ contacts }: ApplicationsPageProps) {
+export default function ApplicationsPage() {
+  const { contacts } = useContacts();
   const user = useSession();
   const { applications, loading: loadingApps, reload: loadApplications } = useApplications();
 
