@@ -189,7 +189,12 @@ export function inferByHeader(headers: string[], candidates: string[]) {
   const normalized = headers.map((h) => ({ raw: h, n: normHeader(h) }));
   for (const cand of candidates) {
     const c = normHeader(cand);
-    const found = normalized.find((h) => h.n === c || h.n.includes(c) || c.includes(h.n));
+    // The reverse test (candidate contains header) lets "mail" find "email", but a one-
+    // or two-letter header is contained in nearly everything: "a" is inside "email". A
+    // sheet with columns A/B/C mapped every field to A until this length floor.
+    const found = normalized.find(
+      (h) => h.n === c || h.n.includes(c) || (h.n.length >= 3 && c.includes(h.n))
+    );
     if (found) return found.raw;
   }
   return null;
