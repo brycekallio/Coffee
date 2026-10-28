@@ -1,65 +1,40 @@
-import Card from "../components/ui/Card";
-import Modal from "../components/ui/Modal";
-import type { Contact, ContactMeeting } from "../types";
-import { useContacts } from "@/features/contacts/contactsContext";
-import { ensureUrl } from "../lib/utils";
-import { supabase } from "../lib/supabase";
+import Card from "@/components/ui/Card";
+import Modal from "@/components/ui/Modal";
+import { inputCls } from "@/components/ui/styles";
+import { useContacts } from "./contactsContext";
+import { useMeetings } from "./meetings/useMeetings";
+import { ensureUrl, formatDateLabel } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { toast } from "sonner";
 
 interface ContactDetailsPageProps {
   contactId: string;
-  meetings: ContactMeeting[];
-  loadingMeetings: boolean;
-  meetingEdits: Record<string, { meeting_date: string; title: string; notes: string }>;
-  meetingDirty: Record<string, boolean>;
-  meetingSavingId: string;
-  meetingDeletingId: string;
-  meetingDraftDate: string;
-  setMeetingDraftDate: (v: string) => void;
-  meetingDraftTitle: string;
-  setMeetingDraftTitle: (v: string) => void;
-  addMeeting: () => void;
-  saveMeeting: (meetingId: string) => void;
-  deleteMeeting: (meetingId: string) => void;
-  setMeetingField: (meetingId: string, key: "meeting_date" | "title" | "notes", value: string) => void;
-  loadMeetings: (contactId: string) => void;
   /** Back to the contact list; also called after the contact is deleted. */
   onBack: () => void;
-  importMeetingFromTranscript: (
-    contact: Contact,
-    transcript: string,
-    meetingDate: string,
-    label: string,
-  ) => Promise<void>;
-  inputCls: string;
-  formatDateLabel: (iso: string) => string;
 }
 
-export default function ContactDetailsPage({
-  contactId,
-  meetings,
-  loadingMeetings,
-  meetingEdits,
-  meetingDirty,
-  meetingSavingId,
-  meetingDeletingId,
-  meetingDraftDate,
-  setMeetingDraftDate,
-  meetingDraftTitle,
-  setMeetingDraftTitle,
-  addMeeting,
-  saveMeeting,
-  deleteMeeting,
-  setMeetingField,
-  loadMeetings,
-  onBack,
-  importMeetingFromTranscript,
-  inputCls,
-  formatDateLabel,
-}: ContactDetailsPageProps) {
+export default function ContactDetailsPage({ contactId, onBack }: ContactDetailsPageProps) {
   const { contacts, editContact: openEdit, deleteContact } = useContacts();
   const selectedContact = contacts.find((c) => c.id === contactId) ?? null;
+  const {
+    meetings,
+    loadingMeetings,
+    loadMeetings,
+    meetingEdits,
+    meetingDirty,
+    meetingSavingId,
+    meetingDeletingId,
+    meetingDraftDate,
+    setMeetingDraftDate,
+    meetingDraftTitle,
+    setMeetingDraftTitle,
+    addMeeting,
+    saveMeeting,
+    deleteMeeting,
+    setMeetingField,
+    importMeetingFromTranscript,
+  } = useMeetings(contactId);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   // ── Transcript import modal ──────────────────────────────
@@ -284,7 +259,7 @@ export default function ContactDetailsPage({
                     Import from Transcript
                   </button>
                   <button
-                    onClick={() => loadMeetings(selectedContact.id)}
+                    onClick={loadMeetings}
                     className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
                   >
                     Refresh
