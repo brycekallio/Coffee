@@ -3,12 +3,8 @@ import { supabase } from "../lib/supabase";
 import { currentUserId } from "../lib/appSession";
 import type { WatchlistTarget } from "../types";
 import Card from "../components/ui/Card";
+import { inputCls, selectCls } from "@/components/ui/styles";
 import { toast } from "sonner";
-
-interface WatchlistPageProps {
-  inputCls: string;
-  selectCls: string;
-}
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_contacted", label: "Not Contacted" },
@@ -30,7 +26,7 @@ const STATUS_STYLE: Record<string, string> = {
   follow_up_sent: "bg-glow/[0.06] text-glow/60",
 };
 
-export default function WatchlistPage({ inputCls, selectCls }: WatchlistPageProps) {
+export default function WatchlistPage() {
   /* ── state ─────────────────────────────────────────────── */
   const [targets, setTargets] = useState<WatchlistTarget[]>([]);
   const [loading, setLoading] = useState(true);
