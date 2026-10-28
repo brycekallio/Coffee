@@ -35,3 +35,13 @@ export function formatDateLabel(iso: string): string {
   const dt = new Date(y, m - 1, d);
   return dt.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
+
+/** Pulls a human-readable message out of anything thrown — Error, PostgrestError, StorageError, or a plain object. */
+export function errorMessage(e: unknown, fallback: string): string {
+  if (e && typeof e === "object") {
+    const o = e as { message?: unknown; error_description?: unknown };
+    if (typeof o.message === "string" && o.message) return o.message;
+    if (typeof o.error_description === "string" && o.error_description) return o.error_description;
+  }
+  return fallback;
+}

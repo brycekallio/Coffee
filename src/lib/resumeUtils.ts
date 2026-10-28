@@ -22,7 +22,7 @@ async function extractPdfText(data: Uint8Array): Promise<string> {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const text = content.items
-        .map((item: any) => ("str" in item ? item.str : ""))
+        .map((item) => ("str" in item ? item.str : ""))
         .join(" ");
       pages.push(text);
     }

@@ -57,20 +57,27 @@ export default function WatchlistPage({ inputCls, selectCls }: WatchlistPageProp
   };
 
   /* ── CRUD ──────────────────────────────────────────────── */
-  const loadTargets = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("watchlist_targets")
-      .select("*")
-      .order("created_at", { ascending: false });
+  // Query and apply are split so the mount effect can hand applyTargets to .then() —
+  // setState only from a callback. `loading` starts true, so mount skips setLoading(true).
+  const queryTargets = () =>
+    supabase.from("watchlist_targets").select("*").order("created_at", { ascending: false });
 
-    if (error) {
-      toast.error("Failed to load watchlist: " + error.message);
-    } else {
-      setTargets(data as WatchlistTarget[]);
-    }
-    setLoading(false);
-  }, []);
+  const applyTargets = useCallback(
+    ({ data, error }: Awaited<ReturnType<typeof queryTargets>>) => {
+      if (error) {
+        toast.error("Failed to load watchlist: " + error.message);
+      } else {
+        setTargets(data as WatchlistTarget[]);
+      }
+      setLoading(false);
+    },
+    []
+  );
+
+  const loadTargets = async () => {
+    setLoading(true);
+    applyTargets(await queryTargets());
+  };
 
   const addTarget = async () => {
     if (!personName.trim() || !company.trim()) {
@@ -168,8 +175,8 @@ export default function WatchlistPage({ inputCls, selectCls }: WatchlistPageProp
 
   /* ── load on mount ─────────────────────────────────────── */
   useEffect(() => {
-    loadTargets();
-  }, [loadTargets]);
+    queryTargets().then(applyTargets);
+  }, [applyTargets]);
 
   /* ── render ────────────────────────────────────────────── */
   return (
