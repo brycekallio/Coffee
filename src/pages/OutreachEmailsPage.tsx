@@ -12,6 +12,19 @@ import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 import { useContacts } from "@/features/contacts/contactsContext";
 
+/** "Oct 26, 3:38 PM" — no seconds, no year unless it isn't this year. */
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /* ── Email open tracking ──────────────────────────────── */
 
 const TRACKER_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/email-open-tracker`;
@@ -222,12 +235,6 @@ export default function OutreachEmailsPage() {
     } else {
       setItems(data);
 
-      const dueCount = data.filter(
-        (i) => i.status === "scheduled" && new Date(i.scheduled_at) <= new Date(),
-      ).length;
-      if (dueCount > 0) {
-        toast.info(`You have ${dueCount} outreach message${dueCount > 1 ? "s" : ""} due now.`);
-      }
     }
     setLoading(false);
   }, []);
@@ -543,9 +550,9 @@ export default function OutreachEmailsPage() {
 
   return (
     <>
-    <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-3">
-      {/* Compose — 1/3 */}
-      <div className="lg:col-span-1 space-y-6">
+    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
+      {/* Compose — 1/3. On a phone the due queue (the job) comes first. */}
+      <div className="order-last space-y-6 lg:order-none lg:col-span-1">
         <Card
           title={editingId ? "Edit Outreach" : "Compose"}
           subtitle="Draft and schedule outreach messages."
@@ -594,7 +601,7 @@ export default function OutreachEmailsPage() {
                         onClick={() => !isDisabled && setChannel(ch.value)}
                         disabled={isDisabled}
                         title={disabledReason ?? undefined}
-                        className={`w-full rounded-input border px-3 py-2 text-sm font-medium transition-all ${
+                        className={`w-full rounded-input border px-3 py-2 text-sm font-medium transition ${
                           isDisabled
                             ? "border-white/[0.03] bg-white/[0.01] text-white/20 cursor-not-allowed opacity-50"
                             : channel === ch.value
@@ -603,7 +610,7 @@ export default function OutreachEmailsPage() {
                         }`}
                       >
                         <div className="flex items-center gap-1.5">{channelIcon(ch.value)} {ch.label}</div>
-                        <div className={`mt-0.5 text-[10px] font-normal ${isDisabled ? "text-white/15" : "text-white/25"}`}>
+                        <div className={`mt-0.5 text-[11px] font-normal ${isDisabled ? "text-white/15" : "text-white/25"}`}>
                           {isDisabled ? disabledReason : ch.description}
                         </div>
                       </button>
@@ -730,7 +737,7 @@ export default function OutreachEmailsPage() {
                   <button
                     onClick={handleScheduleClick}
                     disabled={saving}
-                    className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
+                    className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow disabled:opacity-50 cursor-pointer"
                   >
                     {saving ? "Saving..." : editingId ? "Update" : "Schedule"}
                   </button>
@@ -744,9 +751,9 @@ export default function OutreachEmailsPage() {
               ) : (
                 <button
                   onClick={handleSendNow}
-                  className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
+                  className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow cursor-pointer"
                 >
-                  Open LinkedIn Chat
+                  {channel === "email" ? "Open in Mail" : "Copy and open Messages"}
                 </button>
               )}
               <button
@@ -778,7 +785,7 @@ export default function OutreachEmailsPage() {
                 <div
                   key={tpl.key}
                   onClick={() => applyTemplate(tpl)}
-                  className="cursor-pointer rounded-input bg-depth-0/30 p-3 transition-all hover:bg-glow/[0.04]"
+                  className="cursor-pointer rounded-input bg-depth-0/30 p-3 transition hover:bg-glow/[0.04]"
                 >
                   <div className="text-sm font-medium text-white">{tpl.title}</div>
                   <div className="mt-0.5 text-xs text-white/30">{tpl.description}</div>
@@ -792,7 +799,7 @@ export default function OutreachEmailsPage() {
       {/* Scheduled — 2/3 */}
       <div className="lg:col-span-2 space-y-6">
         <Card
-          title="Upcoming Outreach"
+          title="Upcoming"
           subtitle={loading ? "Loading..." : `${scheduledItems.length} scheduled`}
           right={
             <button
@@ -820,9 +827,9 @@ export default function OutreachEmailsPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-section p-4 transition-all ${
+                    className={`rounded-section p-4 transition ${
                       due
-                        ? "bg-glow/[0.04] ring-1 ring-glow/15"
+                        ? "bg-white/[0.05]"
                         : "bg-depth-0/30"
                     }`}
                   >
@@ -833,7 +840,7 @@ export default function OutreachEmailsPage() {
                             {contactNameById(item.contact_id)}
                           </span>
                           <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/40">
-                            {item.channel.toUpperCase()}
+                            {item.channel === "sms" ? "SMS" : item.channel.charAt(0).toUpperCase() + item.channel.slice(1)}
                           </span>
                           {due && (
                             <span className="inline-block rounded-badge bg-glow/[0.1] px-2 py-0.5 text-xs font-medium text-glow breathe">
@@ -850,7 +857,7 @@ export default function OutreachEmailsPage() {
                           {item.message}
                         </div>
                         <div className="mt-2 font-data text-xs text-white/25">
-                          {new Date(item.scheduled_at).toLocaleString()}
+                          {formatWhen(item.scheduled_at)}
                         </div>
                       </div>
                     </div>
@@ -858,9 +865,9 @@ export default function OutreachEmailsPage() {
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => handleSendItem(item)}
-                        className={`rounded-button px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                        className={`rounded-button px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                           due
-                            ? "bg-glow/90 text-depth-0 shadow-[0_0_16px_rgba(0,229,255,0.2)] hover:bg-glow"
+                            ? "bg-white/[0.08] text-white hover:bg-white/[0.12]"
                             : "bg-glow/[0.08] text-glow hover:bg-glow/15"
                         }`}
                       >
@@ -880,7 +887,7 @@ export default function OutreachEmailsPage() {
                       </button>
                       <button
                         onClick={() => deleteItem(item.id)}
-                        className="rounded-button px-3 py-1.5 text-xs font-medium text-danger/50 transition-colors hover:text-danger cursor-pointer"
+                        className="rounded-button px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
                       >
                         Delete
                       </button>
@@ -910,7 +917,7 @@ export default function OutreachEmailsPage() {
                         {contactNameById(item.contact_id)}
                       </span>
                       <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/30">
-                        {item.channel.toUpperCase()}
+                        {item.channel === "sms" ? "SMS" : item.channel.charAt(0).toUpperCase() + item.channel.slice(1)}
                       </span>
                       <span className={`inline-block rounded-badge px-2 py-0.5 text-xs font-medium ${
                         item.status === "opened"
@@ -919,11 +926,11 @@ export default function OutreachEmailsPage() {
                           ? "bg-glow/[0.08] text-glow/60"
                           : "bg-white/[0.04] text-white/30"
                       }`}>
-                        {item.status === "opened" ? "📬 Opened" : item.status === "sent" ? "Sent" : "Skipped"}
+                        {item.status === "opened" ? "Opened" : item.status === "sent" ? "Sent" : "Skipped"}
                       </span>
                     </div>
                     <div className="mt-0.5 font-data text-xs text-white/20">
-                      {new Date(item.scheduled_at).toLocaleString()}
+                      {formatWhen(item.scheduled_at)}
                       {item.status === "opened" && item.opened_at && (
                         <span className="ml-2 text-emerald-400/40">
                           · opened {new Date(item.opened_at).toLocaleDateString()}
@@ -942,7 +949,7 @@ export default function OutreachEmailsPage() {
                     )}
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="text-xs font-medium text-danger/50 transition-colors hover:text-danger cursor-pointer"
+                      className="text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
                     >
                       Delete
                     </button>
@@ -967,25 +974,25 @@ export default function OutreachEmailsPage() {
         </p>
         <ul className="grid gap-2 text-sm text-white/60">
           <li className="flex gap-2">
-            <span className="text-glow mt-0.5">✓</span>
+            <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" />
             <span>This is <strong className="text-white/80">not</strong> Accessibility or Full Disk Access — it only lets Coffee send messages on your behalf.</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-glow mt-0.5">✓</span>
+            <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" />
             <span>Your email password and Apple ID are <strong className="text-white/80">never</strong> stored or seen by Coffee.</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-glow mt-0.5">✓</span>
+            <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" />
             <span>Messages only send while Coffee is running. You can pause or cancel anytime.</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-glow mt-0.5">✓</span>
+            <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" />
             <span>Revoke permission anytime in <strong className="text-white/80">System Settings → Privacy & Security → Automation</strong>.</span>
           </li>
         </ul>
         <button
           onClick={handleExplainConfirm}
-          className="mt-2 w-full rounded-button bg-glow/90 px-4 py-3 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
+          className="mt-2 w-full rounded-button bg-glow/90 px-4 py-3 text-sm font-semibold text-depth-0 transition hover:bg-glow cursor-pointer"
         >
           Got it, schedule my message
         </button>

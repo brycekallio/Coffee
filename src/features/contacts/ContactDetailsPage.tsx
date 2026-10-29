@@ -106,7 +106,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="mx-auto max-w-7xl px-4 pb-10 md:px-6">
       {!selectedContact && loadingContacts ? (
         // Opened straight from a URL: the list is still loading, so "not found" would be a lie.
         <div className="flex justify-center py-24" role="status" aria-label="Loading">
@@ -134,7 +134,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
           {/* Contact info — 1/3 */}
           <div className="lg:col-span-1">
             <Card
-              title="Connection"
+              title="Contact details"
               right={
                 <button
                   onClick={onBack}
@@ -148,15 +148,6 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
               }
             >
               <div className="grid gap-3">
-                <div className="rounded-input bg-depth-0/40 p-4">
-                  <div className="text-sm font-semibold text-white">
-                    {[selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(" ") || "\u2014"}
-                  </div>
-                  <div className="mt-1 text-xs text-white/40">
-                    {[selectedContact.company, selectedContact.title].filter(Boolean).join(" \u2022 ") || "\u2014"}
-                  </div>
-                </div>
-
                 <div className="grid gap-2 text-sm">
                   <div className="rounded-input bg-depth-0/30 p-3">
                     <div className="text-xs text-white/30">Email</div>
@@ -205,7 +196,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
             </Card>
 
             {/* AI Summary */}
-            <Card title="AI Summary" subtitle="Powered by Claude">
+            <Card title="AI summary" subtitle="A short brief from your notes on this person.">
               <div className="grid gap-3">
                 {summaryExpanded ? (
                   <>
@@ -237,7 +228,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                 ) : (
                   <button
                     onClick={handleSummaryToggle}
-                    className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
+                    className="w-full rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
                   >
                     Generate Summary
                   </button>
@@ -255,13 +246,13 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setImportModalOpen(true)}
-                    className="flex items-center gap-1.5 rounded-button bg-glow/[0.08] px-3 py-2 text-sm font-medium text-glow transition-colors hover:bg-glow/15 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-button bg-white/[0.06] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.1] cursor-pointer"
                   >
                     {/* Sparkle icon */}
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
                     </svg>
-                    Import from Transcript
+                    Import from transcript
                   </button>
                   <button
                     onClick={loadMeetings}
@@ -293,7 +284,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                 <div className="mt-3 flex justify-end">
                   <button
                     onClick={addMeeting}
-                    className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
+                    className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow cursor-pointer"
                   >
                     Add meeting
                   </button>
@@ -328,7 +319,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                           <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
                             <div className="flex flex-1 flex-col gap-2 md:min-w-0 md:flex-row md:items-center">
                               <div className="inline-flex shrink-0 items-center gap-2 rounded-badge bg-glow/[0.06] px-3 py-1.5 text-xs font-medium text-glow/80">
-                                <span className="h-1.5 w-1.5 rounded-full bg-glow shadow-[0_0_6px_rgba(0,229,255,0.4)]" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-glow" />
                                 <span className="font-data">{formatDateLabel(draft.meeting_date || m.meeting_date)}</span>
                               </div>
 
@@ -369,7 +360,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
 
                           <div className="mt-3">
                             <textarea
-                              className="min-h-[160px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none transition-all duration-200 border border-white/[0.04] focus:border-glow/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-glow/10"
+                              className="min-h-[160px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none transition duration-200 border border-white/[0.04] focus:border-glow/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-glow/10"
                               placeholder="What you discussed, next steps, reminders, personal details, follow-ups..."
                               value={draft.notes}
                               onChange={(e) => setMeetingField(m.id, "notes", e.target.value)}
@@ -433,9 +424,9 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
           {/* What Claude extracts */}
           <div className="rounded-input bg-depth-0/40 px-4 py-3 text-xs text-white/40 space-y-1">
             <div className="font-medium text-white/50 mb-1.5">Claude will extract:</div>
-            <div className="flex items-center gap-2"><span>✨</span><span>Fun facts — memorable personal details about {selectedContact ? [selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(" ") : "your contact"}</span></div>
-            <div className="flex items-center gap-2"><span>📋</span><span>Action items — specific follow-ups you need to do</span></div>
-            <div className="flex items-center gap-2"><span>💡</span><span>Important details — professional context worth remembering</span></div>
+            <div className="flex items-center gap-2"><span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" /><span>Fun facts — memorable personal details about {selectedContact ? [selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(" ") : "your contact"}</span></div>
+            <div className="flex items-center gap-2"><span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" /><span>Action items — specific follow-ups you need to do</span></div>
+            <div className="flex items-center gap-2"><span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" /><span>Important details — professional context worth remembering</span></div>
           </div>
 
           <div className="flex gap-3">
@@ -449,7 +440,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
             <button
               onClick={handleImportTranscript}
               disabled={importing || !importTranscript.trim()}
-              className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
+              className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow disabled:opacity-50 cursor-pointer"
             >
               {importing ? (
                 <span className="flex items-center justify-center gap-2">

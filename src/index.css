@@ -42,9 +42,8 @@ body {
 /* ── Data Font (monospaced for dates, counts, emails) ─ */
 
 .font-data {
-  font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
-  font-size: 0.8125rem;
-  letter-spacing: -0.01em;
+  /* Tabular figures in the text face: digits line up without a second, monospace voice. */
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Selection ──────────────────────────────────────── */
@@ -106,22 +105,12 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 .living-canvas {
-  background:
-    radial-gradient(ellipse 600px 400px, rgba(0, 229, 255, 0.05), transparent),
-    radial-gradient(ellipse 500px 500px, rgba(124, 77, 255, 0.04), transparent),
-    radial-gradient(ellipse 400px 300px, rgba(0, 168, 168, 0.03), transparent);
-  background-size: 200% 200%, 200% 200%, 200% 200%;
-  animation: canvas-drift 90s ease-in-out infinite;
+  /* Retired 2026-10-28: the gradient mesh. The ground is flat depth-0. */
+  background: none;
 }
 
 .living-canvas-auth {
-  background:
-    radial-gradient(ellipse 600px 500px, rgba(0, 229, 255, 0.10), transparent),
-    radial-gradient(ellipse 500px 600px, rgba(124, 77, 255, 0.08), transparent),
-    radial-gradient(ellipse 600px 400px, rgba(0, 255, 198, 0.05), transparent),
-    radial-gradient(ellipse 400px 400px, rgba(0, 168, 168, 0.06), transparent);
-  background-size: 200% 200%, 200% 200%, 200% 200%, 200% 200%;
-  animation: canvas-drift 60s ease-in-out infinite;
+  background: none;
 }
 
 /* ── Auth Particles ─────────────────────────────────── */
@@ -234,7 +223,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .auth-input:focus {
   border-color: rgba(0, 229, 255, 0.3);
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.1), 0 0 20px rgba(0, 229, 255, 0.06);
 }
 
 /* ── Launch Transition (on sign-in success) ─────────── */
@@ -277,19 +265,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 /* ── Breathing Pulse (for attention indicators) ─────── */
 
-@keyframes breathe {
-  0%, 100% {
-    opacity: 0.6;
-    box-shadow: 0 0 4px rgba(0, 229, 255, 0.3);
-  }
-  50% {
-    opacity: 1;
-    box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
-  }
-}
-
 .breathe {
-  animation: breathe 3s ease-in-out infinite;
+  /* An attention dot is static: colour marks it, not a glow or a pulse. */
 }
 
 /* ── Subtle shimmer (for loading states, progress bars) ── */
@@ -304,28 +281,24 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 .shimmer {
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.08), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
+  /* Loading placeholders are flat bars at their real size, no sweep. */
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Glow hover (for interactive cards) ─────────────── */
 
 .glow-hover {
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease;
 }
 
 .glow-hover:hover {
-  background-color: rgba(255, 255, 255, 0.02);
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.06), inset 0 0 30px rgba(0, 229, 255, 0.02);
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* ── Keyboard Whisper Bar ───────────────────────────── */
 
 .whisper-bar {
-  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
+  font-size: 0.75rem;
 }
 
 /* ── Focus Ring (accessible) ────────────────────────── */

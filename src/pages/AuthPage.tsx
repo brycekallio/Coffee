@@ -30,7 +30,6 @@ export default function AuthPage() {
       {/* ── Right: sign in ── */}
       <div className="flex w-full lg:w-1/2 items-center justify-center relative">
         <div className="absolute inset-0 bg-depth-0 lg:bg-depth-0/95" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_70%_30%,rgba(0,229,255,0.04),transparent_70%)]" />
 
         <div className="absolute inset-0 lg:hidden overflow-hidden">
           <AuthIllustration />
@@ -38,6 +37,7 @@ export default function AuthPage() {
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-[400px] px-6 py-12">
+          <h1 className="sr-only">Coffee — sign in</h1>
           <div className="mb-6 flex justify-center lg:hidden auth-title-enter">
             <Logo size="lg" />
           </div>

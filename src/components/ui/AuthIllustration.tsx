@@ -33,7 +33,6 @@ function generateParticles() {
           left: `${left}%`,
           bottom: `-${riseHeight}px`,
           backgroundColor: color,
-          boxShadow: `0 0 ${size * 2}px ${color}`,
           animation: `${isAlt ? "particle-rise-alt" : "particle-rise"} ${duration}s linear ${delay}s infinite`,
         }}
       />
@@ -201,20 +200,8 @@ export default function AuthIllustration() {
       <div className="absolute inset-0 bg-depth-0" />
 
       {/* Living canvas */}
-      <div className="absolute inset-0 living-canvas-auth" />
-
-      {/* Subtle grid */}
-      <div
-        className="absolute inset-0 opacity-[0.02]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(0,229,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.15) 1px, transparent 1px)",
-          backgroundSize: "80px 80px",
-        }}
-      />
 
       {/* Central glow behind form */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(0,229,255,0.08),transparent_70%)]" />
 
       {/* ── Coffee + Network Animation ── */}
       <div
@@ -476,7 +463,6 @@ export default function AuthIllustration() {
       {particles}
 
       {/* Depth vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_50%,transparent_30%,rgba(8,20,24,0.7)_100%)]" />
     </div>
   );
 }

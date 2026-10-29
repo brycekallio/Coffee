@@ -106,29 +106,34 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="mx-auto max-w-7xl px-4 pb-10 md:px-6">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile — 2/3 */}
         <div className="lg:col-span-2">
-          <Card title="Profile" subtitle="This info will power personalization (emails, cover letters, etc.).">
-            <div className="grid gap-3">
-              <input className={inputCls} placeholder="Display name (username)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <Card title="Profile" subtitle="Used to personalize your outreach drafts and job matches.">
+            <div className="grid gap-4">
+<label className="grid gap-2"><span className="text-sm font-medium text-white/80">Display name</span>
+              <input className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
 
-              <input className={inputCls} placeholder="Your LinkedIn URL" value={myLinkedInUrl} onChange={(e) => setMyLinkedInUrl(e.target.value)} />
+<label className="grid gap-2"><span className="text-sm font-medium text-white/80">LinkedIn profile URL</span>
+              <input className={inputCls} placeholder="https://www.linkedin.com/in/…" value={myLinkedInUrl} onChange={(e) => setMyLinkedInUrl(e.target.value)} /></label>
 
-              <input className={inputCls} placeholder="Phone number" value={userPhone} onChange={(e) => setUserPhone(e.target.value)} />
+<label className="grid gap-2"><span className="text-sm font-medium text-white/80">Phone</span>
+              <input className={inputCls} type="tel" value={userPhone} onChange={(e) => setUserPhone(e.target.value)} /></label>
 
+<label className="grid gap-2"><span className="text-sm font-medium text-white/80">Career interests</span>
               <textarea
                 className={`${inputCls} min-h-[80px] resize-y`}
-                placeholder="Career interests (e.g. Product Management, UX Design...)"
+                placeholder="e.g. Data & analytics consulting, restructuring"
                 value={userCareerInterests}
                 onChange={(e) => setUserCareerInterests(e.target.value)}
               />
+              </label>
 
               <div className="rounded-input bg-depth-0/30 p-4">
                 <div className="text-sm font-medium text-white">Resume upload</div>
                 <div className="mt-1 text-xs text-white/30">
-                  Upload PDF/DOC/DOCX to Supabase Storage bucket <span className="font-medium text-glow/70">resumes</span>.
+                  A PDF works best: Coffee reads it to tailor outreach and score job descriptions. Only you can open it.
                 </div>
 
                 <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -156,7 +161,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 <button
                   onClick={saveProfile}
                   disabled={savingProfile}
-                  className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
+                  className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow disabled:opacity-50 cursor-pointer"
                 >
                   {savingProfile ? "Saving..." : "Save profile"}
                 </button>
@@ -170,11 +175,11 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
           <Card title="Account" subtitle="Managed by your sign-in provider.">
             <div className="grid gap-3">
               <div className="rounded-input border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-                <div className="text-[10px] uppercase tracking-wide text-white/25">Signed in with</div>
+                <div className="text-xs text-white/60">Signed in with</div>
                 <div className="mt-0.5 text-sm capitalize text-white/70">{accountProvider}</div>
               </div>
               <div className="rounded-input border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-                <div className="text-[10px] uppercase tracking-wide text-white/25">Email</div>
+                <div className="text-xs text-white/60">Email</div>
                 <div className="mt-0.5 truncate text-sm text-white/70">{accountEmail}</div>
               </div>
               {/* Nothing to edit here on purpose: the address comes from the provider
@@ -231,7 +236,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 ) : (
                   <button
                     onClick={onCalendarConnect}
-                    className="rounded-button bg-glow/90 px-4 py-2 text-sm font-semibold text-depth-0 shadow-[0_0_20px_rgba(0,229,255,0.18)] transition-all hover:bg-glow cursor-pointer"
+                    className="rounded-button bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
                   >
                     Connect
                   </button>
@@ -259,7 +264,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
         {/* Resume Adjuster — full width */}
         <div className="lg:col-span-3">
           <Card
-            title="Resume Adjuster"
+            title="Resume adjuster"
             subtitle="Paste a job description and get AI-powered keyword suggestions to tailor your resume."
             right={
               <div className="flex items-center gap-3">
@@ -337,7 +342,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                     <div className="flex items-center gap-2 text-sm font-medium">
                       Full rewrite
                       {!isPowerTier && (
-                        <span className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-white/40">
+                        <span className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-normal text-white/40">
                           Your key
                         </span>
                       )}
@@ -362,7 +367,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 <button
                   onClick={handleAdjust}
                   disabled={adjusting || !profile?.resume_text}
-                  className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
+                  className="rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
                 >
                   {adjusting
                     ? adjustMode === "rewrite"
@@ -391,7 +396,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                       {adjustMode === "rewrite" ? "Rewritten Resume" : "AI Suggestions"}
                     </span>
                     {resultModel && (
-                      <span className="font-data text-[10px] text-white/25">
+                      <span className="font-data text-[11px] text-white/25">
                         {resultModel}
                       </span>
                     )}
@@ -408,7 +413,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
         {/* Import — full width */}
         <div className="lg:col-span-3">
-          <Card title="Import Network (CSV)" subtitle="Smart Import detects columns automatically (email, phone, name, company, job title).">
+          <Card title="Import contacts from CSV" subtitle="Smart Import detects columns automatically (email, phone, name, company, job title).">
             <div className="grid gap-4">
               <input
                 type="file"
@@ -435,7 +440,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   <div className="mt-4 rounded-section bg-depth-0/40">
                     <div className="px-4 py-2 text-xs text-white/30">Preview: {importRows.length} row(s)</div>
 
-                    <div className="grid grid-cols-5 gap-2 px-4 py-2 text-xs uppercase tracking-wider text-white/25 font-medium">
+                    <div className="grid grid-cols-5 gap-2 px-4 py-2 text-xs text-white/25 font-medium">
                       <div>Name</div>
                       <div>Company</div>
                       <div>Title</div>
@@ -488,7 +493,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                     <button
                       disabled={importing || importRows.length === 0}
                       onClick={importIntoSupabase}
-                      className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
+                      className="rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
                     >
                       {importing ? "Importing..." : "Import into Coffee?"}
                     </button>

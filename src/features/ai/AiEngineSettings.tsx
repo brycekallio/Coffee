@@ -138,7 +138,7 @@ export default function AiEngineSettings({
                     loading
                       ? "bg-white/20"
                       : isPower
-                      ? "bg-glow shadow-[0_0_8px_rgba(0,229,255,0.6)]"
+                      ? "bg-glow"
                       : "bg-glow/40"
                   }`}
                 />
@@ -170,7 +170,7 @@ export default function AiEngineSettings({
             ) : (
               <button
                 onClick={() => setExpanded((v) => !v)}
-                className="rounded-button bg-glow/90 px-4 py-2 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
+                className="rounded-button bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
               >
                 {expanded ? "Never mind" : "Use my own key"}
               </button>
@@ -188,7 +188,7 @@ export default function AiEngineSettings({
 
         {/* ── power tools ────────────────────────────────────────────── */}
         <div>
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-white/40">
+          <div className="mb-2 text-xs font-medium text-white/40">
             {isPower ? "Unlocked" : "Unlocks with your own key"}
           </div>
           <div className="grid gap-2">
@@ -200,12 +200,9 @@ export default function AiEngineSettings({
                 }`}
               >
                 <span
-                  className={`mt-0.5 shrink-0 text-xs ${
-                    isPower ? "text-glow" : "text-white/20"
-                  }`}
-                >
-                  {isPower ? "✓" : "○"}
-                </span>
+                  aria-hidden="true"
+                  className={`mt-[6px] h-2 w-2 flex-none rounded-full ${isPower ? "bg-white/80" : "border border-white/40"}`}
+                />
                 <div>
                   <div
                     className={`text-sm font-medium ${
@@ -325,7 +322,7 @@ export default function AiEngineSettings({
               <button
                 onClick={handleSave}
                 disabled={busy !== null || !apiKey.trim()}
-                className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow disabled:opacity-50 cursor-pointer"
+                className="rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
               >
                 {busy === "save"
                   ? "Verifying…"

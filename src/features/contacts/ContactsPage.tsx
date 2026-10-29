@@ -13,9 +13,12 @@ interface ContactsPageProps {
   onFollowUp?: () => void;
 }
 
+/** A contact you haven't met in this many days is due a follow-up. */
+const STALE_DAYS = 30;
+
 export default function ContactsPage({ openDetails, onFollowUp }: ContactsPageProps) {
   const user = useSession();
-  const { contacts: allContacts, loading: loadingContacts, reload: loadContacts, deleteContact, editContact: openEdit } =
+  const { contacts: allContacts, loading: loadingContacts, reload: loadContacts, editContact: openEdit } =
     useContacts();
 
   const [search, setSearch] = useState("");
@@ -98,21 +101,19 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
     fetchMeetingDates();
   }, [contacts]);
 
-  // Check if contact is stale (30+ days since last meeting)
-  function isStale(contactId: string): boolean {
-    const lastDate = lastMeetingDates[contactId];
-    if (!lastDate) return false; // No meetings yet, not stale
+  const dueCount = allContacts.filter((c) => (daysSince(lastMeetingDates[c.id]) ?? 0) >= STALE_DAYS).length;
 
-    const today = new Date(todayISODate());
-    const lastMeeting = new Date(lastDate);
-    const daysDiff = Math.floor((today.getTime() - lastMeeting.getTime()) / (1000 * 60 * 60 * 24));
-    return daysDiff >= 30;
+  /** Whole days from a YYYY-MM-DD meeting date to today, or null when they've never met. */
+  function daysSince(lastDate: string | undefined): number | null {
+    if (!lastDate) return null;
+    const ms = new Date(todayISODate()).getTime() - new Date(lastDate).getTime();
+    return Math.max(0, Math.floor(ms / 86_400_000));
   }
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-3">
-      {/* Add contact — 1/3 */}
-      <div className="lg:col-span-1">
-        <Card title="Add Contact" subtitle="Add someone once. Track the relationship forever.">
+    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
+      {/* Add contact — 1/3. On a phone the list (the job) comes first and the form follows. */}
+      <div className="order-last lg:order-none lg:col-span-1">
+        <Card title="Add a person" subtitle="Add someone once; log every coffee after.">
           <div className="grid gap-3">
             <div className="grid grid-cols-2 gap-3">
               <input className={inputCls} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -127,9 +128,9 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
 
             <button
               onClick={addContact}
-              className="mt-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all duration-300 hover:bg-glow hover:shadow-[0_0_30px_rgba(0,229,255,0.3)] active:scale-[0.98] cursor-pointer"
+              className="mt-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition duration-300 hover:bg-glow active:scale-[0.98] cursor-pointer"
             >
-              Save Contact
+              Add person
             </button>
           </div>
         </Card>
@@ -138,8 +139,14 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
       {/* Network list — 2/3 */}
       <div className="lg:col-span-2">
         <Card
-          title="Your Network"
-          subtitle={loadingContacts ? "Loading..." : `${contacts.length} connection${contacts.length !== 1 ? "s" : ""}`}
+          title="People"
+          subtitle={
+            loadingContacts
+              ? "Loading…"
+              : dueCount > 0
+                ? `${dueCount} ${dueCount === 1 ? "person is" : "people are"} due a follow-up (${STALE_DAYS}+ days since you met)`
+                : "Nobody is overdue for a follow-up."
+          }
           right={
             <button
               onClick={loadContacts}
@@ -157,120 +164,85 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
           />
 
           <div className="mt-4 rounded-section bg-depth-0/40">
-            <div className="grid grid-cols-[2.2fr_1.4fr_1.2fr_1.0fr_1.0fr_1.0fr_0.9fr] items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-white/30 font-medium">
+            {/* Columns: who · company · days since you last met · the one action. Below md each row is two lines. */}
+            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_7.5rem_6.5rem] items-center gap-4 px-4 py-3 text-xs text-white/60 md:grid">
               <div>Name</div>
               <div>Company</div>
-              <div>Title</div>
-              <div>Details</div>
-              <div>Follow Up</div>
-              <div>Edit</div>
-              <div>Delete</div>
+              <div className="text-right">Last met</div>
+              <div />
             </div>
 
-            <div className="h-px w-full bg-white/[0.04]" />
+            <div className="h-px w-full bg-white/[0.06]" />
 
             {loadingContacts ? (
-              <div className="px-4 py-8 text-center text-sm text-white/40">Loading your network...</div>
+              <div className="px-4 py-8 text-center text-sm text-white/60">Loading your network…</div>
             ) : contacts.length === 0 ? (
               <div className="px-6 py-10 text-center">
-                <p className="text-sm text-white/50">Your network is empty.</p>
-                <p className="mt-1 text-xs text-white/25">
-                  The best time to plant a tree was twenty years ago. The second best time is now.
-                </p>
+                <p className="text-sm text-white/80">{search.trim() ? "Nobody matches that search." : "Your network is empty."}</p>
+                {!search.trim() ? (
+                  <p className="mt-1 text-sm text-white/60">Add the first person you've had coffee with, or import a CSV from Settings.</p>
+                ) : null}
               </div>
             ) : (
-              contacts.map((c, i) => {
+              contacts.map((c) => {
                 const displayName = [c.first_name, c.last_name].filter(Boolean).join(" ") || "\u2014";
                 const li = c.linkedin_url ?? "";
-                const isRecent = i < 3;
-                const stale = isStale(c.id);
+                const days = daysSince(lastMeetingDates[c.id]);
+                const stale = days !== null && days >= STALE_DAYS;
 
                 return (
                   <div key={c.id} className="px-4">
-                    <div className={`grid grid-cols-[2.2fr_1.4fr_1.2fr_1.0fr_1.0fr_1.0fr_0.9fr] items-center gap-3 py-3 transition-colors hover:bg-white/[0.02] ${isRecent ? "bg-white/[0.01]" : ""}`}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_7.5rem_6.5rem]">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0 flex-1">
-                            {li ? (
-                              <a
-                                href={ensureUrl(li)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block truncate font-medium text-glow hover:underline"
-                                title="Open LinkedIn"
-                              >
-                                {displayName}
+                        <button
+                          onClick={() => openDetails(c.id)}
+                          className="block max-w-full truncate text-left font-medium text-white hover:underline cursor-pointer"
+                        >
+                          {displayName}
+                        </button>
+                        <div className="mt-0.5 truncate text-sm text-white/60">
+                          <span className="md:hidden">{[c.title, c.company].filter(Boolean).join(" · ") || "\u2014"}</span>
+                          <span className="hidden md:inline">{c.title || "\u2014"}</span>
+                          {li ? (
+                            <>
+                              {" · "}
+                              <a href={ensureUrl(li)} target="_blank" rel="noreferrer" className="text-white/60 hover:text-white hover:underline">
+                                LinkedIn
                               </a>
-                            ) : (
-                              <div className="truncate font-medium text-white" title={displayName}>
-                                {displayName}
-                              </div>
-                            )}
-                            <div className="mt-0.5 truncate font-data text-white/30">
-                              {[c.email, c.phone].filter(Boolean).join(" \u2022 ")}
-                            </div>
-                          </div>
-                          {stale && (
-                            <div className="shrink-0 rounded-badge bg-glow/15 px-2 py-1 text-xs font-medium text-glow" title="Last meeting was 30+ days ago">
-                              Stale
-                            </div>
-                          )}
+                            </>
+                          ) : null}
                         </div>
                       </div>
 
-                      <div className="truncate text-sm text-white/50" title={c.company ?? ""}>
-                        {c.company ?? "\u2014"}
+                      <div className="hidden truncate text-sm text-white/80 md:block" title={c.company ?? ""}>
+                        {c.company || <span className="text-white/60">\u2014</span>}
                       </div>
 
-                      <div className="truncate text-sm text-white/50" title={c.title ?? ""}>
-                        {c.title ?? "\u2014"}
-                      </div>
-
-                      <button
-                        onClick={() => openDetails(c.id)}
-                        className="w-full rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
+                      <div
+                        className={`row-span-2 text-right text-sm font-data md:row-span-1 ${stale ? "text-glow" : days === null ? "text-white/60" : "text-white/80"}`}
+                        title={days === null ? "No meetings logged yet" : `Last meeting ${lastMeetingDates[c.id]}`}
                       >
-                        Details
-                      </button>
+                        {days === null ? "Not yet" : days === 0 ? "Today" : `${days} ${days === 1 ? "day" : "days"} ago`}
+                      </div>
 
-                      {stale && onFollowUp ? (
-                        <button
-                          onClick={() => onFollowUp()}
-                          className="w-full rounded-button bg-glow/10 px-3 py-2 text-sm font-medium text-glow transition-colors hover:bg-glow/20 cursor-pointer"
-                          title="Start a follow-up outreach"
-                        >
-                          Follow Up
+                      <div className="col-span-2 flex justify-start gap-4 text-sm md:col-span-1 md:justify-end">
+                        {stale && onFollowUp ? (
+                          <button onClick={() => onFollowUp()} className="font-medium text-white hover:underline cursor-pointer">
+                            Follow up
+                          </button>
+                        ) : null}
+                        <button onClick={() => openEdit(c)} className="text-white/60 hover:text-white hover:underline cursor-pointer">
+                          Edit
                         </button>
-                      ) : (
-                        <div />
-                      )}
-
-                      <button
-                        onClick={() => openEdit(c)}
-                        className="w-full rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={() => deleteContact(c.id)}
-                        className="w-full rounded-button bg-danger/[0.06] px-3 py-2 text-sm font-medium text-danger/70 transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                      >
-                        Delete
-                      </button>
+                      </div>
                     </div>
 
-                    <div className="h-px w-full bg-white/[0.03]" />
+                    <div className="h-px w-full bg-white/[0.04]" />
                   </div>
                 );
               })
             )}
 
-            {contacts.length > 0 && (
-              <div className="px-4 py-3 text-xs text-white/20">
-                Click a name to open LinkedIn. Use Details to log meetings and notes.
-              </div>
-            )}
           </div>
         </Card>
       </div>

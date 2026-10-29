@@ -21,10 +21,10 @@ const STEPS: readonly Step[] = [
 ] as const;
 
 const primaryBtn =
-  "rounded-xl bg-glow px-6 py-3 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all duration-300 hover:shadow-[0_0_36px_rgba(0,229,255,0.3)] hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:shadow-none cursor-pointer";
+  "rounded-xl bg-glow px-6 py-3 text-sm font-semibold text-depth-0 transition duration-300 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:shadow-none cursor-pointer";
 
 const secondaryBtn =
-  "rounded-xl bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/50 transition-all duration-200 hover:bg-white/[0.08] hover:text-white cursor-pointer";
+  "rounded-xl bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/50 transition duration-200 hover:bg-white/[0.08] hover:text-white cursor-pointer";
 
 const skipBtn =
   "text-xs font-medium text-white/35 transition-colors duration-200 hover:text-white/70 cursor-pointer";
@@ -54,13 +54,13 @@ function FloatingInput({
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="peer w-full rounded-xl bg-white/[0.03] px-4 pb-2.5 pt-5 text-sm text-white outline-none transition-all duration-300 border border-white/[0.06] focus:border-glow/40 focus:bg-white/[0.06] focus:shadow-[0_0_20px_rgba(0,229,255,0.08)]"
+        className="peer w-full rounded-xl bg-white/[0.03] px-4 pb-2.5 pt-5 text-sm text-white outline-none transition duration-300 border border-white/[0.06] focus:border-glow/40 focus:bg-white/[0.06]"
         placeholder={active ? placeholder : " "}
       />
       <label
-        className={`pointer-events-none absolute left-4 transition-all duration-200 ${
+        className={`pointer-events-none absolute left-4 transition duration-200 ${
           active
-            ? "top-1.5 text-[10px] font-medium text-glow/70"
+            ? "top-1.5 text-[11px] font-medium text-glow/70"
             : "top-3.5 text-sm text-white/30"
         }`}
       >
@@ -156,8 +156,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-depth-0 px-4">
       {/* Background accents */}
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,229,255,0.05),transparent_60%)]" />
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_80%_80%,rgba(124,77,255,0.03),transparent_50%)]" />
+
 
       <div className="w-full max-w-md">
         {/* Logo */}
@@ -168,7 +167,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
         {/* Progress bar */}
         <div className="mb-8 auth-form-enter">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-medium text-white/25 tracking-wide uppercase">
+            <span className="text-[11px] font-medium text-white/25">
               Step {step + 1} of {STEPS.length}
             </span>
             <span className="text-[11px] font-medium text-glow/50">
@@ -177,7 +176,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
           </div>
           <div className="h-1 w-full rounded-full bg-white/[0.06] overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-glow/60 to-glow transition-all duration-700 ease-out"
+              className="h-full rounded-full bg-glow transition duration-700 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -250,7 +249,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
           {/* Step: Resume */}
           {currentStep.key === "resume" && (
             <div className="space-y-4">
-              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] border-dashed p-5 text-center transition-all hover:border-glow/20 hover:bg-white/[0.04]">
+              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] border-dashed p-5 text-center transition hover:border-glow/20 hover:bg-white/[0.04]">
                 <svg
                   className="mx-auto h-7 w-7 text-white/15 mb-2"
                   fill="none"

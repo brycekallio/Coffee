@@ -3,6 +3,7 @@ import { useClerk } from "@clerk/clerk-react";
 import Logo from "@/components/ui/Logo";
 import ContactsPage from "@/features/contacts/ContactsPage";
 import { useProfile } from "@/features/profile/profileContext";
+import { useContacts } from "@/features/contacts/contactsContext";
 import { clearCachedUserId } from "@/lib/appSession";
 import { supabase } from "@/lib/supabase";
 import { initialsFromName } from "@/lib/utils";
@@ -81,24 +82,54 @@ export default function AppShell() {
     setPage("outreach_emails");
   }
 
+  // Every screen names itself in an h1; the line under it states the screen's finding.
+  const { contacts } = useContacts();
+  const openContact = contacts.find((c) => c.id === selectedContactId);
+  const { title, subtitle } = ((): { title: string | null; subtitle?: string } => {
+    switch (page) {
+      case "contacts":
+        return { title: "Network", subtitle: `${contacts.length} ${contacts.length === 1 ? "person" : "people"}` };
+      case "contact_details":
+        return {
+          title: openContact ? [openContact.first_name, openContact.last_name].filter(Boolean).join(" ") || "Contact" : "Contact",
+          subtitle: openContact ? [openContact.title, openContact.company].filter(Boolean).join(" · ") : undefined,
+        };
+      case "network_watchlist":
+        return { title: "Watchlist", subtitle: "People you want to meet, and when to reach out." };
+      case "outreach_emails":
+        return {
+          title: "Outreach",
+          subtitle: dueOutreachCount > 0 ? `${dueOutreachCount} ${dueOutreachCount === 1 ? "message is" : "messages are"} due now.` : "Nothing due right now.",
+        };
+      case "applications":
+        return { title: "Applications" };
+      case "jd_scorer":
+        return { title: "Job description match", subtitle: "Paste a posting to see how your resume lines up." };
+      case "analytics":
+        return { title: "Analytics" };
+      case "settings":
+        return { title: "Settings" };
+      default:
+        return { title: null }; // onboarding has its own full-screen layout
+    }
+  })();
+
   const profileLabel = profile?.full_name?.trim() || user.email?.split("@")[0] || "User";
   const avatarText = initialsFromName(profileLabel);
 
   const navLinkCls = (active: boolean) =>
-    `relative px-3 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-200 ${
+    `relative px-3 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition duration-200 ${
+      // Active by brightness and a neutral step, never the accent: cyan is for data.
       active
-        ? "text-glow bg-glow/[0.08]"
-        : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
+        ? "text-white bg-white/[0.07]"
+        : "text-white/60 hover:text-white hover:bg-white/[0.04]"
     }`;
 
   return (
     <div className="min-h-screen text-white">
-      {/* Living canvas background */}
-      <div className="fixed inset-0 -z-10 bg-depth-0" />
-      <div className="fixed inset-0 -z-10 living-canvas" />
 
       {/* Top Nav */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.04] bg-depth-0/70 backdrop-blur-2xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.04] bg-depth-0">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 md:px-6">
           {/* Left: Logo + Nav Links */}
           <div className="flex items-center gap-1 md:gap-1.5">
@@ -119,7 +150,7 @@ export default function AppShell() {
                 >
                   <span className="flex items-center gap-1">
                     Network
-                    <svg className={`h-3 w-3 transition-transform duration-200 ${networkDropdownOpen ? "rotate-180" : ""} ${page === "contacts" || page === "contact_details" || page === "network_watchlist" ? "text-glow/50" : "text-white/20"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className={`h-3 w-3 transition-transform duration-200 ${networkDropdownOpen ? "rotate-180" : ""} ${page === "contacts" || page === "contact_details" || page === "network_watchlist" ? "text-white/60" : "text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                   </span>
@@ -127,7 +158,7 @@ export default function AppShell() {
                 {networkDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setNetworkDropdownOpen(false)} />
-                    <div className="absolute left-0 z-50 mt-2 w-52 overflow-hidden rounded-xl bg-depth-1/95 backdrop-blur-xl border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                    <div className="absolute left-0 z-50 mt-2 w-52 overflow-hidden rounded-xl bg-depth-1/95 border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
                       <div className="p-1.5">
                         <button
                           onClick={() => { setPage("contacts"); setNetworkDropdownOpen(false); }}
@@ -160,7 +191,7 @@ export default function AppShell() {
               >
                 Outreach
                 {dueOutreachCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-glow px-1 text-[9px] font-bold text-depth-0 shadow-[0_0_8px_rgba(0,229,255,0.4)]">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-glow px-1 text-[11px] font-bold text-depth-0">
                     {dueOutreachCount}
                   </span>
                 )}
@@ -194,7 +225,7 @@ export default function AppShell() {
             {/* Settings icon (desktop) */}
             <button
               onClick={() => { setPage("settings"); }}
-              className={`hidden md:flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-200 cursor-pointer ${page === "settings" ? "bg-glow/[0.08] text-glow" : "text-white/30 hover:text-white/60 hover:bg-white/[0.04]"}`}
+              className={`hidden md:flex items-center justify-center h-8 w-8 rounded-lg transition duration-200 cursor-pointer ${page === "settings" ? "bg-white/[0.07] text-white" : "text-white/60 hover:text-white hover:bg-white/[0.04]"}`}
               title="Settings"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -210,12 +241,12 @@ export default function AppShell() {
             <div className="relative">
               <button
                 onClick={() => setProfileMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2 py-1.5 transition-all duration-200 hover:bg-white/[0.06] border border-transparent hover:border-white/[0.06] md:gap-2.5 md:px-2.5 cursor-pointer"
+                className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2 py-1.5 transition duration-200 hover:bg-white/[0.06] border border-transparent hover:border-white/[0.06] md:gap-2.5 md:px-2.5 cursor-pointer"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-glow/20 to-glow-purple/20 text-[11px] font-bold text-glow">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.08] text-[11px] font-bold text-white/80">
                   {avatarText}
                 </div>
-                <div className="hidden text-left md:block">
+                <div className="hidden text-left lg:block">
                   <div className="text-[13px] font-medium text-white/80 leading-tight">{profileLabel}</div>
                 </div>
                 <svg className={`hidden md:block h-3 w-3 text-white/20 transition-transform duration-200 ${profileMenuOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -226,7 +257,7 @@ export default function AppShell() {
               {profileMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
-                  <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl bg-depth-1/95 backdrop-blur-xl border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                  <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl bg-depth-1/95 border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
                     {/* Profile header in dropdown */}
                     <div className="px-4 py-3 border-b border-white/[0.06]">
                       <div className="text-sm font-medium text-white/80">{profileLabel}</div>
@@ -261,13 +292,13 @@ export default function AppShell() {
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="inline-flex items-center justify-center rounded-lg bg-white/[0.03] p-2 transition-all duration-200 hover:bg-white/[0.06] md:hidden cursor-pointer"
+              className="inline-flex items-center justify-center rounded-lg bg-white/[0.03] p-2 transition duration-200 hover:bg-white/[0.06] md:hidden cursor-pointer"
               aria-label="Open menu"
             >
               <div className="relative h-4 w-4">
-                <span className={`absolute left-0 h-0.5 w-4 rounded bg-white/50 transition-all duration-300 ${mobileMenuOpen ? "top-[7px] rotate-45" : "top-0.5"}`} />
-                <span className={`absolute left-0 top-[7px] h-0.5 w-4 rounded bg-white/50 transition-all duration-300 ${mobileMenuOpen ? "opacity-0 scale-0" : "opacity-100"}`} />
-                <span className={`absolute left-0 h-0.5 w-4 rounded bg-white/50 transition-all duration-300 ${mobileMenuOpen ? "top-[7px] -rotate-45" : "top-[13px]"}`} />
+                <span className={`absolute left-0 h-0.5 w-4 rounded bg-white/50 transition duration-300 ${mobileMenuOpen ? "top-[7px] rotate-45" : "top-0.5"}`} />
+                <span className={`absolute left-0 top-[7px] h-0.5 w-4 rounded bg-white/50 transition duration-300 ${mobileMenuOpen ? "opacity-0 scale-0" : "opacity-100"}`} />
+                <span className={`absolute left-0 h-0.5 w-4 rounded bg-white/50 transition duration-300 ${mobileMenuOpen ? "top-[7px] -rotate-45" : "top-[13px]"}`} />
               </div>
             </button>
           </div>
@@ -275,7 +306,7 @@ export default function AppShell() {
 
         {/* Mobile menu — slide down */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-out md:hidden ${mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
+          className={`overflow-hidden transition duration-300 ease-out md:hidden ${mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
         >
           <div className="border-t border-white/[0.04] px-4 pb-4 pt-2 space-y-0.5">
             <button onClick={() => { setPage("contacts"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "contacts" || page === "contact_details")} block w-full text-left py-2.5`}>
@@ -327,6 +358,12 @@ export default function AppShell() {
       </nav>
 
       <div className="page-enter">
+        {title ? (
+          <header className="mx-auto max-w-7xl px-4 pb-6 pt-8 md:px-6">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+            {subtitle ? <p className="mt-1 text-sm text-white/60">{subtitle}</p> : null}
+          </header>
+        ) : null}
         <Suspense fallback={<PageFallback />}>
 
         {/* APPLICATIONS PAGE */}
