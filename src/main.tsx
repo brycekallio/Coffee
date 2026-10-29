@@ -17,6 +17,21 @@ const CLERK_KEY =
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
   "pk_test_bW9kZWwtYW50ZWxvcGUtMzkzNS5jbGVyay5hY2NvdW50cy5kZXYk"
 
+// Pages are lazy chunks with hashed names, and each Netlify deploy replaces them. A tab
+// opened before a deploy then asks for a chunk that no longer exists. Vite raises this
+// event when that import fails; reload once to pick up the new index.html, and guard with
+// sessionStorage so a genuinely broken deploy can't put the page in a reload loop.
+window.addEventListener('vite:preloadError', (event) => {
+  const key = 'coffee_chunk_reload'
+  if (sessionStorage.getItem(key)) return
+  sessionStorage.setItem(key, '1')
+  event.preventDefault()
+  window.location.reload()
+})
+window.addEventListener('load', () => {
+  setTimeout(() => sessionStorage.removeItem('coffee_chunk_reload'), 10_000)
+})
+
 // Register service worker for offline PWA support
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch((error) => {

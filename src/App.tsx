@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { invokeAi, PowerTierRequiredError } from "./features/ai/client";
 import { supabase, supabaseMisconfigured } from "./lib/supabase";
@@ -10,18 +10,28 @@ import Modal from "./components/ui/Modal";
 import Logo from "./components/ui/Logo";
 import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath, errorMessage } from "./lib/utils";
 import { parseCsv, inferFieldMap, splitName, isEmail, cleanLinkedIn, cleanPhone } from "./lib/csvHelper";
-import { parsePdfToText, parsePdfFromUrl } from "./lib/resumeUtils";
 import AuthPage from "./pages/AuthPage";
 import ContactsPage from "./pages/ContactsPage";
-import ContactDetailsPage from "./pages/ContactDetailsPage";
-import ApplicationsPage from "./pages/ApplicationsPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import SettingsPage from "./pages/SettingsPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import WatchlistPage from "./pages/WatchlistPage";
-import OutreachEmailsPage from "./pages/OutreachEmailsPage";
-import JdScorerPage from "./pages/JdScorerPage";
 
+// Contacts is the landing page and Auth the signed-out one, so both stay in the entry
+// chunk. Everything else loads on first visit — Analytics alone pulls in Recharts.
+const ContactDetailsPage = lazy(() => import("./pages/ContactDetailsPage"));
+const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const WatchlistPage = lazy(() => import("./pages/WatchlistPage"));
+const OutreachEmailsPage = lazy(() => import("./pages/OutreachEmailsPage"));
+const JdScorerPage = lazy(() => import("./pages/JdScorerPage"));
+
+
+function PageFallback() {
+  return (
+    <div className="flex justify-center py-24" role="status" aria-label="Loading">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-glow/20 border-t-glow/70" />
+    </div>
+  );
+}
 
 /* =============================== App =============================== */
 
@@ -413,6 +423,8 @@ export default function App() {
 
       if (ext === "pdf") {
         try {
+          // pdf.js is ~half a megabyte; load it only when someone actually uploads.
+          const { parsePdfToText } = await import("./lib/pdfText");
           const text = await parsePdfToText(file);
           updatePayload.resume_text = text;
         } catch (parseErr) {
@@ -492,6 +504,7 @@ export default function App() {
     try {
       const url = await getResumeUrl();
       if (!url) return;
+      const { parsePdfFromUrl } = await import("./lib/pdfText");
       const text = await parsePdfFromUrl(url);
       const { error } = await supabase
         .from("profiles")
@@ -1334,6 +1347,7 @@ export default function App() {
       </nav>
 
       <div className="page-enter">
+        <Suspense fallback={<PageFallback />}>
 
         {/* APPLICATIONS PAGE */}
         {page === "applications" ? (
@@ -1499,6 +1513,8 @@ export default function App() {
             onCalendarDisconnect={disconnectGCal}
           />
         ) : null}
+
+        </Suspense>
 
         {/* Edit Contact Modal */}
         <Modal
