@@ -219,8 +219,8 @@ async function processQueue() {
       await markStatus(msg.id, "sent");
       sentCount++;
       console.log(`[Worker] Message ${msg.id} sent successfully.`);
-    } catch (err: any) {
-      console.error(`[Worker] Failed to send ${msg.id}:`, err.message);
+    } catch (err) {
+      console.error(`[Worker] Failed to send ${msg.id}:`, err instanceof Error ? err.message : err);
       await markStatus(msg.id, "failed");
     }
   }
@@ -423,7 +423,7 @@ function setupIPC() {
     };
   });
 
-  ipcMain.handle("set-setting", (_, key: string, value: any) => {
+  ipcMain.handle("set-setting", (_, key: string, value: boolean) => {
     if (key === "autoLaunch" || key === "workerEnabled") {
       store.set(key, value);
       updateTrayMenu();

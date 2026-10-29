@@ -2,6 +2,7 @@ import { useState } from "react";
 import Card from "../components/ui/Card";
 import type { Application, Contact } from "../types";
 import { supabase } from "../lib/supabase";
+import { errorMessage } from "../lib/utils";
 import { toast } from "sonner";
 
 interface ApplicationsPageProps {
@@ -76,8 +77,8 @@ export default function ApplicationsPage({
       if (error) throw error;
       toast.success("Application updated.");
       await loadApplications();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to update application.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to update application."));
     } finally {
       setUpdatingStatusId("");
     }

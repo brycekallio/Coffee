@@ -1,7 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import puppeteer from 'puppeteer';
+import puppeteer, { type ElementHandle } from 'puppeteer';
 import { exec } from 'child_process';
 import util from 'util';
 
@@ -137,7 +137,7 @@ async function sendLinkedIn(contact: Contact, message: string) {
     const messageBtn = await page.$x("//button[contains(., 'Message')]");
     
     if (messageBtn.length > 0) {
-      await (messageBtn[0] as any).click();
+      await (messageBtn[0] as ElementHandle<Element>).click();
     } else {
       // Maybe it's in the "More" dropdown?
       // MVP: Throw error if main button not found
@@ -208,7 +208,7 @@ async function processQueue() {
       await markStatus(msg.id, 'sent');
       console.log(`Reference ${msg.id} sent successfully.`);
       
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Failed to send ${msg.id}:`, err);
       // Optional: await markStatus(msg.id, 'failed', err.message);
     }

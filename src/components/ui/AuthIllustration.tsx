@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState } from "react";
 
 /**
  * Generates the decorative particle field once. Deliberately non-deterministic (random
@@ -42,9 +42,8 @@ function generateParticles() {
 }
 
 export default function AuthIllustration() {
-  const particlesRef = useRef<ReturnType<typeof generateParticles> | null>(null);
-  if (particlesRef.current === null) particlesRef.current = generateParticles();
-  const particles = particlesRef.current;
+  // Lazy initializer: generated once per mount, stable across re-renders.
+  const [particles] = useState(generateParticles);
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">

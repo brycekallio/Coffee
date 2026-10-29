@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import type { Profile } from "../types";
+import type { Page, Profile } from "../types";
+import { errorMessage } from "../lib/utils";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -22,7 +23,7 @@ interface ScoreResult {
 interface Props {
   profile: Profile | null;
   inputCls: string;
-  setPage: (page: any) => void;
+  setPage: (page: Page) => void;
 }
 
 /* ── Helpers ────────────────────────────────────────────────────── */
@@ -112,11 +113,12 @@ export default function JdScorerPage({ profile, inputCls, setPage }: Props) {
       });
 
       if (fnError) throw new Error(fnError.message);
-      if ((data as any)?.error) throw new Error((data as any).error);
+      const fnErr = (data as { error?: string } | null)?.error;
+      if (fnErr) throw new Error(fnErr);
 
       setResult(data as ScoreResult);
-    } catch (e: any) {
-      setErrorMsg(e?.message ?? "Scoring failed. Please try again.");
+    } catch (e) {
+      setErrorMsg(errorMessage(e, "Scoring failed. Please try again."));
     } finally {
       setLoading(false);
     }

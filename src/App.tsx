@@ -8,7 +8,7 @@ import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
 import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
 import Modal from "./components/ui/Modal";
 import Logo from "./components/ui/Logo";
-import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath } from "./lib/utils";
+import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath, errorMessage } from "./lib/utils";
 import { parseCsv, inferFieldMap, splitName, isEmail, cleanLinkedIn, cleanPhone } from "./lib/csvHelper";
 import { parsePdfToText, parsePdfFromUrl } from "./lib/resumeUtils";
 import AuthPage from "./pages/AuthPage";
@@ -286,10 +286,10 @@ export default function App() {
       pending = { ...(pending ?? {}), full_name: session.user.name };
     }
 
-    let row: Record<string, any> | null = data;
+    let row: Partial<Profile> | null = data;
 
     if (!row) {
-      const insertPayload: Record<string, any> = {
+      const insertPayload: Partial<Profile> = {
         id: session.user.id,
         full_name: pending?.full_name || null,
         my_linkedin_url: pending?.my_linkedin_url || null,
@@ -308,7 +308,7 @@ export default function App() {
     } else if (pending && (pending.full_name || pending.phone || pending.my_linkedin_url || pending.career_interests)) {
       // Row already existed (created blank by the DB trigger) — merge the pending data in
       // rather than leaving it stranded in localStorage and the row permanently blank.
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Partial<Profile> = {};
       if (pending.full_name) updatePayload.full_name = pending.full_name;
       if (pending.my_linkedin_url) updatePayload.my_linkedin_url = pending.my_linkedin_url;
       if (pending.phone) updatePayload.phone = pending.phone;
@@ -389,8 +389,8 @@ export default function App() {
       // set — Coffee never receives one. Settings shows the address read-only.
 
       await loadProfile();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to save profile.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to save profile."));
     } finally {
       setSavingProfile(false);
     }
@@ -451,12 +451,12 @@ export default function App() {
 
       await loadProfile();
       toast.success("Resume uploaded.");
-    } catch (e: any) {
+    } catch (e) {
       console.error("[uploadResume] failed", e);
-      const msg =
-        e?.message ||
-        e?.error_description ||
-        "Resume upload failed. Make sure the Storage bucket 'resumes' exists and profiles RLS allows updates.";
+      const msg = errorMessage(
+        e,
+        "Resume upload failed. Make sure the Storage bucket 'resumes' exists and profiles RLS allows updates."
+      );
       toast.error(msg);
     } finally {
       setSavingProfile(false);
@@ -500,8 +500,8 @@ export default function App() {
       if (error) throw error;
       await loadProfile();
       toast.success("Resume text re-parsed.");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to re-parse resume.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to re-parse resume."));
     } finally {
       setSavingProfile(false);
     }
@@ -576,8 +576,8 @@ export default function App() {
       setEditingAppId(null);
 
       await loadApplications();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to save application. Did you create the table?");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to save application. Did you create the table?"));
     } finally {
       setSavingApp(false);
     }
@@ -760,8 +760,8 @@ export default function App() {
       }
       setMeetingEdits(edits);
       setMeetingDirty(dirty);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to load meetings. Did you create the contact_meetings table?");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to load meetings. Did you create the contact_meetings table?"));
       setMeetings([]);
       setMeetingEdits({});
       setMeetingDirty({});
@@ -812,8 +812,8 @@ export default function App() {
 
       setMeetingDraftTitle("");
       await loadMeetings(selectedContactId);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to add meeting.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to add meeting."));
     }
   }
 
@@ -845,8 +845,8 @@ export default function App() {
 
       setMeetingDirty((prev) => ({ ...prev, [meetingId]: false }));
       await loadMeetings(selectedContactId);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to save meeting notes.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to save meeting notes."));
     } finally {
       setMeetingSavingId("");
     }
@@ -862,8 +862,8 @@ export default function App() {
       const { error } = await supabase.from("contact_meetings").delete().eq("id", meetingId);
       if (error) throw error;
       await loadMeetings(selectedContactId);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to delete meeting.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to delete meeting."));
     } finally {
       setMeetingDeletingId("");
     }
@@ -967,7 +967,7 @@ export default function App() {
       const owner_id = session.user.id;
 
       const seen = new Set<string>();
-      const inserts: any[] = [];
+      const inserts: Record<string, unknown>[] = [];
 
       for (const r of rows) {
         const emailRaw = map.email ? r[map.email] : "";
@@ -1037,8 +1037,8 @@ export default function App() {
       await loadContacts();
       toast.success("Import complete.");
       setPage("contacts");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Import failed.");
+    } catch (e) {
+      toast.error(errorMessage(e, "Import failed."));
     } finally {
       setImporting(false);
     }

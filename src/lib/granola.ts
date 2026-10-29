@@ -35,7 +35,7 @@ function nameFor(text: string, email: string): string | null {
   // that cannot be part of a name.
   const before = text.slice(Math.max(0, at - 80), at);
   const cleaned = before
-    .replace(/[<(\[]\s*$/, "")
+    .replace(/[<([]\s*$/, "")
     .split(/[,;\n|]/).pop()!
     .replace(/\s+from\s+\S+\s*$/i, "")      // "Anna Steward from TIFIN"
     .replace(/\(note creator\)/i, "")

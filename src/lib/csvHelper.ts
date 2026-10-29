@@ -76,22 +76,22 @@ export function normHeader(h: string) {
     .replaceAll(/[^\w]/g, "");
 }
 
-export function isEmail(v: any) {
+export function isEmail(v: unknown) {
   const s = String(v ?? "").trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
-export function isPhone(v: any) {
+export function isPhone(v: unknown) {
   const s = String(v ?? "").trim();
   return /(\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}/.test(s);
 }
 
-export function isLinkedInUrl(v: any) {
+export function isLinkedInUrl(v: unknown) {
   const s = String(v ?? "").trim().toLowerCase();
   return /linkedin\.com\/(in|company|pub)\//.test(s) || /^in\/[a-z0-9\-_%.]+/i.test(s);
 }
 
-export function cleanLinkedIn(v: any): string | null {
+export function cleanLinkedIn(v: unknown): string | null {
   let s = String(v ?? "").trim();
   if (!s) return null;
   if (/^in\//i.test(s)) s = `https://www.linkedin.com/${s}`;
@@ -99,13 +99,13 @@ export function cleanLinkedIn(v: any): string | null {
   return isLinkedInUrl(s) ? s : null;
 }
 
-export function cleanPhone(v: any): string | null {
+export function cleanPhone(v: unknown): string | null {
   const s = String(v ?? "").trim();
   if (!s) return null;
   return s.replaceAll(/\s+/g, " ");
 }
 
-export function looksLikeName(v: any) {
+export function looksLikeName(v: unknown) {
   const s = String(v ?? "").trim();
   if (!s) return false;
   if (isEmail(s) || isPhone(s) || isLinkedInUrl(s)) return false;
@@ -144,7 +144,7 @@ export const TITLE_HINTS = [
   "portfolio",
 ];
 
-export function looksLikeTitle(v: any) {
+export function looksLikeTitle(v: unknown) {
   const s = String(v ?? "").trim();
   const l = s.toLowerCase();
   if (!s) return false;
@@ -173,7 +173,7 @@ export const COMPANY_HINTS = [
   "university",
 ];
 
-export function looksLikeCompany(v: any) {
+export function looksLikeCompany(v: unknown) {
   const s = String(v ?? "").trim();
   const l = s.toLowerCase();
   if (!s) return false;
@@ -195,7 +195,7 @@ export function inferByHeader(headers: string[], candidates: string[]) {
   return null;
 }
 
-export function inferByContent(headers: string[], rows: Record<string, string>[], predicate: (v: any) => boolean) {
+export function inferByContent(headers: string[], rows: Record<string, string>[], predicate: (v: unknown) => boolean) {
   const scores: Record<string, number> = {};
   for (const h of headers) scores[h] = 0;
 
