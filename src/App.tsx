@@ -1,23 +1,22 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { invokeAi, PowerTierRequiredError } from "./features/ai/client";
 import { supabase, supabaseMisconfigured } from "./lib/supabase";
 import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { clearCachedUserId, linkIdentity, NoAccountError, type AppUser } from "./lib/appSession";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
-import type { Contact, ContactMeeting, Profile, Page } from "./types";
+import type { Profile, Page } from "./types";
 import type { TablesInsert } from "./lib/database.types";
 import { inputCls, selectCls } from "./components/ui/styles";
 import { SessionContext } from "./app/session";
 import Logo from "./components/ui/Logo";
-import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath, errorMessage } from "./lib/utils";
+import { initialsFromName, resumeStoragePath, errorMessage } from "./lib/utils";
 import AuthPage from "./pages/AuthPage";
 import ContactsPage from "./features/contacts/ContactsPage";
 import { ContactsProvider } from "./features/contacts/ContactsProvider";
 
 // Contacts is the landing page and Auth the signed-out one, so both stay in the entry
 // chunk. Everything else loads on first visit — Analytics alone pulls in Recharts.
-const ContactDetailsPage = lazy(() => import("./pages/ContactDetailsPage"));
+const ContactDetailsPage = lazy(() => import("./features/contacts/ContactDetailsPage"));
 const ApplicationsPage = lazy(() => import("./features/applications/ApplicationsPage"));
 const AnalyticsPage = lazy(() => import("./features/analytics/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -59,23 +58,6 @@ export default function App() {
   const [userCareerInterests, setUserCareerInterests] = useState("");
 
   const [selectedContactId, setSelectedContactId] = useState<string>("");
-  const [meetings, setMeetings] = useState<ContactMeeting[]>([]);
-  const [loadingMeetings, setLoadingMeetings] = useState(false);
-  const [meetingDraftDate, setMeetingDraftDate] = useState<string>(todayISODate());
-  const [meetingDraftTitle, setMeetingDraftTitle] = useState<string>("");
-  const [meetingSavingId, setMeetingSavingId] = useState<string>("");
-  const [meetingDeletingId, setMeetingDeletingId] = useState<string>("");
-  const [meetingDirty, setMeetingDirty] = useState<Record<string, boolean>>({});
-  const [meetingEdits, setMeetingEdits] = useState<
-    Record<
-      string,
-      {
-        meeting_date: string;
-        title: string;
-        notes: string;
-      }
-    >
-  >({});
 
   /* ----------------------------- Applications State ----------------------------- */
   /* ----------------------------- Auth session ----------------------------- */
@@ -180,9 +162,6 @@ export default function App() {
     setSession(null);
     setProfile(null);
     setSelectedContactId("");
-    setMeetings([]);
-    setMeetingEdits({});
-    setMeetingDirty({});
     setProfileMenuOpen(false);
   }
 
@@ -469,46 +448,6 @@ export default function App() {
     }
   }
 
-  async function loadMeetings(contactId: string) {
-    if (!session?.user?.id) return;
-    if (!contactId) return;
-
-    setLoadingMeetings(true);
-    try {
-      const { data, error } = await supabase
-        .from("contact_meetings")
-        .select("id, owner_id, contact_id, meeting_date, title, notes, created_at")
-        .eq("contact_id", contactId)
-        .order("meeting_date", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const rows = data ?? [];
-      setMeetings(rows);
-
-      const edits: typeof meetingEdits = {};
-      const dirty: typeof meetingDirty = {};
-      for (const m of rows) {
-        edits[m.id] = {
-          meeting_date: (m.meeting_date ?? "").slice(0, 10),
-          title: m.title ?? "",
-          notes: m.notes ?? "",
-        };
-        dirty[m.id] = false;
-      }
-      setMeetingEdits(edits);
-      setMeetingDirty(dirty);
-    } catch (e) {
-      toast.error(errorMessage(e, "Failed to load meetings. Did you create the contact_meetings table?"));
-      setMeetings([]);
-      setMeetingEdits({});
-      setMeetingDirty({});
-    } finally {
-      setLoadingMeetings(false);
-    }
-  }
-
   async function openDetails(contactId: string) {
     setSelectedContactId(contactId);
     setPage("contact_details");
@@ -517,165 +456,6 @@ export default function App() {
   function handleFollowUp() {
     setPage("outreach_emails");
   }
-
-  useEffect(() => {
-    if (page === "contact_details" && selectedContactId) {
-      loadMeetings(selectedContactId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, selectedContactId]);
-
-  async function addMeeting() {
-    if (!session?.user?.id) return;
-    if (!selectedContactId) return;
-
-    const date = (meetingDraftDate || "").trim() || todayISODate();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      toast.error("Meeting date must be in YYYY-MM-DD format.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from("contact_meetings").insert({
-        owner_id: session.user.id,
-        contact_id: selectedContactId,
-        meeting_date: date,
-        title: meetingDraftTitle.trim() || null,
-        notes: null,
-      });
-      if (error) throw error;
-
-      setMeetingDraftTitle("");
-      await loadMeetings(selectedContactId);
-    } catch (e) {
-      toast.error(errorMessage(e, "Failed to add meeting."));
-    }
-  }
-
-  async function saveMeeting(meetingId: string) {
-    if (!session?.user?.id) return;
-    if (!meetingId) return;
-
-    const draft = meetingEdits[meetingId];
-    if (!draft) return;
-
-    const date = (draft.meeting_date || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      toast.error("Meeting date must be in YYYY-MM-DD format.");
-      return;
-    }
-
-    setMeetingSavingId(meetingId);
-    try {
-      const { error } = await supabase
-        .from("contact_meetings")
-        .update({
-          meeting_date: date,
-          title: draft.title.trim() || null,
-          notes: draft.notes ?? null,
-        })
-        .eq("id", meetingId);
-
-      if (error) throw error;
-
-      setMeetingDirty((prev) => ({ ...prev, [meetingId]: false }));
-      await loadMeetings(selectedContactId);
-    } catch (e) {
-      toast.error(errorMessage(e, "Failed to save meeting notes."));
-    } finally {
-      setMeetingSavingId("");
-    }
-  }
-
-  async function deleteMeeting(meetingId: string) {
-    if (!meetingId) return;
-    const ok = window.confirm("Delete this meeting note folder? This cannot be undone.");
-    if (!ok) return;
-
-    setMeetingDeletingId(meetingId);
-    try {
-      const { error } = await supabase.from("contact_meetings").delete().eq("id", meetingId);
-      if (error) throw error;
-      await loadMeetings(selectedContactId);
-    } catch (e) {
-      toast.error(errorMessage(e, "Failed to delete meeting."));
-    } finally {
-      setMeetingDeletingId("");
-    }
-  }
-
-  function setMeetingField(meetingId: string, key: "meeting_date" | "title" | "notes", value: string) {
-    setMeetingEdits((prev) => ({
-      ...prev,
-      [meetingId]: {
-        meeting_date: prev[meetingId]?.meeting_date ?? "",
-        title: prev[meetingId]?.title ?? "",
-        notes: prev[meetingId]?.notes ?? "",
-        [key]: value,
-      },
-    }));
-    setMeetingDirty((prev) => ({ ...prev, [meetingId]: true }));
-  }
-
-  async function importMeetingFromTranscript(
-    contact: Contact,
-    transcript: string,
-    meetingDate: string,
-    label: string,
-  ) {
-    const contactId = contact.id;
-    const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
-    const contactCompany = contact.company ?? "";
-
-    // invokeAi surfaces the server's own message (a bare invoke only reports
-    // "non-2xx status code") and turns the free-tier length cap into a 402.
-    let fnData: {
-      suggested_title?: string;
-      formatted_notes?: string;
-    };
-    try {
-      fnData = await invokeAi("process-meeting-notes", {
-        transcript,
-        contact_name: contactName,
-        contact_company: contactCompany,
-        meeting_date: meetingDate,
-      });
-    } catch (e) {
-      if (e instanceof PowerTierRequiredError) {
-        toast.error(e.message);
-      } else {
-        toast.error(
-          "Transcript processing failed: " +
-            (e instanceof Error ? e.message : "Unknown error"),
-        );
-      }
-      return;
-    }
-
-    const user = session?.user;
-    if (!user) { toast.error("Not signed in."); return; }
-
-    const title = label.trim() || fnData.suggested_title || "Meeting";
-    const notes = fnData.formatted_notes ?? "";
-
-    const { error: insErr } = await supabase.from("contact_meetings").insert({
-      owner_id: user.id,
-      contact_id: contactId,
-      meeting_date: meetingDate,
-      title,
-      notes,
-    });
-
-    if (insErr) {
-      toast.error("Failed to save meeting note: " + insErr.message);
-      return;
-    }
-
-    toast.success("Meeting notes extracted and saved!");
-    await loadMeetings(contactId);
-  }
-
-  /* ----------------------------- Import page handlers ----------------------------- */
 
   /* =============================== Auth Screen =============================== */
 
@@ -984,28 +764,10 @@ export default function App() {
         {page === "contact_details" ? (
           <ContactDetailsPage
             contactId={selectedContactId}
-            meetings={meetings}
-            loadingMeetings={loadingMeetings}
-            meetingEdits={meetingEdits}
-            meetingDirty={meetingDirty}
-            meetingSavingId={meetingSavingId}
-            meetingDeletingId={meetingDeletingId}
-            meetingDraftDate={meetingDraftDate}
-            setMeetingDraftDate={setMeetingDraftDate}
-            meetingDraftTitle={meetingDraftTitle}
-            setMeetingDraftTitle={setMeetingDraftTitle}
-            addMeeting={addMeeting}
-            saveMeeting={saveMeeting}
-            deleteMeeting={deleteMeeting}
-            setMeetingField={setMeetingField}
-            loadMeetings={loadMeetings}
             onBack={() => {
               setPage("contacts");
               setSelectedContactId("");
             }}
-            importMeetingFromTranscript={importMeetingFromTranscript}
-            inputCls={inputCls}
-            formatDateLabel={formatDateLabel}
           />
         ) : null}
 
