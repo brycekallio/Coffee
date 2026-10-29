@@ -1,60 +1,49 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import Card from "../components/ui/Card";
-import type { Profile } from "../types";
+import Card from "@/components/ui/Card";
+import { inputCls, selectCls } from "@/components/ui/styles";
+import { useSession } from "@/app/session";
 import { useCsvImport } from "@/features/contacts/useCsvImport";
-import { adjustResume } from "../lib/resumeUtils";
-import AiEngineSettings from "../features/ai/AiEngineSettings";
-import { type AiStatus, PowerTierRequiredError } from "../features/ai/client";
+import { adjustResume } from "@/lib/resumeUtils";
+import { initiateGCalOAuth } from "@/lib/googleCalendar";
+import AiEngineSettings from "@/features/ai/AiEngineSettings";
+import { type AiStatus, PowerTierRequiredError } from "@/features/ai/client";
+import { useProfile } from "./profileContext";
 
 interface SettingsPageProps {
-  displayName: string;
-  setDisplayName: (v: string) => void;
-  myLinkedInUrl: string;
-  setMyLinkedInUrl: (v: string) => void;
-  userPhone: string;
-  setUserPhone: (v: string) => void;
-  userCareerInterests: string;
-  setUserCareerInterests: (v: string) => void;
-  accountEmail: string;
-  accountProvider: string;
-  profile: Profile | null;
-  savingProfile: boolean;
-  saveProfile: () => void;
-  uploadResume: (file: File) => void;
-  openResume: () => void;
   /** Called after a CSV import succeeds — App navigates to the contact list. */
   onContactsImported: () => void;
-  inputCls: string;
-  selectCls: string;
-  reparseResume: () => void;
-  onCalendarConnect: () => void;
-  onCalendarDisconnect: () => void;
 }
 
-export default function SettingsPage({
-  displayName,
-  setDisplayName,
-  myLinkedInUrl,
-  setMyLinkedInUrl,
-  userPhone,
-  setUserPhone,
-  userCareerInterests,
-  setUserCareerInterests,
-  accountEmail,
-  accountProvider,
-  profile,
-  savingProfile,
-  saveProfile,
-  uploadResume,
-  openResume,
-  onContactsImported,
-  inputCls,
-  selectCls,
-  reparseResume,
-  onCalendarConnect,
-  onCalendarDisconnect,
-}: SettingsPageProps) {
+/** Rendered only once the profile has loaded, so the drafts below seed from real values. */
+export default function SettingsPage({ onContactsImported }: SettingsPageProps) {
+  const { email: accountEmail } = useSession();
+  const accountProvider = "Clerk";
+  const {
+    profile,
+    saving: savingProfile,
+    saveProfile: save,
+    uploadResume,
+    openResume,
+    reparseResume,
+    disconnectCalendar: onCalendarDisconnect,
+  } = useProfile();
+  const onCalendarConnect = initiateGCalOAuth;
+
+  const [displayName, setDisplayName] = useState(profile?.full_name ?? "");
+  const [myLinkedInUrl, setMyLinkedInUrl] = useState(profile?.my_linkedin_url ?? "");
+  const [userPhone, setUserPhone] = useState(profile?.phone ?? "");
+  const [userCareerInterests, setUserCareerInterests] = useState(profile?.career_interests ?? "");
+
+  function saveProfile() {
+    void save({
+      full_name: displayName || null,
+      my_linkedin_url: myLinkedInUrl || null,
+      phone: userPhone || null,
+      career_interests: userCareerInterests || null,
+    });
+  }
+
   const {
     fileName: importFileName,
     rows: importRows,

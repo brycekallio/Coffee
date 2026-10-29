@@ -1,20 +1,11 @@
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import type { Page } from "../types";
-import Logo from "../components/ui/Logo";
+import Logo from "@/components/ui/Logo";
+import { useProfile } from "./profileContext";
 
 interface OnboardingPageProps {
-  displayName: string;
-  setDisplayName: (v: string) => void;
-  myLinkedInUrl: string;
-  setMyLinkedInUrl: (v: string) => void;
-  saveProfile: () => Promise<void>;
-  uploadResume: (file: File) => Promise<void>;
-  savingProfile: boolean;
-  setPage: (page: Page) => void;
-  inputCls: string;
-  /** Marks onboarding as finished so it never auto-opens again for this user. */
-  completeOnboarding: () => void;
+  /** Leaves onboarding (finished or skipped) — App navigates to the contact list. */
+  onDone: () => void;
 }
 
 type Step = {
@@ -79,17 +70,13 @@ function FloatingInput({
   );
 }
 
-export default function OnboardingPage({
-  displayName,
-  setDisplayName,
-  myLinkedInUrl,
-  setMyLinkedInUrl,
-  saveProfile,
-  uploadResume,
-  savingProfile,
-  setPage,
-  completeOnboarding,
-}: OnboardingPageProps) {
+/** Rendered only once the profile has loaded, so the drafts below seed from real values. */
+export default function OnboardingPage({ onDone }: OnboardingPageProps) {
+  const { profile, saving: savingProfile, saveProfile: save, uploadResume, completeOnboarding } = useProfile();
+  const [displayName, setDisplayName] = useState(profile?.full_name ?? "");
+  const [myLinkedInUrl, setMyLinkedInUrl] = useState(profile?.my_linkedin_url ?? "");
+  const saveProfile = () =>
+    save({ full_name: displayName.trim() || null, my_linkedin_url: myLinkedInUrl.trim() || null });
   const [step, setStep] = useState(0);
   const [stepping, setStepping] = useState(false);
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
@@ -145,25 +132,20 @@ export default function OnboardingPage({
 
   async function handleSkip() {
     // Persist anything they already entered so it shows up in Settings.
-    try {
-      if (displayName.trim() || myLinkedInUrl.trim()) {
-        await saveProfile();
-      }
-    } catch {
-      /* saveProfile surfaces its own toast; swallow here so skip still works */
-    }
+    // saveProfile toasts its own failure; skipping still proceeds.
+    if (displayName.trim() || myLinkedInUrl.trim()) await saveProfile();
     completeOnboarding();
     toast.info("You can finish setting up your profile anytime in Settings.");
-    setPage("contacts");
+    onDone();
   }
 
   async function handleFinish() {
     setFinishing(true);
     try {
-      await saveProfile();
+      if (!(await saveProfile())) return;
       completeOnboarding();
       toast.success("You're in. Welcome to Coffee.");
-      setPage("contacts");
+      onDone();
     } finally {
       setFinishing(false);
     }

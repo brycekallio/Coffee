@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import type { Page, Profile } from "../types";
+import { inputCls } from "@/components/ui/styles";
+import { useProfile } from "@/features/profile/profileContext";
 import { errorMessage } from "../lib/utils";
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -21,9 +22,8 @@ interface ScoreResult {
 }
 
 interface Props {
-  profile: Profile | null;
-  inputCls: string;
-  setPage: (page: Page) => void;
+  /** The "upload a resume first" empty state links here. */
+  onGoToSettings: () => void;
 }
 
 /* ── Helpers ────────────────────────────────────────────────────── */
@@ -88,7 +88,8 @@ function ScoreRing({ score }: { score: number }) {
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function JdScorerPage({ profile, inputCls, setPage }: Props) {
+export default function JdScorerPage({ onGoToSettings }: Props) {
+  const { profile } = useProfile();
   const [jdText, setJdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScoreResult | null>(null);
@@ -173,7 +174,7 @@ export default function JdScorerPage({ profile, inputCls, setPage }: Props) {
                 A resume is required to use Job Description Comparison. Upload a PDF resume in Settings to get started.
               </p>
               <button
-                onClick={() => setPage("settings")}
+                onClick={onGoToSettings}
                 className="mt-3 rounded-lg bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/70 transition-all hover:bg-white/[0.10] hover:text-white cursor-pointer"
               >
                 Go to Settings →

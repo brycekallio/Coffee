@@ -3,18 +3,14 @@ import { supabase } from "../lib/supabase";
 import { currentUserId } from "../lib/appSession";
 import { createCalendarEvent } from "../lib/googleCalendar";
 import type { Contact, Profile, ScheduledOutreach, WatchlistTarget } from "../types";
+import { inputCls, selectCls } from "@/components/ui/styles";
+import { useProfile } from "@/features/profile/profileContext";
 import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
 import { toast } from "sonner";
 import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 import { useContacts } from "@/features/contacts/contactsContext";
-
-interface OutreachEmailsPageProps {
-  profile: Profile | null;
-  inputCls: string;
-  selectCls: string;
-}
 
 /* ── Email open tracking ──────────────────────────────── */
 
@@ -116,11 +112,8 @@ function openOutreach(
 
 /* ── Component ────────────────────────────────────────── */
 
-export default function OutreachEmailsPage({
-  profile,
-  inputCls,
-  selectCls,
-}: OutreachEmailsPageProps) {
+export default function OutreachEmailsPage() {
+  const { profile } = useProfile();
   const { contacts } = useContacts();
   /* ── compose state ──────────────────────────────────── */
   const [selectedContactId, setSelectedContactId] = useState("");
