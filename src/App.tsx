@@ -6,6 +6,7 @@ import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { clearCachedUserId, linkIdentity, NoAccountError, type AppUser } from "./lib/appSession";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
 import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
+import type { TablesInsert } from "./lib/database.types";
 import Modal from "./components/ui/Modal";
 import Logo from "./components/ui/Logo";
 import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath, errorMessage } from "./lib/utils";
@@ -299,7 +300,7 @@ export default function App() {
     let row: Partial<Profile> | null = data;
 
     if (!row) {
-      const insertPayload: Partial<Profile> = {
+      const insertPayload: TablesInsert<"profiles"> = {
         id: session.user.id,
         full_name: pending?.full_name || null,
         my_linkedin_url: pending?.my_linkedin_url || null,
@@ -536,7 +537,7 @@ export default function App() {
       toast.error("Failed to load applications.");
       return;
     }
-    setApplications((data ?? []) as Application[]);
+    setApplications(data ?? []);
   }
 
   async function loadScheduledOutreach() {
@@ -550,7 +551,7 @@ export default function App() {
       console.error("Failed to load scheduled outreach:", error);
       return;
     }
-    setScheduledOutreach((data ?? []) as ScheduledOutreach[]);
+    setScheduledOutreach(data ?? []);
   }
 
   async function saveApplication() {
@@ -636,7 +637,7 @@ export default function App() {
       toast.error(error.message);
       return;
     }
-    setContacts((data ?? []) as Contact[]);
+    setContacts(data ?? []);
   }
 
   async function addContact() {
@@ -758,7 +759,7 @@ export default function App() {
 
       if (error) throw error;
 
-      const rows = (data ?? []) as ContactMeeting[];
+      const rows = data ?? [];
       setMeetings(rows);
 
       const edits: typeof meetingEdits = {};
@@ -980,7 +981,7 @@ export default function App() {
       const owner_id = session.user.id;
 
       const seen = new Set<string>();
-      const inserts: Record<string, unknown>[] = [];
+      const inserts: TablesInsert<"contacts">[] = [];
 
       for (const r of rows) {
         const emailRaw = map.email ? r[map.email] : "";

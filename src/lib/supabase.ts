@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -27,7 +28,7 @@ declare global {
  * `supabase.auth.*` throws. That is the intent: there is exactly one place
  * sessions come from, and it is Clerk.
  */
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   supabaseUrl ?? "https://placeholder.supabase.co",
   supabaseAnonKey ?? "placeholder",
   {
