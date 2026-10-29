@@ -1,33 +1,16 @@
 import { useState } from "react";
-import Card from "../components/ui/Card";
-import type { Application, Contact } from "../types";
-import { supabase } from "../lib/supabase";
-import { errorMessage } from "../lib/utils";
 import { toast } from "sonner";
+import Card from "@/components/ui/Card";
+import { inputCls, selectCls } from "@/components/ui/styles";
+import { useSession } from "@/app/session";
+import { errorMessage, todayISODate } from "@/lib/utils";
+import type { Application, Contact } from "@/types";
+import * as api from "./api";
+import { useApplications } from "./useApplications";
 
 interface ApplicationsPageProps {
-  applications: Application[];
-  loadingApps: boolean;
-  loadApplications: () => void;
+  /** For the "Linked contact" dropdown. */
   contacts: Contact[];
-  appCompany: string;
-  setAppCompany: (v: string) => void;
-  appLink: string;
-  setAppLink: (v: string) => void;
-  appDate: string;
-  setAppDate: (v: string) => void;
-  appStatus: string;
-  setAppStatus: (v: string) => void;
-  appContactId: string;
-  setAppContactId: (v: string) => void;
-  savingApp: boolean;
-  editingAppId: string | null;
-  saveApplication: () => void;
-  cancelEditApp: () => void;
-  startEditApp: (a: Application) => void;
-  deleteApplication: (id: string) => void;
-  inputCls: string;
-  selectCls: string;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -37,44 +20,86 @@ const STATUS_STYLE: Record<string, string> = {
   Rejected: "bg-danger/[0.08] text-danger/70",
 };
 
-export default function ApplicationsPage({
-  applications,
-  loadingApps,
-  loadApplications,
-  contacts,
-  appCompany,
-  setAppCompany,
-  appLink,
-  setAppLink,
-  appDate,
-  setAppDate,
-  appStatus,
-  setAppStatus,
-  appContactId,
-  setAppContactId,
-  savingApp,
-  editingAppId,
-  saveApplication,
-  cancelEditApp,
-  startEditApp,
-  deleteApplication,
-  inputCls,
-  selectCls,
-}: ApplicationsPageProps) {
+export default function ApplicationsPage({ contacts }: ApplicationsPageProps) {
+  const user = useSession();
+  const { applications, loading: loadingApps, reload: loadApplications } = useApplications();
+
+  // Form draft — only this page reads it, so it lives here rather than in App.
+  const [appCompany, setAppCompany] = useState("");
+  const [appLink, setAppLink] = useState("");
+  const [appDate, setAppDate] = useState(todayISODate());
+  const [appStatus, setAppStatus] = useState("Applied");
+  const [appContactId, setAppContactId] = useState("");
+  const [savingApp, setSavingApp] = useState(false);
+  const [editingAppId, setEditingAppId] = useState<string | null>(null);
+
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [updatingStatusId, setUpdatingStatusId] = useState<string>("");
 
   const KANBAN_COLUMNS = ["Bookmarked", "Applied", "Interview", "Offer", "Rejected"];
 
+  function resetForm() {
+    setEditingAppId(null);
+    setAppCompany("");
+    setAppLink("");
+    setAppDate(todayISODate());
+    setAppStatus("Applied");
+    setAppContactId("");
+  }
+
+  async function saveApplication() {
+    if (!appCompany.trim()) {
+      toast.error("Company name is required.");
+      return;
+    }
+
+    setSavingApp(true);
+    try {
+      const values = {
+        owner_id: user.id,
+        company: appCompany.trim(),
+        link: appLink.trim() || null,
+        date_applied: appDate || null,
+        status: appStatus.trim() || "Applied",
+        contact_id: appContactId || null,
+      };
+      if (editingAppId) await api.updateApplication(editingAppId, values);
+      else await api.createApplication(values);
+
+      resetForm();
+      await loadApplications();
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to save application."));
+    } finally {
+      setSavingApp(false);
+    }
+  }
+
+  async function deleteApplication(id: string) {
+    if (!confirm("Delete this application?")) return;
+    try {
+      await api.deleteApplication(id);
+      await loadApplications();
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to delete application."));
+    }
+  }
+
+  function startEditApp(a: Application) {
+    setEditingAppId(a.id);
+    setAppCompany(a.company);
+    setAppLink(a.link ?? "");
+    setAppDate(a.date_applied ?? "");
+    setAppStatus(a.status);
+    setAppContactId(a.contact_id ?? "");
+  }
+
+  const cancelEditApp = resetForm;
+
   async function updateApplicationStatus(appId: string, newStatus: string) {
     setUpdatingStatusId(appId);
     try {
-      const { error } = await supabase
-        .from("applications")
-        .update({ status: newStatus })
-        .eq("id", appId);
-
-      if (error) throw error;
+      await api.updateApplication(appId, { status: newStatus });
       toast.success("Application updated.");
       await loadApplications();
     } catch (e) {

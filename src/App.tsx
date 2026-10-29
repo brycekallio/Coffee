@@ -5,9 +5,11 @@ import { supabase, supabaseMisconfigured } from "./lib/supabase";
 import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { clearCachedUserId, linkIdentity, NoAccountError, type AppUser } from "./lib/appSession";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
-import type { Contact, ContactMeeting, Profile, Application, Page, FieldMap, ScheduledOutreach } from "./types";
+import type { Contact, ContactMeeting, Profile, Page, FieldMap } from "./types";
 import type { TablesInsert } from "./lib/database.types";
 import Modal from "./components/ui/Modal";
+import { inputCls, selectCls } from "./components/ui/styles";
+import { SessionContext } from "./app/session";
 import Logo from "./components/ui/Logo";
 import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath, errorMessage } from "./lib/utils";
 import { parseCsv, inferFieldMap, splitName, isEmail, cleanLinkedIn, cleanPhone } from "./lib/csvHelper";
@@ -17,8 +19,8 @@ import ContactsPage from "./pages/ContactsPage";
 // Contacts is the landing page and Auth the signed-out one, so both stay in the entry
 // chunk. Everything else loads on first visit — Analytics alone pulls in Recharts.
 const ContactDetailsPage = lazy(() => import("./pages/ContactDetailsPage"));
-const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
-const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const ApplicationsPage = lazy(() => import("./features/applications/ApplicationsPage"));
+const AnalyticsPage = lazy(() => import("./features/analytics/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const WatchlistPage = lazy(() => import("./pages/WatchlistPage"));
@@ -105,27 +107,6 @@ export default function App() {
   >({});
 
   /* ----------------------------- Applications State ----------------------------- */
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loadingApps, setLoadingApps] = useState(false);
-
-  const [appCompany, setAppCompany] = useState("");
-  const [appLink, setAppLink] = useState("");
-  const [appDate, setAppDate] = useState(todayISODate());
-  const [appStatus, setAppStatus] = useState("Applied");
-  const [appContactId, setAppContactId] = useState("");
-
-  const [savingApp, setSavingApp] = useState(false);
-  const [editingAppId, setEditingAppId] = useState<string | null>(null);
-
-  /* ----------------------------- Scheduled Outreach State ----------------------------- */
-  const [scheduledOutreach, setScheduledOutreach] = useState<ScheduledOutreach[]>([]);
-
-
-  const inputCls =
-    "w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-200 border border-white/[0.06] focus:border-glow/30 focus:bg-white/[0.06] focus:ring-1 focus:ring-glow/15";
-  const selectCls =
-    "w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none transition-all duration-200 border border-white/[0.06] focus:border-glow/30 focus:ring-1 focus:ring-glow/15";
-
   /* ----------------------------- Auth session ----------------------------- */
 
   const { isLoaded: clerkLoaded, isSignedIn, user: clerkUser } = useUser();
@@ -371,8 +352,6 @@ export default function App() {
     if (session) {
       loadProfile();
       loadContacts();
-      loadApplications();
-      loadScheduledOutreach();
       checkDueOutreach();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -519,107 +498,6 @@ export default function App() {
     } finally {
       setSavingProfile(false);
     }
-  }
-
-  /* ----------------------------- Applications CRUD ----------------------------- */
-
-  async function loadApplications() {
-    if (!session?.user?.id) return;
-    setLoadingApps(true);
-    const { data, error } = await supabase
-      .from("applications")
-      .select("*")
-      .order("date_applied", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    setLoadingApps(false);
-    if (error) {
-      toast.error("Failed to load applications.");
-      return;
-    }
-    setApplications(data ?? []);
-  }
-
-  async function loadScheduledOutreach() {
-    if (!session?.user?.id) return;
-    const { data, error } = await supabase
-      .from("scheduled_outreach")
-      .select("*")
-      .order("scheduled_at", { ascending: false });
-
-    if (error) {
-      console.error("Failed to load scheduled outreach:", error);
-      return;
-    }
-    setScheduledOutreach(data ?? []);
-  }
-
-  async function saveApplication() {
-    if (!session?.user?.id) return;
-    if (!appCompany.trim()) {
-      toast.error("Company name is required.");
-      return;
-    }
-
-    setSavingApp(true);
-    try {
-      const payload = {
-        owner_id: session.user.id,
-        company: appCompany.trim(),
-        link: appLink.trim() || null,
-        date_applied: appDate || null,
-        status: appStatus.trim() || "Applied",
-        contact_id: appContactId || null,
-      };
-
-      if (editingAppId) {
-        const { error } = await supabase
-          .from("applications")
-          .update(payload)
-          .eq("id", editingAppId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("applications").insert(payload);
-        if (error) throw error;
-      }
-
-      setAppCompany("");
-      setAppLink("");
-      setAppDate(todayISODate());
-      setAppStatus("Applied");
-      setEditingAppId(null);
-
-      await loadApplications();
-    } catch (e) {
-      toast.error(errorMessage(e, "Failed to save application. Did you create the table?"));
-    } finally {
-      setSavingApp(false);
-    }
-  }
-
-  async function deleteApplication(id: string) {
-    if (!confirm("Delete this application?")) return;
-    const { error } = await supabase.from("applications").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else loadApplications();
-  }
-
-  function startEditApp(a: Application) {
-    setEditingAppId(a.id);
-    setAppCompany(a.company);
-    setAppLink(a.link ?? "");
-    setAppDate(a.date_applied ?? "");
-    setAppStatus(a.status);
-    setAppContactId(a.contact_id ?? "");
-  }
-
-  function cancelEditApp() {
-    setEditingAppId(null);
-    setAppCompany("");
-    setAppLink("");
-    setAppDate(todayISODate());
-    setAppStatus("Applied");
-    setAppContactId("");
   }
 
   /* ----------------------------- Contacts CRUD ----------------------------- */
@@ -796,10 +674,6 @@ export default function App() {
   useEffect(() => {
     if (page === "contact_details" && selectedContactId) {
       loadMeetings(selectedContactId);
-    }
-    if (page === "applications") {
-      loadApplications();
-      if (contacts.length === 0) loadContacts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, selectedContactId]);
@@ -1113,6 +987,7 @@ export default function App() {
   }
 
   return (
+    <SessionContext.Provider value={session.user}>
     <div className="min-h-screen text-white">
       {/* Living canvas background */}
       <div className="fixed inset-0 -z-10 bg-depth-0" />
@@ -1351,41 +1226,10 @@ export default function App() {
         <Suspense fallback={<PageFallback />}>
 
         {/* APPLICATIONS PAGE */}
-        {page === "applications" ? (
-          <ApplicationsPage
-            applications={applications}
-            loadingApps={loadingApps}
-            loadApplications={loadApplications}
-            contacts={contacts}
-            appCompany={appCompany}
-            setAppCompany={setAppCompany}
-            appLink={appLink}
-            setAppLink={setAppLink}
-            appDate={appDate}
-            setAppDate={setAppDate}
-            appStatus={appStatus}
-            setAppStatus={setAppStatus}
-            appContactId={appContactId}
-            setAppContactId={setAppContactId}
-            savingApp={savingApp}
-            editingAppId={editingAppId}
-            saveApplication={saveApplication}
-            cancelEditApp={cancelEditApp}
-            startEditApp={startEditApp}
-            deleteApplication={deleteApplication}
-            inputCls={inputCls}
-            selectCls={selectCls}
-          />
-        ) : null}
+        {page === "applications" ? <ApplicationsPage contacts={contacts} /> : null}
 
         {/* ANALYTICS PAGE */}
-        {page === "analytics" ? (
-          <AnalyticsPage
-            applications={applications}
-            contacts={contacts}
-            scheduledOutreach={scheduledOutreach}
-          />
-        ) : null}
+        {page === "analytics" ? <AnalyticsPage contacts={contacts} /> : null}
 
         {/* NETWORK PAGE */}
         {page === "contacts" ? (
@@ -1564,5 +1408,6 @@ export default function App() {
         </Modal>
       </div>
     </div>
+    </SessionContext.Provider>
   );
 }
