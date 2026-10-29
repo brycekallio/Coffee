@@ -1,64 +1,74 @@
-import { useEffect, useState } from "react";
-import Card from "../components/ui/Card";
-import type { Contact } from "../types";
-import { ensureUrl, todayISODate } from "../lib/utils";
-import { supabase } from "../lib/supabase";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import Card from "@/components/ui/Card";
+import { inputCls } from "@/components/ui/styles";
+import { useSession } from "@/app/session";
+import { ensureUrl, errorMessage, todayISODate } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import * as api from "./api";
+import { useContacts } from "./contactsContext";
 
 interface ContactsPageProps {
-  contacts: Contact[];
-  loadingContacts: boolean;
-  loadContacts: () => void;
-  search: string;
-  setSearch: (v: string) => void;
-  firstName: string;
-  setFirstName: (v: string) => void;
-  lastName: string;
-  setLastName: (v: string) => void;
-  company: string;
-  setCompany: (v: string) => void;
-  jobTitle: string;
-  setJobTitle: (v: string) => void;
-  contactEmail: string;
-  setContactEmail: (v: string) => void;
-  phone: string;
-  setPhone: (v: string) => void;
-  linkedinUrl: string;
-  setLinkedinUrl: (v: string) => void;
-  addContact: () => void;
   openDetails: (contactId: string) => void;
-  openEdit: (c: Contact) => void;
-  deleteContact: (contactId: string) => void;
   onFollowUp?: () => void;
-  inputCls: string;
 }
 
-export default function ContactsPage({
-  contacts,
-  loadingContacts,
-  loadContacts,
-  search,
-  setSearch,
-  firstName,
-  setFirstName,
-  lastName,
-  setLastName,
-  company,
-  setCompany,
-  jobTitle,
-  setJobTitle,
-  contactEmail,
-  setContactEmail,
-  phone,
-  setPhone,
-  linkedinUrl,
-  setLinkedinUrl,
-  addContact,
-  openDetails,
-  openEdit,
-  deleteContact,
-  onFollowUp,
-  inputCls,
-}: ContactsPageProps) {
+export default function ContactsPage({ openDetails, onFollowUp }: ContactsPageProps) {
+  const user = useSession();
+  const { contacts: allContacts, loading: loadingContacts, reload: loadContacts, deleteContact, editContact: openEdit } =
+    useContacts();
+
+  const [search, setSearch] = useState("");
+  const contacts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allContacts;
+    return allContacts.filter((c) =>
+      [c.first_name, c.last_name, c.company, c.title, c.email, c.phone]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [allContacts, search]);
+
+  // Add-contact draft.
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+
+  async function addContact() {
+    try {
+      await api.createContacts([
+        {
+          owner_id: user.id,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          company: company || null,
+          title: jobTitle || null,
+          email: contactEmail || null,
+          phone: phone || null,
+          linkedin_url: linkedinUrl || null,
+          status: "to_contact",
+        },
+      ]);
+    } catch (e) {
+      toast.error(errorMessage(e, "Failed to add contact."));
+      return;
+    }
+    setFirstName("");
+    setLastName("");
+    setCompany("");
+    setJobTitle("");
+    setContactEmail("");
+    setPhone("");
+    setLinkedinUrl("");
+    await loadContacts();
+  }
+
   const [lastMeetingDates, setLastMeetingDates] = useState<Record<string, string>>({});
 
   // Fetch last meeting date for each contact

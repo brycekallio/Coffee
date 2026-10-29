@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Card from "../components/ui/Card";
-import type { Profile, FieldMap } from "../types";
+import type { Profile } from "../types";
+import { useCsvImport } from "@/features/contacts/useCsvImport";
 import { adjustResume } from "../lib/resumeUtils";
 import AiEngineSettings from "../features/ai/AiEngineSettings";
 import { type AiStatus, PowerTierRequiredError } from "../features/ai/client";
@@ -22,12 +23,8 @@ interface SettingsPageProps {
   saveProfile: () => void;
   uploadResume: (file: File) => void;
   openResume: () => void;
-  importFileName: string;
-  importRows: Record<string, string>[];
-  importMap: FieldMap;
-  importing: boolean;
-  onPickCsv: (file: File) => void;
-  importIntoSupabase: () => void;
+  /** Called after a CSV import succeeds — App navigates to the contact list. */
+  onContactsImported: () => void;
   inputCls: string;
   selectCls: string;
   reparseResume: () => void;
@@ -51,18 +48,21 @@ export default function SettingsPage({
   saveProfile,
   uploadResume,
   openResume,
-  importFileName,
-  importRows,
-  importMap,
-  importing,
-  onPickCsv,
-  importIntoSupabase,
+  onContactsImported,
   inputCls,
   selectCls,
   reparseResume,
   onCalendarConnect,
   onCalendarDisconnect,
 }: SettingsPageProps) {
+  const {
+    fileName: importFileName,
+    rows: importRows,
+    map: importMap,
+    importing,
+    pickFile: onPickCsv,
+    importAll: importIntoSupabase,
+  } = useCsvImport({ onImported: onContactsImported });
   const [jobDescription, setJobDescription] = useState("");
   const [adjustResult, setAdjustResult] = useState("");
   const [adjusting, setAdjusting] = useState(false);

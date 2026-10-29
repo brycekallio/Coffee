@@ -1,20 +1,19 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { invokeAi, PowerTierRequiredError } from "./features/ai/client";
 import { supabase, supabaseMisconfigured } from "./lib/supabase";
 import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { clearCachedUserId, linkIdentity, NoAccountError, type AppUser } from "./lib/appSession";
 import { GCAL_OAUTH_STATE, initiateGCalOAuth } from "./lib/googleCalendar";
-import type { Contact, ContactMeeting, Profile, Page, FieldMap } from "./types";
+import type { Contact, ContactMeeting, Profile, Page } from "./types";
 import type { TablesInsert } from "./lib/database.types";
-import Modal from "./components/ui/Modal";
 import { inputCls, selectCls } from "./components/ui/styles";
 import { SessionContext } from "./app/session";
 import Logo from "./components/ui/Logo";
 import { initialsFromName, todayISODate, formatDateLabel, resumeStoragePath, errorMessage } from "./lib/utils";
-import { parseCsv, inferFieldMap, splitName, isEmail, cleanLinkedIn, cleanPhone } from "./lib/csvHelper";
 import AuthPage from "./pages/AuthPage";
-import ContactsPage from "./pages/ContactsPage";
+import ContactsPage from "./features/contacts/ContactsPage";
+import { ContactsProvider } from "./features/contacts/ContactsProvider";
 
 // Contacts is the landing page and Auth the signed-out one, so both stay in the entry
 // chunk. Everything else loads on first visit — Analytics alone pulls in Recharts.
@@ -58,34 +57,6 @@ export default function App() {
   const [myLinkedInUrl, setMyLinkedInUrl] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [userCareerInterests, setUserCareerInterests] = useState("");
-
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(false);
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [company, setCompany] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [linkedinUrl, setLinkedinUrl] = useState("");
-
-  const [search, setSearch] = useState("");
-
-  const [editOpen, setEditOpen] = useState(false);
-  const [editContact, setEditContact] = useState<Contact | null>(null);
-  const [editFirst, setEditFirst] = useState("");
-  const [editLast, setEditLast] = useState("");
-  const [editCompany, setEditCompany] = useState("");
-  const [editTitle, setEditTitle] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editLinkedIn, setEditLinkedIn] = useState("");
-
-  const [importFileName, setImportFileName] = useState<string>("");
-  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
-  const [importMap, setImportMap] = useState<FieldMap>({});
-  const [importing, setImporting] = useState(false);
 
   const [selectedContactId, setSelectedContactId] = useState<string>("");
   const [meetings, setMeetings] = useState<ContactMeeting[]>([]);
@@ -207,7 +178,6 @@ export default function App() {
     await clerk.signOut();
     clearCachedUserId();
     setSession(null);
-    setContacts([]);
     setProfile(null);
     setSelectedContactId("");
     setMeetings([]);
@@ -351,7 +321,6 @@ export default function App() {
   useEffect(() => {
     if (session) {
       loadProfile();
-      loadContacts();
       checkDueOutreach();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -499,128 +468,6 @@ export default function App() {
       setSavingProfile(false);
     }
   }
-
-  /* ----------------------------- Contacts CRUD ----------------------------- */
-
-  async function loadContacts() {
-    setLoadingContacts(true);
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, owner_id, first_name, last_name, company, title, email, phone, linkedin_url, status, created_at")
-      .order("created_at", { ascending: false });
-
-    setLoadingContacts(false);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setContacts(data ?? []);
-  }
-
-  async function addContact() {
-    if (!session?.user?.id) return;
-
-    const { error } = await supabase.from("contacts").insert({
-      owner_id: session.user.id,
-      first_name: firstName || null,
-      last_name: lastName || null,
-      company: company || null,
-      title: jobTitle || null,
-      email: contactEmail || null,
-      phone: phone || null,
-      linkedin_url: linkedinUrl || null,
-      status: "to_contact",
-    });
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    setFirstName("");
-    setLastName("");
-    setCompany("");
-    setJobTitle("");
-    setContactEmail("");
-    setPhone("");
-    setLinkedinUrl("");
-
-    loadContacts();
-  }
-
-  async function deleteContact(contactId: string) {
-    const ok = window.confirm("Delete this person from your Network? This cannot be undone.");
-    if (!ok) return;
-    const { error } = await supabase.from("contacts").delete().eq("id", contactId);
-    if (error) toast.error(error.message);
-    else {
-      if (selectedContactId === contactId) {
-        setSelectedContactId("");
-        setMeetings([]);
-        setMeetingEdits({});
-        setMeetingDirty({});
-        setPage("contacts");
-      }
-      loadContacts();
-    }
-  }
-
-  function openEdit(c: Contact) {
-    setEditContact(c);
-    setEditFirst(c.first_name ?? "");
-    setEditLast(c.last_name ?? "");
-    setEditCompany(c.company ?? "");
-    setEditTitle(c.title ?? "");
-    setEditEmail(c.email ?? "");
-    setEditPhone(c.phone ?? "");
-    setEditLinkedIn(c.linkedin_url ?? "");
-    setEditOpen(true);
-  }
-
-  async function saveEdit() {
-    if (!editContact?.id) return;
-
-    const { error } = await supabase
-      .from("contacts")
-      .update({
-        first_name: editFirst || null,
-        last_name: editLast || null,
-        company: editCompany || null,
-        title: editTitle || null,
-        email: editEmail || null,
-        phone: editPhone || null,
-        linkedin_url: editLinkedIn || null,
-      })
-      .eq("id", editContact.id);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    setEditOpen(false);
-    setEditContact(null);
-    loadContacts();
-  }
-
-  const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    return contacts.filter((c) => {
-      if (!s) return true;
-      return [c.first_name, c.last_name, c.company, c.title, c.email, c.phone]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(s);
-    });
-  }, [contacts, search]);
-
-  /* ----------------------------- Contact Details (meetings/notes) ----------------------------- */
-
-  const selectedContact = useMemo(() => {
-    return contacts.find((c) => c.id === selectedContactId) ?? null;
-  }, [contacts, selectedContactId]);
 
   async function loadMeetings(contactId: string) {
     if (!session?.user?.id) return;
@@ -771,16 +618,14 @@ export default function App() {
   }
 
   async function importMeetingFromTranscript(
-    contactId: string,
+    contact: Contact,
     transcript: string,
     meetingDate: string,
     label: string,
   ) {
-    const contact = contacts.find((c) => c.id === contactId);
-    const contactName = contact
-      ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
-      : "";
-    const contactCompany = contact?.company ?? "";
+    const contactId = contact.id;
+    const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
+    const contactCompany = contact.company ?? "";
 
     // invokeAi surfaces the server's own message (a bare invoke only reports
     // "non-2xx status code") and turns the free-tier length cap into a 402.
@@ -831,106 +676,6 @@ export default function App() {
   }
 
   /* ----------------------------- Import page handlers ----------------------------- */
-
-  async function onPickCsv(file: File) {
-    setImportFileName(file.name);
-    const text = await file.text();
-    const parsed = parseCsv(text);
-
-    setImportRows(parsed.rows);
-
-    const mapping = inferFieldMap(parsed.headers, parsed.rows);
-    setImportMap(mapping);
-  }
-
-  async function importIntoSupabase() {
-    if (!session?.user?.id) return;
-    if (importRows.length === 0) return;
-
-    setImporting(true);
-
-    try {
-      const rows = importRows;
-      const map = importMap;
-      const owner_id = session.user.id;
-
-      const seen = new Set<string>();
-      const inserts: TablesInsert<"contacts">[] = [];
-
-      for (const r of rows) {
-        const emailRaw = map.email ? r[map.email] : "";
-        const phoneRaw = map.phone ? r[map.phone] : "";
-        const liRaw = map.linkedin_url ? r[map.linkedin_url] : "";
-        const companyRaw = map.company ? r[map.company] : "";
-        const titleRaw = map.title ? r[map.title] : "";
-        const statusRaw = map.status ? r[map.status] : "";
-
-        let first = "";
-        let last = "";
-
-        if (map.first_name || map.last_name) {
-          first = map.first_name ? r[map.first_name] : "";
-          last = map.last_name ? r[map.last_name] : "";
-        } else if (map.full_name) {
-          const sn = splitName(r[map.full_name]);
-          first = sn.first;
-          last = sn.last;
-        }
-
-        const email = isEmail(emailRaw) ? emailRaw.trim() : "";
-        const phone = cleanPhone(phoneRaw) ?? "";
-        const linkedin = cleanLinkedIn(liRaw) ?? "";
-
-        const dedupeKey =
-          (email || "").toLowerCase() ||
-          (linkedin || "").toLowerCase() ||
-          `${first.toLowerCase()}|${last.toLowerCase()}|${(companyRaw || "").toLowerCase()}`;
-
-        if (!dedupeKey.trim()) continue;
-        if (seen.has(dedupeKey)) continue;
-        seen.add(dedupeKey);
-
-        let status = "to_contact";
-        const sr = String(statusRaw ?? "").trim().toLowerCase().replaceAll(" ", "_");
-        if (sr) status = sr;
-
-        inserts.push({
-          owner_id,
-          first_name: first || null,
-          last_name: last || null,
-          company: companyRaw?.trim() ? companyRaw.trim() : null,
-          title: titleRaw?.trim() ? titleRaw.trim() : null,
-          email: email || null,
-          phone: phone || null,
-          linkedin_url: linkedin || null,
-          status,
-        });
-      }
-
-      if (inserts.length === 0) {
-        toast.error("No valid rows found to import.");
-        return;
-      }
-
-      const CHUNK = 200;
-      for (let i = 0; i < inserts.length; i += CHUNK) {
-        const chunk = inserts.slice(i, i + CHUNK);
-        const { error } = await supabase.from("contacts").insert(chunk);
-        if (error) throw error;
-      }
-
-      setImportFileName("");
-      setImportRows([]);
-      setImportMap({});
-      await loadContacts();
-      toast.success("Import complete.");
-      setPage("contacts");
-    } catch (e) {
-      toast.error(errorMessage(e, "Import failed."));
-    } finally {
-      setImporting(false);
-    }
-  }
 
   /* =============================== Auth Screen =============================== */
 
@@ -988,6 +733,7 @@ export default function App() {
 
   return (
     <SessionContext.Provider value={session.user}>
+    <ContactsProvider>
     <div className="min-h-screen text-white">
       {/* Living canvas background */}
       <div className="fixed inset-0 -z-10 bg-depth-0" />
@@ -1226,46 +972,18 @@ export default function App() {
         <Suspense fallback={<PageFallback />}>
 
         {/* APPLICATIONS PAGE */}
-        {page === "applications" ? <ApplicationsPage contacts={contacts} /> : null}
+        {page === "applications" ? <ApplicationsPage /> : null}
 
         {/* ANALYTICS PAGE */}
-        {page === "analytics" ? <AnalyticsPage contacts={contacts} /> : null}
+        {page === "analytics" ? <AnalyticsPage /> : null}
 
         {/* NETWORK PAGE */}
-        {page === "contacts" ? (
-          <ContactsPage
-            contacts={filtered}
-            loadingContacts={loadingContacts}
-            loadContacts={loadContacts}
-            search={search}
-            setSearch={setSearch}
-            firstName={firstName}
-            setFirstName={setFirstName}
-            lastName={lastName}
-            setLastName={setLastName}
-            company={company}
-            setCompany={setCompany}
-            jobTitle={jobTitle}
-            setJobTitle={setJobTitle}
-            contactEmail={contactEmail}
-            setContactEmail={setContactEmail}
-            phone={phone}
-            setPhone={setPhone}
-            linkedinUrl={linkedinUrl}
-            setLinkedinUrl={setLinkedinUrl}
-            addContact={addContact}
-            openDetails={openDetails}
-            openEdit={openEdit}
-            deleteContact={deleteContact}
-            onFollowUp={handleFollowUp}
-            inputCls={inputCls}
-          />
-        ) : null}
+        {page === "contacts" ? <ContactsPage openDetails={openDetails} onFollowUp={handleFollowUp} /> : null}
 
         {/* DETAILS PAGE */}
         {page === "contact_details" ? (
           <ContactDetailsPage
-            selectedContact={selectedContact}
+            contactId={selectedContactId}
             meetings={meetings}
             loadingMeetings={loadingMeetings}
             meetingEdits={meetingEdits}
@@ -1281,10 +999,10 @@ export default function App() {
             deleteMeeting={deleteMeeting}
             setMeetingField={setMeetingField}
             loadMeetings={loadMeetings}
-            openEdit={openEdit}
-            deleteContact={deleteContact}
-            setPage={setPage}
-            setSelectedContactId={setSelectedContactId}
+            onBack={() => {
+              setPage("contacts");
+              setSelectedContactId("");
+            }}
             importMeetingFromTranscript={importMeetingFromTranscript}
             inputCls={inputCls}
             formatDateLabel={formatDateLabel}
@@ -1294,7 +1012,6 @@ export default function App() {
         {/* OUTREACH EMAILS PAGE */}
         {page === "outreach_emails" ? (
           <OutreachEmailsPage
-            contacts={contacts}
             profile={profile}
             inputCls={inputCls}
             selectCls={selectCls}
@@ -1345,12 +1062,7 @@ export default function App() {
             saveProfile={saveProfile}
             uploadResume={uploadResume}
             openResume={openResume}
-            importFileName={importFileName}
-            importRows={importRows}
-            importMap={importMap}
-            importing={importing}
-            onPickCsv={onPickCsv}
-            importIntoSupabase={importIntoSupabase}
+            onContactsImported={() => setPage("contacts")}
             inputCls={inputCls}
             selectCls={selectCls}
             reparseResume={reparseResume}
@@ -1361,53 +1073,9 @@ export default function App() {
 
         </Suspense>
 
-        {/* Edit Contact Modal */}
-        <Modal
-          title={`Edit Contact${editContact ? `: ${[editContact.first_name, editContact.last_name].filter(Boolean).join(" ")}` : ""}`}
-          open={editOpen}
-          onClose={() => {
-            setEditOpen(false);
-            setEditContact(null);
-          }}
-        >
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <input className={inputCls} placeholder="First name" value={editFirst} onChange={(e) => setEditFirst(e.target.value)} />
-              <input className={inputCls} placeholder="Last name" value={editLast} onChange={(e) => setEditLast(e.target.value)} />
-            </div>
-
-            <input className={inputCls} placeholder="Company" value={editCompany} onChange={(e) => setEditCompany(e.target.value)} />
-            <input className={inputCls} placeholder="Job Title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            <input className={inputCls} placeholder="Email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
-            <input className={inputCls} placeholder="Phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
-            <input
-              className={inputCls}
-              placeholder="LinkedIn URL (paste full URL text)"
-              value={editLinkedIn}
-              onChange={(e) => setEditLinkedIn(e.target.value)}
-            />
-
-            <div className="mt-2 flex items-center justify-end gap-2">
-              <button
-                onClick={() => {
-                  setEditOpen(false);
-                  setEditContact(null);
-                }}
-                className="rounded-button border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.06] cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveEdit}
-                className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 shadow-[0_0_24px_rgba(0,229,255,0.2)] transition-all hover:bg-glow cursor-pointer"
-              >
-                Save changes
-              </button>
-            </div>
-          </div>
-        </Modal>
       </div>
     </div>
+    </ContactsProvider>
     </SessionContext.Provider>
   );
 }

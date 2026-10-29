@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/ui/Card";
-import type { Contact, ScheduledOutreach } from "@/types";
+import type { ScheduledOutreach } from "@/types";
+import { useContacts } from "@/features/contacts/contactsContext";
 import { useApplications } from "@/features/applications/useApplications";
 import { listScheduledOutreach } from "@/features/outreach/api";
 import {
@@ -17,11 +18,8 @@ import {
   Legend,
 } from "recharts";
 
-interface AnalyticsPageProps {
-  contacts: Contact[];
-}
-
-export default function AnalyticsPage({ contacts }: AnalyticsPageProps) {
+export default function AnalyticsPage() {
+  const { contacts } = useContacts();
   const { applications } = useApplications();
   const [scheduledOutreach, setScheduledOutreach] = useState<ScheduledOutreach[]>([]);
 

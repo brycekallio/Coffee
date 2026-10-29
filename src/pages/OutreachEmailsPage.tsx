@@ -8,9 +8,9 @@ import Modal from "../components/ui/Modal";
 import { toast } from "sonner";
 import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
+import { useContacts } from "@/features/contacts/contactsContext";
 
 interface OutreachEmailsPageProps {
-  contacts: Contact[];
   profile: Profile | null;
   inputCls: string;
   selectCls: string;
@@ -117,11 +117,11 @@ function openOutreach(
 /* ── Component ────────────────────────────────────────── */
 
 export default function OutreachEmailsPage({
-  contacts,
   profile,
   inputCls,
   selectCls,
 }: OutreachEmailsPageProps) {
+  const { contacts } = useContacts();
   /* ── compose state ──────────────────────────────────── */
   const [selectedContactId, setSelectedContactId] = useState("");
   const [channel, setChannel] = useState<string>("email");
