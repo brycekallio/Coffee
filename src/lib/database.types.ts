@@ -419,6 +419,7 @@ export type Database = {
     }
     Functions: {
       app_user_id: { Args: never; Returns: string }
+      create_clerk_account: { Args: never; Returns: string }
       link_clerk_identity: { Args: never; Returns: string }
     }
     Enums: {

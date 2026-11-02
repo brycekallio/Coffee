@@ -6,8 +6,10 @@
 import { installDemoClient } from "@/lib/supabase";
 import { createDemoClient } from "./demoClient";
 import { installNetworkGuard } from "./networkGuard";
+import { installDemoToasts } from "./demoToasts";
 
 installDemoClient(createDemoClient({ readOnly: true }));
 installNetworkGuard();
+installDemoToasts();
 
 export { default as DemoApp } from "./DemoApp";

@@ -14,6 +14,9 @@ export const DEMO_BASE = "/demo";
 
 export const DEMO_READ_ONLY_MESSAGE = "This is a demo with sample data. Sign up to save your own changes.";
 
+/** Where "Sign up" goes, from the demo and from the sign-in card: Clerk's sign-up form. */
+export const SIGN_UP_PATH = "/sign-up";
+
 /** "/demo" and anything under it; not "/demonstration". */
 export function isDemoPath(pathname: string): boolean {
   return pathname === DEMO_BASE || pathname.startsWith(`${DEMO_BASE}/`);

@@ -4,6 +4,7 @@ import { ContactsProvider } from "@/features/contacts/ContactsProvider";
 import { ProfileProvider } from "@/features/profile/ProfileProvider";
 import type { AppUser } from "@/lib/appSession";
 import DemoBanner from "./DemoBanner";
+import { SIGN_UP_PATH } from "./mode";
 import { USER, USER_ID } from "./sampleData";
 
 const DEMO_USER: AppUser = { id: USER_ID, email: USER.email, name: USER.name };
@@ -21,7 +22,7 @@ export default function DemoApp() {
           <AppShell
             banner={<DemoBanner />}
             signOutLabel="Sign up free"
-            onSignOut={() => window.location.assign("/")}
+            onSignOut={() => window.location.assign(SIGN_UP_PATH)}
           />
         </ContactsProvider>
       </ProfileProvider>

@@ -1,3 +1,5 @@
+import { SIGN_UP_PATH } from "./mode";
+
 /**
  * The demo's one persistent message, pinned above the nav (AppShell puts it inside its
  * sticky header). Says what this is, and gives the way out. A plain link on purpose:
@@ -13,7 +15,7 @@ export default function DemoBanner() {
           <span className="sm:hidden"> · Sample data</span>
         </p>
         <a
-          href="/"
+          href={SIGN_UP_PATH}
           className="flex-shrink-0 rounded-lg bg-white px-3 py-1 text-[13px] font-semibold text-depth-0 transition-opacity hover:opacity-90"
         >
           Sign up free
