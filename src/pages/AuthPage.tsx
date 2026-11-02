@@ -3,6 +3,25 @@ import AuthIllustration from "../components/ui/AuthIllustration";
 import Logo from "../components/ui/Logo";
 import { SIGN_UP_PATH } from "../demo/mode";
 
+/**
+ * Social sign-in buttons use the app's neutral step (white at 8% on the dark card) so
+ * they read as buttons, not as loose icons.
+ *
+ * These are style objects, not Tailwind classes, on purpose: Tailwind 4 puts its
+ * utilities in a CSS layer, and Clerk's own unlayered styles beat any layered rule,
+ * so classes here lose to Clerk's transparent defaults (the GitHub button was an
+ * almost invisible black mark on the dark card). Style objects are injected by Clerk
+ * itself and win.
+ */
+const socialButton = {
+  backgroundColor: "rgba(255,255,255,0.08)",
+  boxShadow: "none",
+  border: "none",
+  color: "#ffffff",
+  "&:hover": { backgroundColor: "rgba(255,255,255,0.13)" },
+  "&:focus-visible": { boxShadow: "0 0 0 2px rgba(0,229,255,0.6)" },
+};
+
 const clerkAppearance = {
   elements: {
     rootBox: "w-full",
@@ -10,9 +29,11 @@ const clerkAppearance = {
     card: "bg-transparent shadow-none border-0 px-0",
     headerTitle: "text-[22px] font-semibold tracking-tight text-white",
     headerSubtitle: "text-sm text-white/35",
-    socialButtonsBlockButton:
-      "border border-white/[0.08] bg-white/[0.04] text-white hover:bg-white/[0.07] hover:border-glow/30",
-    socialButtonsBlockButtonText: "text-white/90 font-medium",
+    socialButtonsIconButton: socialButton,
+    socialButtonsBlockButton: socialButton,
+    socialButtonsBlockButtonText: { color: "rgba(255,255,255,0.9)", fontWeight: 500 },
+    // GitHub's mark ships black; flip it to white on the dark card.
+    socialButtonsProviderIcon__github: { filter: "invert(1)" },
     dividerLine: "bg-white/[0.08]",
     dividerText: "text-white/25",
     formFieldLabel: "text-white/50",

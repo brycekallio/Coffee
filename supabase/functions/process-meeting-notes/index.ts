@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
 import {
+  callModel,
   FREE_TRANSCRIPT_CHAR_LIMIT,
   HttpError,
   requirePower,
   resolveTier,
 } from "../_shared/tier.ts";
-import { callLLM, parseJsonObject } from "../_shared/llm.ts";
+import { parseJsonObject } from "../_shared/llm.ts";
 
 // Turns a networking-call transcript into fun facts / action items / details.
 //
@@ -119,7 +120,7 @@ serve(async (req) => {
       requirePower(resolved, "meeting-transcripts");
     }
 
-    const result = await callLLM(resolved.creds, {
+    const result = await callModel(resolved, {
       prompt: buildPrompt(transcript, contact_name, contact_company, meeting_date),
       maxTokens: 8000,
       json: true,

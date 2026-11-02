@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
-import { HttpError, requirePower, resolveTier } from "../_shared/tier.ts";
-import { callLLM } from "../_shared/llm.ts";
+import { callModel, HttpError, requirePower, resolveTier } from "../_shared/tier.ts";
 
 // Resume-vs-JD tailoring. Two modes:
 //
@@ -85,7 +84,7 @@ serve(async (req) => {
       requirePower(resolved, "resume-rewrite");
     }
 
-    const result = await callLLM(resolved.creds, {
+    const result = await callModel(resolved, {
       prompt: mode === "rewrite"
         ? rewritePrompt(resumeText, jobDescription)
         : suggestionsPrompt(resumeText, jobDescription),

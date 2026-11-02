@@ -21,6 +21,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_free_usage: {
+        Row: {
+          day: string
+          requests: number
+          user_id: string
+        }
+        Insert: {
+          day: string
+          requests?: number
+          user_id: string
+        }
+        Update: {
+          day?: string
+          requests?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           company: string
@@ -419,6 +437,10 @@ export type Database = {
     }
     Functions: {
       app_user_id: { Args: never; Returns: string }
+      consume_free_ai_request: {
+        Args: { p_limit: number; p_user: string }
+        Returns: number
+      }
       create_clerk_account: { Args: never; Returns: string }
       link_clerk_identity: { Args: never; Returns: string }
     }

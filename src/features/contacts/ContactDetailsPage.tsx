@@ -4,7 +4,7 @@ import { inputCls } from "@/components/ui/styles";
 import { useContacts } from "./contactsContext";
 import { useMeetings } from "./meetings/useMeetings";
 import { ensureUrl, formatDateLabel } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { invokeAi } from "@/features/ai/client";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -75,19 +75,16 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
     setSummaryLoading(true);
     setSummaryError("");
     try {
-      const { data, error } = await supabase.functions.invoke("summarize-contact", {
-        body: {
-          contact: selectedContact,
-          meetings: meetings.map((m) => ({
-            id: m.id,
-            meeting_date: m.meeting_date,
-            title: m.title,
-            notes: m.notes,
-          })),
-        },
+      // invokeAi surfaces the server's own message (e.g. the daily free-AI limit).
+      const data = await invokeAi<{ summary: string }>("summarize-contact", {
+        contact: selectedContact,
+        meetings: meetings.map((m) => ({
+          id: m.id,
+          meeting_date: m.meeting_date,
+          title: m.title,
+          notes: m.notes,
+        })),
       });
-
-      if (error) throw error;
       setSummary(data.summary);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to generate summary";

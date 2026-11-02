@@ -4,7 +4,8 @@
  * Two tiers:
  *   free  — the project's own OPENROUTER_API_KEY against a free open-weight model.
  *           Every signed-in user gets this with zero setup. Rate-limited by OpenRouter
- *           (20 req/min, 50/day shared across all users on a sub-$10 account).
+ *           (20 req/min, 50/day shared across all users on a sub-$10 account), and by
+ *           Coffee itself to freeDailyLimit() requests per user per day.
  *   power — the user saved their own provider key in Settings. Runs on their quota,
  *           and unlocks the gated tools listed in POWER_TOOLS.
  *
@@ -15,9 +16,12 @@
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import {
+  callLLM,
   type Credentials,
   FREE_MODEL,
   FREE_MODEL_CHAIN,
+  type LlmRequest,
+  type LlmResponse,
   type Provider,
 } from "./llm.ts";
 
@@ -156,6 +160,82 @@ export async function resolveTier(req: Request): Promise<Resolved> {
       fallbacks: FREE_MODEL_CHAIN.slice(1),
     },
   };
+}
+
+/**
+ * Per-user daily cap on the shared free tier.
+ *
+ * The free tier's real ceiling is OpenRouter's: 50 requests/day for the whole project,
+ * shared by every user. Sign-ups are open, so without a per-user cap one account could
+ * spend the day's 50 and leave everyone else with "rate limited". The cap is a config
+ * value -- the `FREE_AI_DAILY_LIMIT_PER_USER` Edge Function secret -- with this default
+ * when it is unset. 0 turns the free tier off. Days are UTC, like OpenRouter's.
+ *
+ * Users with their own key (power tier) are never counted.
+ */
+export const DEFAULT_FREE_DAILY_LIMIT = 10;
+
+export function freeDailyLimit(): number {
+  const raw = Deno.env.get("FREE_AI_DAILY_LIMIT_PER_USER")?.trim();
+  if (!raw) return DEFAULT_FREE_DAILY_LIMIT;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) {
+    console.error(`Ignoring FREE_AI_DAILY_LIMIT_PER_USER=${JSON.stringify(raw)}; using ${DEFAULT_FREE_DAILY_LIMIT}.`);
+    return DEFAULT_FREE_DAILY_LIMIT;
+  }
+  return n;
+}
+
+/** "in about 5 hours" until the next UTC midnight, when the count resets. */
+export function resetPhrase(now: Date): string {
+  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  const hours = Math.ceil((next - now.getTime()) / 3_600_000);
+  if (hours <= 1) return "within the hour";
+  return `in about ${hours} hours`;
+}
+
+/**
+ * Counts one free-tier request against the caller's daily cap, or refuses with a 429.
+ *
+ * Call it immediately before the model call, after every other check (bad input,
+ * the power-tier gate), so a request that was going to be refused anyway costs nothing.
+ * The count lives in `ai_free_usage` and is bumped by `consume_free_ai_request()`, an
+ * atomic insert-or-increment that only service_role can execute (see
+ * docs/migration_2026-11-02_free_ai_cap.sql). If that bookkeeping fails, the request is
+ * refused rather than let through uncounted: an outage must not become a way around the cap.
+ */
+export async function spendFreeRequest(resolved: Resolved, now = new Date()): Promise<void> {
+  if (resolved.tier !== "free") return;
+
+  const limit = freeDailyLimit();
+  const { data, error } = await serviceClient().rpc("consume_free_ai_request", {
+    p_user: resolved.userId,
+    p_limit: limit,
+  });
+
+  if (error) {
+    console.error("consume_free_ai_request failed:", error.message);
+    throw new HttpError(
+      "The free AI engine is unavailable right now. Try again in a minute, or add your own API key under Settings → AI engine.",
+      503,
+    );
+  }
+
+  if (data === null || data === undefined) {
+    throw new HttpError(
+      limit === 0
+        ? "The free AI engine is switched off right now. Add your own API key under Settings → AI engine to keep using AI tools."
+        : `You've used today's ${limit} free AI requests. More arrive ${resetPhrase(now)}, or add your own API key under Settings → AI engine for no daily limit.`,
+      429,
+      { reason: "free_daily_limit", limit, tier: resolved.tier },
+    );
+  }
+}
+
+/** The one way an AI function calls a model for a user: counts free-tier use, then calls. */
+export async function callModel(resolved: Resolved, req: LlmRequest): Promise<LlmResponse> {
+  await spendFreeRequest(resolved);
+  return callLLM(resolved.creds, req);
 }
 
 /** Gate for a power-only tool. 402 is what the client watches for to show the upsell. */
