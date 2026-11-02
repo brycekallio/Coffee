@@ -134,11 +134,16 @@ describe("demo mode makes no network requests", () => {
     const realOpen = vi.fn();
     class FakeXhr {}
     (FakeXhr.prototype as unknown as { open: unknown }).open = realOpen;
+    const sockets: string[] = [];
+    class FakeSocket { constructor(url: string) { sockets.push(url); } }
+    class FakeSource { constructor(url: string) { sockets.push(url); } }
     const target = {
       location: { origin: "https://coffee.test" },
       fetch: real,
       navigator: { sendBeacon: realBeacon },
       XMLHttpRequest: FakeXhr,
+      WebSocket: FakeSocket,
+      EventSource: FakeSource,
     } as unknown as Window & typeof globalThis;
     vi.spyOn(console, "warn").mockImplementation(() => {});
     installNetworkGuard(target);
@@ -151,12 +156,17 @@ describe("demo mode makes no network requests", () => {
     expect(real).not.toHaveBeenCalled();
     expect(realBeacon).not.toHaveBeenCalled();
     expect(realOpen).not.toHaveBeenCalled();
+    expect(() => new target.WebSocket("wss://xyz.supabase.co/realtime/v1/websocket")).toThrow(DemoNetworkBlockedError);
+    expect(() => new target.EventSource("https://evil.test/stream")).toThrow(DemoNetworkBlockedError);
+    expect(sockets).toEqual([]);
 
     await target.fetch("/assets/index.js");
     expect(real).toHaveBeenCalledTimes(1);
     expect(target.navigator.sendBeacon("/ping")).toBe(true);
     xhr.open("GET", "/assets/data.json");
     expect(realOpen).toHaveBeenCalledTimes(1);
+    new target.WebSocket("wss://coffee.test/hmr"); // Vite's dev socket, same host
+    expect(sockets).toEqual(["wss://coffee.test/hmr"]);
   });
 });
 

@@ -48,7 +48,8 @@ vi.mock("jsr:@supabase/supabase-js@2", () => ({
   }),
 }));
 
-const { resolveTier, requirePower, HttpError, callModel, freeDailyLimit, resetPhrase } = await import("./tier.ts");
+const { resolveTier, requirePower, HttpError, callModel, freeDailyLimit, resetPhrase, FREE_PROMPT_CHAR_LIMIT } =
+  await import("./tier.ts");
 const { FREE_MODEL, FREE_MODEL_CHAIN } = await import("./llm.ts");
 
 // The model itself: OpenRouter/Anthropic answer "ok" and record who paid for the call.
@@ -207,7 +208,7 @@ describe("per-user free-tier cap", () => {
 
   it("falls back to the default when the config value is not a whole number", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    for (const bad of ["ten", "-1", "2.5", "Infinity"]) {
+    for (const bad of ["ten", "-1", "2.5", "Infinity", "1e3", "0x10", "9999999999"]) {
       env.set("FREE_AI_DAILY_LIMIT_PER_USER", bad);
       expect(freeDailyLimit()).toBe(10);
     }
@@ -256,6 +257,24 @@ describe("per-user free-tier cap", () => {
     provider.status = 400;
     await expect(callModel(r, ask)).rejects.toMatchObject({ status: 400 });
     expect(db.usage.get("user-1")).toBe(1);
+  });
+
+  it("refuses an oversized free prompt (413) before counting it or calling the model", async () => {
+    const r = await resolveTier(authed());
+    const big = { prompt: "x".repeat(FREE_PROMPT_CHAR_LIMIT), system: "sys", maxTokens: 10 };
+    const err = await refusal(callModel(r, big));
+    expect(err).toMatchObject({ status: 413, extra: { reason: "free_prompt_too_large" } });
+    expect(db.consumeCalls).toHaveLength(0);
+    expect(llmCalls).toHaveLength(0);
+    await callModel(r, { prompt: "x".repeat(FREE_PROMPT_CHAR_LIMIT), maxTokens: 10 }); // exactly at the limit is fine
+    expect(llmCalls).toHaveLength(1);
+  });
+
+  it("does not limit prompt size for a user with their own key", async () => {
+    db.settings = { provider: "openrouter", model: "m", api_key: "byo" };
+    const r = await resolveTier(authed());
+    await callModel(r, { prompt: "x".repeat(FREE_PROMPT_CHAR_LIMIT * 3), maxTokens: 10 });
+    expect(llmCalls).toEqual(["Bearer byo"]);
   });
 
   it("says when the count resets (next UTC midnight)", () => {

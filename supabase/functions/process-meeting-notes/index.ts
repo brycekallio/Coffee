@@ -103,6 +103,12 @@ serve(async (req) => {
       throw new HttpError("transcript is required", 400);
     }
 
+    // The free-tier length limit below measures the transcript, so the other fields that go
+    // into the prompt must not be able to carry text of their own (break-it pass, 2026-11-02).
+    const contactName = String(contact_name).slice(0, 200);
+    const contactCompany = String(contact_company).slice(0, 200);
+    const meetingDate = String(meeting_date).slice(0, 32);
+
     // Long transcripts are the power-tier tool; short ones stay free.
     if (transcript.length > FREE_TRANSCRIPT_CHAR_LIMIT) {
       if (resolved.tier !== "power") {
@@ -121,7 +127,7 @@ serve(async (req) => {
     }
 
     const result = await callModel(resolved, {
-      prompt: buildPrompt(transcript, contact_name, contact_company, meeting_date),
+      prompt: buildPrompt(transcript, contactName, contactCompany, meetingDate),
       maxTokens: 8000,
       json: true,
     });
@@ -133,7 +139,7 @@ serve(async (req) => {
       fun_facts: parsed.fun_facts ?? [],
       action_items: parsed.action_items ?? [],
       important_details: parsed.important_details ?? [],
-      formatted_notes: formatNotesFromResult(parsed, meeting_date),
+      formatted_notes: formatNotesFromResult(parsed, meetingDate),
       model: result.model,
       tier: resolved.tier,
     });

@@ -9,6 +9,7 @@ import type { Profile } from "@/types";
 import * as api from "./api";
 import { fillEmptyFields, type PendingSignup } from "./fillEmptyFields";
 import { ProfileContext } from "./profileContext";
+import { isDemoMode } from "@/demo/mode";
 
 const PENDING_SIGNUP_KEY = "coffee_pending_signup";
 
@@ -30,10 +31,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async () => {
     try {
       let row = await api.getProfile(user.id);
-      const fill = fillEmptyFields(row, readPendingSignup(), user.name);
+      // The demo must not consume a real visitor's leftover sign-up details in this browser.
+      const pending = isDemoMode ? {} : readPendingSignup();
+      const fill = fillEmptyFields(row, pending, user.name);
       if (!row) row = await api.createProfile(user.id, fill);
       else if (Object.keys(fill).length > 0) row = await api.updateProfile(user.id, fill);
-      localStorage.removeItem(PENDING_SIGNUP_KEY);
+      if (!isDemoMode) localStorage.removeItem(PENDING_SIGNUP_KEY);
       setProfile(row);
     } catch (e) {
       toast.error(errorMessage(e, "Failed to load profile."));

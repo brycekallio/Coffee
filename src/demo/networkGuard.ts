@@ -2,7 +2,7 @@
  * Backstop for demo mode: the demo makes no cross-origin requests, so block any that a
  * code path forgot about. The demo client already answers every database, storage and AI
  * call in memory; this catches raw `fetch` calls (a LinkedIn preview, a resume download),
- * beacons and XMLHttpRequest, which would otherwise leave the page.
+ * beacons, XMLHttpRequest, WebSocket and EventSource, which would otherwise leave the page.
  *
  * Same-origin requests stay allowed: the page's own assets are the demo's only network.
  */
@@ -40,9 +40,28 @@ export function installNetworkGuard(target: Window & typeof globalThis = window)
     return realBeacon ? realBeacon(url, data) : false;
   };
 
+  // WebSocket and EventSource (Supabase realtime would use the first): refuse to construct
+  // one to another origin.
+  for (const name of ["WebSocket", "EventSource"] as const) {
+    const Real = target[name] as unknown as (new (url: string | URL, ...rest: unknown[]) => object) | undefined;
+    if (!Real) continue;
+    const Guarded = function (url: string | URL, ...rest: unknown[]) {
+      const dest = new URL(String(url), origin);
+      const sameOrigin = dest.host === new URL(origin).host;
+      if (!sameOrigin) {
+        console.warn(`[demo] blocked ${name} to ${dest.origin}`);
+        throw new DemoNetworkBlockedError(dest.origin);
+      }
+      return new Real(url, ...rest);
+    };
+    Guarded.prototype = Real.prototype;
+    (target as unknown as Record<string, unknown>)[name] = Guarded;
+  }
+
   // XMLHttpRequest is the other way a library reaches the network. Refuse cross-origin
-  // targets at open(), before anything is sent. (Image and script loads are not covered;
-  // the demo renders none from other origins.)
+  // targets at open(), before anything is sent. Not covered: image/script loads, iframes
+  // and workers -- the demo creates none pointing elsewhere. This is a backstop; the real
+  // guarantee is that demo mode never constructs the real database client.
   const xhr = target.XMLHttpRequest?.prototype;
   if (xhr) {
     const realOpen = xhr.open;

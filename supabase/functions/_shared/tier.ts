@@ -179,8 +179,10 @@ export const DEFAULT_FREE_DAILY_LIMIT = 10;
 export function freeDailyLimit(): number {
   const raw = Deno.env.get("FREE_AI_DAILY_LIMIT_PER_USER")?.trim();
   if (!raw) return DEFAULT_FREE_DAILY_LIMIT;
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 0) {
+  // Plain digits only: Number() would also accept "1e3" and "0x10", and anything past
+  // Postgres' integer range would make every free request fail.
+  const n = /^\d{1,6}$/.test(raw) ? Number(raw) : NaN;
+  if (!Number.isInteger(n)) {
     console.error(`Ignoring FREE_AI_DAILY_LIMIT_PER_USER=${JSON.stringify(raw)}; using ${DEFAULT_FREE_DAILY_LIMIT}.`);
     return DEFAULT_FREE_DAILY_LIMIT;
   }
@@ -247,8 +249,32 @@ async function refundFreeRequest(resolved: Resolved): Promise<void> {
   if (error) console.error("refund_free_ai_request failed:", error.message);
 }
 
-/** The one way an AI function calls a model for a user: counts free-tier use, then calls. */
+/**
+ * Largest prompt (system + user text, in characters) the shared free key will send.
+ * The daily cap counts requests, not size, so without this one free request could carry
+ * a million characters. ~40k fits a full resume plus a long job posting, or a contact's
+ * whole meeting history; anything bigger is a power-tier job.
+ */
+export const FREE_PROMPT_CHAR_LIMIT = 40_000;
+
+function assertFreePromptSize(resolved: Resolved, req: LlmRequest): void {
+  if (resolved.tier !== "free") return;
+  const size = req.prompt.length + (req.system?.length ?? 0);
+  if (size > FREE_PROMPT_CHAR_LIMIT) {
+    throw new HttpError(
+      `That's more text than the free AI engine takes in one go (${size.toLocaleString("en-US")} characters; the limit is ${FREE_PROMPT_CHAR_LIMIT.toLocaleString("en-US")}). Shorten it, or add your own API key under Settings → AI engine.`,
+      413,
+      { reason: "free_prompt_too_large", limit: FREE_PROMPT_CHAR_LIMIT, size, tier: resolved.tier },
+    );
+  }
+}
+
+/**
+ * The one way an AI function calls a model for a user: checks the free tier's size limit,
+ * counts the request against the daily cap, then calls. A refused request costs no slot.
+ */
 export async function callModel(resolved: Resolved, req: LlmRequest): Promise<LlmResponse> {
+  assertFreePromptSize(resolved, req);
   await spendFreeRequest(resolved);
   try {
     return await callLLM(resolved.creds, req);

@@ -25,7 +25,9 @@ set search_path = public
 as $$
 declare
   v_sub   text := auth.jwt() ->> 'sub';
-  v_email text := lower(nullif(auth.jwt() ->> 'email', ''));
+  -- Trimmed (break-it pass, 2026-11-02): an email claim with a trailing space would
+  -- otherwise slip past the duplicate check below and mint a second account.
+  v_email text := lower(nullif(btrim(auth.jwt() ->> 'email'), ''));
   v_id    uuid;
 begin
   if v_sub is null or v_email is null then
