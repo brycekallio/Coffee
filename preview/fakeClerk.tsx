@@ -2,7 +2,7 @@
 // Stand-in for @clerk/clerk-react in the preview harness: always signed in as the
 // sample student, unless the URL carries ?signedOut, which shows the real AuthPage.
 import type { ReactNode } from "react";
-import { USER } from "./sampleData";
+import { USER } from "../src/demo/sampleData";
 
 const signedIn = !new URLSearchParams(window.location.search).has("signedOut");
 

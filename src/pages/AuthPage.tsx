@@ -70,7 +70,15 @@ export default function AuthPage() {
             />
           </div>
 
-          <p className="mt-6 text-center text-[11px] leading-relaxed text-white/25">
+          <p className="mt-6 text-center text-sm text-white/60">
+            Just looking?{" "}
+            {/* A plain link, not router navigation: the demo is chosen at page load. */}
+            <a href="/demo" className="font-medium text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white">
+              See a demo
+            </a>
+          </p>
+
+          <p className="mt-4 text-center text-[11px] leading-relaxed text-white/25">
             We only ever read your name, email address and profile picture.
           </p>
         </div>

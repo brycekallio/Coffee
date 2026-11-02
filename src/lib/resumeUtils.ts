@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/demo/mode";
 import { invokeAi, type AiTier } from "@/features/ai/client";
 
 /**
@@ -34,6 +35,7 @@ export async function adjustResume(
 }
 
 export async function fetchLinkedInPreview(url: string): Promise<string | null> {
+  if (isDemoMode) return null; // the demo never leaves the page
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);

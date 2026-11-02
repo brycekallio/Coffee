@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
+import { isDemoMode, stripDemoBase, withDemoBase } from "@/demo/mode";
 import { parsePath, toPath, type Route } from "./routes";
 
 // The Electron build loads dist/index.html over file://, where the pathname is a path
 // on disk — so there the route lives in the hash instead. On the web it's a real path,
-// served by the SPA catch-all in netlify.toml.
+// served by the SPA catch-all in netlify.toml. The public demo lives under /demo: routes
+// are the same, only the URL carries the prefix.
 const useHash = typeof window !== "undefined" && window.location.protocol === "file:";
 
 function currentPath(): string {
-  return useHash ? window.location.hash.slice(1) || "/" : window.location.pathname;
+  return useHash ? window.location.hash.slice(1) || "/" : stripDemoBase(window.location.pathname);
+}
+
+/** The address-bar URL for an app path. */
+function urlFor(path: string): string {
+  if (useHash) return `#${path}`;
+  return isDemoMode ? withDemoBase(path) : path;
 }
 
 function currentRoute(): Route {
@@ -23,7 +31,7 @@ export function useRoute() {
 
   useEffect(() => {
     // An unknown path was rendered as the contact list; make the URL say so.
-    if (!parsePath(currentPath())) window.history.replaceState(null, "", useHash ? "#/" : "/");
+    if (!parsePath(currentPath())) window.history.replaceState(null, "", urlFor("/"));
 
     const onChange = () => setRoute(currentRoute());
     window.addEventListener("popstate", onChange);
@@ -33,7 +41,7 @@ export function useRoute() {
   const navigate = useCallback((next: Route, { replace = false }: { replace?: boolean } = {}) => {
     const path = toPath(next);
     if (path !== currentPath()) {
-      const url = useHash ? `#${path}` : path;
+      const url = urlFor(path);
       if (replace) window.history.replaceState(null, "", url);
       else window.history.pushState(null, "", url);
     }

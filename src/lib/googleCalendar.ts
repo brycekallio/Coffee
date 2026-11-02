@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { isDemoMode } from "@/demo/mode";
 import { supabase } from "./supabase";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
@@ -54,6 +56,11 @@ export function buildGCalOAuthUrl(): string {
 
 /** Kicks off the Google OAuth flow by redirecting the current tab. */
 export function initiateGCalOAuth(): void {
+  // The demo never sends anyone to Google, and a consent there would redirect back to the real app.
+  if (isDemoMode) {
+    toast.info("Google Calendar isn't available in the demo.");
+    return;
+  }
   window.location.href = buildGCalOAuthUrl();
 }
 

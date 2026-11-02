@@ -114,7 +114,7 @@ export default function App() {
     <SessionContext.Provider value={session.user}>
       <ProfileProvider>
         <ContactsProvider>
-          <AppShell />
+          <AppShell onSignOut={() => clerk.signOut()} />
         </ContactsProvider>
       </ProfileProvider>
     </SessionContext.Provider>
