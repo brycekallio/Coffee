@@ -5,3 +5,7 @@ import { createDemoClient } from "../src/demo/demoClient";
 
 export const supabaseMisconfigured = false;
 export const supabase = createDemoClient({ readOnly: false });
+
+// src/demo/boot.ts imports this from "@/lib/supabase"; the harness client above is already
+// the in-memory one, so there is nothing to install. Exported only so the import resolves.
+export function installDemoClient(): void {}
