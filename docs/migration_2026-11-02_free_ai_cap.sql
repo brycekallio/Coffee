@@ -63,3 +63,24 @@ grant execute on function public.consume_free_ai_request(uuid, integer) to servi
 
 revoke all on table public.ai_free_usage from anon, authenticated;
 grant select, insert, update, delete on table public.ai_free_usage to service_role;
+
+-- ── Part 3 (added after code review, 2026-11-02) ───────────────────────────────────
+-- Gives one request back when the provider refused the shared key outright (rate limited
+-- or key rejected), so a user isn't charged for a call that did no work. tier.ts decides
+-- which failures qualify; model errors stay counted.
+
+create or replace function public.refund_free_ai_request(p_user uuid)
+returns void
+language sql
+security invoker
+set search_path = ''
+as $$
+  update public.ai_free_usage
+     set requests = requests - 1
+   where user_id = p_user
+     and day = (now() at time zone 'utc')::date
+     and requests > 0;
+$$;
+
+revoke all on function public.refund_free_ai_request(uuid) from public, anon, authenticated;
+grant execute on function public.refund_free_ai_request(uuid) to service_role;

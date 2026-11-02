@@ -47,6 +47,7 @@ export async function linkIdentity(clerk: {
 
   // null means no account holds this email: a new user, so make them one.
   const id = data ?? (await createAccount());
+  cachedId = id;
   return { id, email: clerk.email, name: clerk.name, avatar_url: clerk.avatar_url };
 }
 
@@ -64,15 +65,21 @@ async function createAccount(): Promise<string> {
  * The current user's Supabase id, for the handful of places that insert rows
  * without the session threaded down to them.
  *
- * Cached for the life of the page: the mapping cannot change while signed in,
- * and without this every insert would cost an extra round trip. Cleared on sign
- * out so a second user on the same browser never inherits the first one's id.
+ * Asks `app_user_id`, the same function every RLS policy uses, so the id an insert
+ * carries is by construction the one the database will accept. (It used to ask
+ * `link_clerk_identity`, which matches on email: after a user changed their email in
+ * Clerk it returned null and every Watchlist/Outreach insert failed.)
+ *
+ * Cached for the life of the page (linkIdentity seeds it): the mapping cannot change
+ * while signed in, and without this every insert would cost an extra round trip.
+ * Cleared on sign out so a second user on the same browser never inherits the first
+ * one's id.
  */
 let cachedId: string | null = null;
 
 export async function currentUserId(): Promise<string | null> {
   if (cachedId) return cachedId;
-  const { data, error } = await supabase.rpc("link_clerk_identity");
+  const { data, error } = await supabase.rpc("app_user_id");
   if (error || !data) return null;
   cachedId = data as string;
   return cachedId;

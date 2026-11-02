@@ -52,6 +52,13 @@ describe("linkIdentity", () => {
     expect(rpc.mock.calls.every((c) => c[0] === "link_clerk_identity")).toBe(true);
   });
 
+  it("seeds currentUserId with the account it just created", async () => {
+    replies.link_clerk_identity = { data: null, error: null };
+    replies.create_clerk_account = { data: CREATED, error: null };
+    await linkIdentity(CLERK);
+    expect(await currentUserId()).toBe(CREATED);
+  });
+
   it("refuses an email that another Clerk sign-in already owns", async () => {
     replies.link_clerk_identity = { data: null, error: null };
     replies.create_clerk_account = {
@@ -79,5 +86,21 @@ describe("linkIdentity", () => {
     replies.link_clerk_identity = { data: null, error: null };
     replies.create_clerk_account = { data: null, error: null };
     await expect(linkIdentity(CLERK)).rejects.toThrow(/no id/);
+  });
+});
+
+describe("currentUserId", () => {
+  it("asks app_user_id (what RLS uses), not the email-matching link", async () => {
+    // A user who changed their email in Clerk: link_clerk_identity no longer finds them,
+    // but their Clerk id still maps to their account.
+    replies.link_clerk_identity = { data: null, error: null };
+    replies.app_user_id = { data: EXISTING, error: null };
+    expect(await currentUserId()).toBe(EXISTING);
+    expect(rpc.mock.calls.map((c) => c[0])).toEqual(["app_user_id"]);
+  });
+
+  it("returns null rather than a wrong id when the lookup fails", async () => {
+    replies.app_user_id = { data: null, error: { message: "JWT expired" } };
+    expect(await currentUserId()).toBeNull();
   });
 });

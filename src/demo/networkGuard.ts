@@ -1,8 +1,8 @@
 /**
  * Backstop for demo mode: the demo makes no cross-origin requests, so block any that a
  * code path forgot about. The demo client already answers every database, storage and AI
- * call in memory; this catches raw `fetch` calls (a LinkedIn preview, a resume download)
- * and beacons, which would otherwise leave the page.
+ * call in memory; this catches raw `fetch` calls (a LinkedIn preview, a resume download),
+ * beacons and XMLHttpRequest, which would otherwise leave the page.
  *
  * Same-origin requests stay allowed: the page's own assets are the demo's only network.
  */
@@ -31,9 +31,28 @@ export function installNetworkGuard(target: Window & typeof globalThis = window)
     return realFetch(input, init);
   };
 
-  target.navigator.sendBeacon = (url: string | URL) => {
-    const blocked = targetOf(url, origin).origin !== origin;
-    if (blocked) console.warn("[demo] blocked beacon");
-    return false;
+  const realBeacon = target.navigator.sendBeacon?.bind(target.navigator);
+  target.navigator.sendBeacon = (url: string | URL, data?: BodyInit | null) => {
+    if (targetOf(url, origin).origin !== origin) {
+      console.warn("[demo] blocked beacon");
+      return false;
+    }
+    return realBeacon ? realBeacon(url, data) : false;
   };
+
+  // XMLHttpRequest is the other way a library reaches the network. Refuse cross-origin
+  // targets at open(), before anything is sent. (Image and script loads are not covered;
+  // the demo renders none from other origins.)
+  const xhr = target.XMLHttpRequest?.prototype;
+  if (xhr) {
+    const realOpen = xhr.open;
+    xhr.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
+      const dest = targetOf(url, origin);
+      if (dest.origin !== origin) {
+        console.warn(`[demo] blocked XMLHttpRequest to ${dest.origin}`);
+        throw new DemoNetworkBlockedError(dest.origin);
+      }
+      return (realOpen as (...args: unknown[]) => void).call(this, method, url, ...rest);
+    } as typeof xhr.open;
+  }
 }

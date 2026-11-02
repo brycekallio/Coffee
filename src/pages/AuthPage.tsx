@@ -61,6 +61,9 @@ const clerkAppearance = {
  */
 export default function AuthPage() {
   const isSignUp = typeof window !== "undefined" && window.location.pathname === SIGN_UP_PATH;
+  // The Electron build loads over file://, where "/sign-up" and "/demo" would be paths on
+  // disk. There, sign-up falls back to Clerk's hosted page and the demo link is hidden.
+  const isDesktopFile = typeof window !== "undefined" && window.location.protocol === "file:";
 
   return (
     <div className="relative flex min-h-screen text-white">
@@ -97,17 +100,23 @@ export default function AuthPage() {
             {isSignUp ? (
               <SignUp routing="hash" signInUrl="/" fallbackRedirectUrl="/" appearance={clerkAppearance} />
             ) : (
-              <SignIn routing="hash" signUpUrl={SIGN_UP_PATH} appearance={clerkAppearance} />
+              <SignIn
+                routing="hash"
+                signUpUrl={isDesktopFile ? undefined : SIGN_UP_PATH}
+                appearance={clerkAppearance}
+              />
             )}
           </div>
 
-          <p className="mt-6 text-center text-sm text-white/60">
-            Just looking?{" "}
-            {/* A plain link, not router navigation: the demo is chosen at page load. */}
-            <a href="/demo" className="font-medium text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white">
-              See a demo
-            </a>
-          </p>
+          {!isDesktopFile && (
+            <p className="mt-6 text-center text-sm text-white/60">
+              Just looking?{" "}
+              {/* A plain link, not router navigation: the demo is chosen at page load. */}
+              <a href="/demo" className="font-medium text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white">
+                See a demo
+              </a>
+            </p>
+          )}
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-white/25">
             We only ever read your name, email address and profile picture.

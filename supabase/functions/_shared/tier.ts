@@ -20,6 +20,7 @@ import {
   type Credentials,
   FREE_MODEL,
   FREE_MODEL_CHAIN,
+  LlmError,
   type LlmRequest,
   type LlmResponse,
   type Provider,
@@ -232,10 +233,31 @@ export async function spendFreeRequest(resolved: Resolved, now = new Date()): Pr
   }
 }
 
+/**
+ * Provider answers that mean the shared key did no work for this request: rate limited
+ * (429: OpenRouter's own daily or per-minute cap is hit) or the project key was rejected
+ * (401/403: our misconfiguration). The user gets the slot back for these. Anything else
+ * -- a model error, empty or unparseable output -- ran on the shared quota and stays
+ * counted, so a crafted bad request can't spend the shared key for free.
+ */
+const REFUNDED_PROVIDER_STATUSES = new Set([401, 403, 429]);
+
+async function refundFreeRequest(resolved: Resolved): Promise<void> {
+  const { error } = await serviceClient().rpc("refund_free_ai_request", { p_user: resolved.userId });
+  if (error) console.error("refund_free_ai_request failed:", error.message);
+}
+
 /** The one way an AI function calls a model for a user: counts free-tier use, then calls. */
 export async function callModel(resolved: Resolved, req: LlmRequest): Promise<LlmResponse> {
   await spendFreeRequest(resolved);
-  return callLLM(resolved.creds, req);
+  try {
+    return await callLLM(resolved.creds, req);
+  } catch (e) {
+    if (resolved.tier === "free" && e instanceof LlmError && REFUNDED_PROVIDER_STATUSES.has(e.status)) {
+      await refundFreeRequest(resolved);
+    }
+    throw e;
+  }
 }
 
 /** Gate for a power-only tool. 402 is what the client watches for to show the upsell. */

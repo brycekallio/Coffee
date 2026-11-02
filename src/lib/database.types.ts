@@ -443,6 +443,7 @@ export type Database = {
       }
       create_clerk_account: { Args: never; Returns: string }
       link_clerk_identity: { Args: never; Returns: string }
+      refund_free_ai_request: { Args: { p_user: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

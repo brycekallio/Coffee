@@ -128,12 +128,17 @@ describe("demo mode makes no network requests", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("the guard blocks cross-origin fetch and beacons, and lets same-origin through", async () => {
+  it("the guard blocks cross-origin fetch, beacons and XHR, and lets same-origin through", async () => {
     const real = vi.fn(async () => new Response("ok"));
+    const realBeacon = vi.fn(() => true);
+    const realOpen = vi.fn();
+    class FakeXhr {}
+    (FakeXhr.prototype as unknown as { open: unknown }).open = realOpen;
     const target = {
       location: { origin: "https://coffee.test" },
       fetch: real,
-      navigator: { sendBeacon: vi.fn(() => true) },
+      navigator: { sendBeacon: realBeacon },
+      XMLHttpRequest: FakeXhr,
     } as unknown as Window & typeof globalThis;
     vi.spyOn(console, "warn").mockImplementation(() => {});
     installNetworkGuard(target);
@@ -141,10 +146,17 @@ describe("demo mode makes no network requests", () => {
     await expect(target.fetch("https://xyz.supabase.co/functions/v1/score-jd")).rejects.toBeInstanceOf(DemoNetworkBlockedError);
     await expect(target.fetch("https://openrouter.ai/api/v1/chat")).rejects.toBeInstanceOf(DemoNetworkBlockedError);
     expect(target.navigator.sendBeacon("https://example.com/track")).toBe(false);
+    const xhr = new target.XMLHttpRequest();
+    expect(() => xhr.open("POST", "https://xyz.supabase.co/rest/v1/contacts")).toThrow(DemoNetworkBlockedError);
     expect(real).not.toHaveBeenCalled();
+    expect(realBeacon).not.toHaveBeenCalled();
+    expect(realOpen).not.toHaveBeenCalled();
 
     await target.fetch("/assets/index.js");
     expect(real).toHaveBeenCalledTimes(1);
+    expect(target.navigator.sendBeacon("/ping")).toBe(true);
+    xhr.open("GET", "/assets/data.json");
+    expect(realOpen).toHaveBeenCalledTimes(1);
   });
 });
 

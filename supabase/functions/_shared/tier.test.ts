@@ -31,6 +31,11 @@ vi.mock("jsr:@supabase/supabase-js@2", () => ({
         db.usage.set(args.p_user, used + 1);
         return { data: used + 1, error: null };
       }
+      if (fn === "refund_free_ai_request" && args) {
+        const used = db.usage.get(args.p_user) ?? 0;
+        if (used > 0) db.usage.set(args.p_user, used - 1);
+        return { data: null, error: null };
+      }
       throw new Error(`unexpected rpc ${fn}`);
     },
     from: () => ({
@@ -48,8 +53,10 @@ const { FREE_MODEL, FREE_MODEL_CHAIN } = await import("./llm.ts");
 
 // The model itself: OpenRouter/Anthropic answer "ok" and record who paid for the call.
 const llmCalls: string[] = [];
+const provider = { status: 200 };
 vi.stubGlobal("fetch", async (url: string, init: { headers: Record<string, string> }) => {
   llmCalls.push(init.headers.Authorization ?? init.headers["x-api-key"]);
+  if (provider.status !== 200) return new Response("nope", { status: provider.status });
   const body = String(url).includes("anthropic")
     ? { content: [{ type: "text", text: "ok" }], model: "m" }
     : { choices: [{ message: { content: "ok" } }], model: "m" };
@@ -71,6 +78,7 @@ beforeEach(() => {
   db.usageError = null;
   db.consumeCalls = [];
   llmCalls.length = 0;
+  provider.status = 200;
 });
 
 describe("resolveTier", () => {
@@ -229,6 +237,25 @@ describe("per-user free-tier cap", () => {
     const err = await refusal(callModel(r, ask));
     expect(err).toMatchObject({ status: 503 });
     expect(llmCalls).toHaveLength(0);
+  });
+
+  it("gives the slot back when the provider rate-limited the shared key (it did no work)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await spendAs("user-1", 9);
+    provider.status = 429;
+    await expect(callModel(r, ask)).rejects.toMatchObject({ status: 429 });
+    expect(db.usage.get("user-1")).toBe(9);
+    provider.status = 200;
+    await callModel(r, ask); // the 10th still works
+    await expect(callModel(r, ask)).rejects.toMatchObject({ extra: { reason: "free_daily_limit" } });
+  });
+
+  it("keeps the count when the model ran but failed, so bad requests can't spend the shared key free", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await resolveTier(authed());
+    provider.status = 400;
+    await expect(callModel(r, ask)).rejects.toMatchObject({ status: 400 });
+    expect(db.usage.get("user-1")).toBe(1);
   });
 
   it("says when the count resets (next UTC midnight)", () => {

@@ -60,14 +60,29 @@ const root = createRoot(document.getElementById('root')!)
 if (isDemoMode) {
   // The public demo at /demo: no Clerk, no real database. The demo chunk installs the
   // in-memory client and the network guard when it loads, so wait for it before rendering.
-  import('./demo/boot').then(({ DemoApp }) => {
-    root.render(
-      <StrictMode>
-        {toaster}
-        <DemoApp />
-      </StrictMode>,
-    )
-  })
+  import('./demo/boot')
+    .then(({ DemoApp }) => {
+      root.render(
+        <StrictMode>
+          {toaster}
+          <DemoApp />
+        </StrictMode>,
+      )
+    })
+    .catch((error) => {
+      // Without this a failed demo chunk leaves /demo as a blank dark page.
+      console.error('Demo failed to load:', error)
+      root.render(
+        <div className="flex min-h-screen items-center justify-center px-6 text-center text-white">
+          <p>
+            The demo didn't load.{' '}
+            <a href="/demo" className="underline decoration-white/30 underline-offset-4 hover:decoration-white">
+              Try again
+            </a>
+          </p>
+        </div>,
+      )
+    })
 } else {
   root.render(
     <StrictMode>

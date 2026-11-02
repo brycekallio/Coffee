@@ -52,7 +52,12 @@ begin
   -- The email already belongs to an account that a *different* Clerk user has claimed
   -- (link_clerk_identity returned null for this one). Never create a second account beside
   -- it and never take it over: refuse, and let the app say so.
-  if exists (select 1 from public.auth_identities ai where ai.email = v_email) then
+  -- Case-insensitive, and auth.users too (code review, 2026-11-02): link_clerk_identity
+  -- matches the lowercased email exactly, so a legacy row stored in mixed case, or a
+  -- pre-Clerk user with no auth_identities row, would otherwise get a second, empty
+  -- account beside their data. (Neither exists today; this keeps it that way.)
+  if exists (select 1 from public.auth_identities ai where lower(ai.email) = v_email)
+     or exists (select 1 from auth.users u where lower(u.email) = v_email) then
     raise exception 'email already belongs to another account'
       using errcode = 'CF409';
   end if;
