@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { supabaseMisconfigured } from "./lib/supabase";
-import { linkIdentity, NoAccountError, type AppUser } from "./lib/appSession";
+import { EmailTakenError, linkIdentity, type AppUser } from "./lib/appSession";
 import Logo from "./components/ui/Logo";
 import AuthPage from "./pages/AuthPage";
 import { SessionContext } from "./app/session";
@@ -12,7 +12,7 @@ import { ProfileProvider } from "./features/profile/ProfileProvider";
 
 /**
  * The auth gate. Clerk says who you are; linkIdentity maps that to the Supabase user
- * whose rows are yours. Once both are known, the signed-in app mounts inside the
+ * whose rows are yours, creating a fresh account the first time a new person signs up. Once both are known, the signed-in app mounts inside the
  * session-scoped providers — and unmounts on sign-out, discarding all of its state.
  */
 export default function App() {
@@ -52,11 +52,11 @@ export default function App() {
         }
       } catch (e) {
         if (cancelled) return;
-        // No Supabase row holds this email. Signing out is deliberate: leaving
-        // them half-authenticated with no data reads as a broken app rather than
-        // an account that was never set up.
-        if (e instanceof NoAccountError) {
-          toast.error("No Coffee account is linked to that email yet.");
+        // The email belongs to an account another Clerk sign-in already owns (say,
+        // Google before, email code now). Signing out is deliberate: the alternative
+        // is an empty app beside their real data, which reads as data loss.
+        if (e instanceof EmailTakenError) {
+          toast.error("That email already has a Coffee account. Sign in the way you did before.");
           void clerk.signOut();
         } else {
           toast.error("Couldn't load your account. Try signing in again.");
@@ -114,7 +114,7 @@ export default function App() {
     <SessionContext.Provider value={session.user}>
       <ProfileProvider>
         <ContactsProvider>
-          <AppShell />
+          <AppShell onSignOut={() => clerk.signOut()} />
         </ContactsProvider>
       </ProfileProvider>
     </SessionContext.Provider>

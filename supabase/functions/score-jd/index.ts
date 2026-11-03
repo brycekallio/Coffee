@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
-import { HttpError, resolveTier } from "../_shared/tier.ts";
-import { callLLM, parseJsonObject } from "../_shared/llm.ts";
+import { callModel, HttpError, resolveTier } from "../_shared/tier.ts";
+import { parseJsonObject } from "../_shared/llm.ts";
 
 // Scores a resume against a job description. Available on every tier.
 //
@@ -52,7 +52,7 @@ serve(async (req) => {
       throw new HttpError("jd_text is required", 400);
     }
 
-    const result = await callLLM(resolved.creds, {
+    const result = await callModel(resolved, {
       prompt: buildPrompt(resume_text, jd_text),
       // Open-weight reasoning models spend output tokens thinking before the JSON,
       // so this needs far more headroom than the JSON payload itself.

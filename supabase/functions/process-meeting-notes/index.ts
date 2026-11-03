@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
 import {
+  callModel,
   FREE_TRANSCRIPT_CHAR_LIMIT,
   HttpError,
   requirePower,
   resolveTier,
 } from "../_shared/tier.ts";
-import { callLLM, parseJsonObject } from "../_shared/llm.ts";
+import { parseJsonObject } from "../_shared/llm.ts";
 
 // Turns a networking-call transcript into fun facts / action items / details.
 //
@@ -102,6 +103,12 @@ serve(async (req) => {
       throw new HttpError("transcript is required", 400);
     }
 
+    // The free-tier length limit below measures the transcript, so the other fields that go
+    // into the prompt must not be able to carry text of their own (break-it pass, 2026-11-02).
+    const contactName = String(contact_name).slice(0, 200);
+    const contactCompany = String(contact_company).slice(0, 200);
+    const meetingDate = String(meeting_date).slice(0, 32);
+
     // Long transcripts are the power-tier tool; short ones stay free.
     if (transcript.length > FREE_TRANSCRIPT_CHAR_LIMIT) {
       if (resolved.tier !== "power") {
@@ -119,8 +126,8 @@ serve(async (req) => {
       requirePower(resolved, "meeting-transcripts");
     }
 
-    const result = await callLLM(resolved.creds, {
-      prompt: buildPrompt(transcript, contact_name, contact_company, meeting_date),
+    const result = await callModel(resolved, {
+      prompt: buildPrompt(transcript, contactName, contactCompany, meetingDate),
       maxTokens: 8000,
       json: true,
     });
@@ -132,7 +139,7 @@ serve(async (req) => {
       fun_facts: parsed.fun_facts ?? [],
       action_items: parsed.action_items ?? [],
       important_details: parsed.important_details ?? [],
-      formatted_notes: formatNotesFromResult(parsed, meeting_date),
+      formatted_notes: formatNotesFromResult(parsed, meetingDate),
       model: result.model,
       tier: resolved.tier,
     });

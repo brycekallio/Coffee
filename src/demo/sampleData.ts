@@ -14,18 +14,18 @@ const id = () => `00000000-0000-4000-8000-${String(++n).padStart(12, "0")}`;
 
 type C = [first: string, last: string, company: string, title: string, email: string | null, linkedin: string | null, addedDaysAgo: number];
 const people: C[] = [
-  ["Priya", "Raman", "FTI Consulting", "Senior Consultant, Data & Analytics", "priya.raman@fticonsulting.com", "https://www.linkedin.com/in/priyaraman", 64],
-  ["Daniel", "Choi", "Deloitte", "Analyst, Strategy & Analytics", "dchoi@deloitte.com", "https://www.linkedin.com/in/danielchoi", 58],
-  ["Hannah", "Weiss", "Goldman Sachs", "Analyst, Investment Banking", null, "https://www.linkedin.com/in/hannahweiss", 51],
-  ["Marcus", "Bell", "Alvarez & Marsal", "Associate", "mbell@alvarezandmarsal.com", null, 47],
-  ["Sofia", "Herrera", "Bain & Company", "Associate Consultant", "sofia.herrera@bain.com", "https://www.linkedin.com/in/sofiaherrera", 40],
-  ["Ethan", "Park", "Houlihan Lokey", "Financial Analyst", null, "https://www.linkedin.com/in/ethanpark", 36],
-  ["Grace", "Liu", "Leeds School of Business", "Career Coach, Finance", "grace.liu@colorado.edu", null, 33],
-  ["Owen", "Fitzgerald", "Guidehouse", "Consultant", "ofitzgerald@guidehouse.com", "https://www.linkedin.com/in/owenfitzgerald", 28],
-  ["Amara", "Nwosu", "J.P. Morgan", "Analyst, Corporate Banking", null, "https://www.linkedin.com/in/amaranwosu", 21],
-  ["Lucas", "Moreno", "Accenture", "Analyst, Data & AI", "lucas.moreno@accenture.com", null, 15],
-  ["Chloe", "Bennett", "Lazard", "Analyst, Restructuring", null, "https://www.linkedin.com/in/chloebennett", 9],
-  ["Ryan", "Takahashi", "Ankura", "Senior Associate", "ryan.takahashi@ankura.com", "https://www.linkedin.com/in/ryantakahashi", 4],
+  ["Priya", "Raman", "FTI Consulting", "Senior Consultant, Data & Analytics", "priya.raman@fticonsulting.example", "https://www.linkedin.com/in/demo-priya-raman", 64],
+  ["Daniel", "Choi", "Deloitte", "Analyst, Strategy & Analytics", "dchoi@deloitte.example", "https://www.linkedin.com/in/demo-daniel-choi", 58],
+  ["Hannah", "Weiss", "Goldman Sachs", "Analyst, Investment Banking", null, "https://www.linkedin.com/in/demo-hannah-weiss", 51],
+  ["Marcus", "Bell", "Alvarez & Marsal", "Associate", "mbell@alvarezandmarsal.example", null, 47],
+  ["Sofia", "Herrera", "Bain & Company", "Associate Consultant", "sofia.herrera@bain.example", "https://www.linkedin.com/in/demo-sofia-herrera", 40],
+  ["Ethan", "Park", "Houlihan Lokey", "Financial Analyst", null, "https://www.linkedin.com/in/demo-ethan-park", 36],
+  ["Grace", "Liu", "Leeds School of Business", "Career Coach, Finance", "grace.liu@colorado.example", null, 33],
+  ["Owen", "Fitzgerald", "Guidehouse", "Consultant", "ofitzgerald@guidehouse.example", "https://www.linkedin.com/in/demo-owen-fitzgerald", 28],
+  ["Amara", "Nwosu", "J.P. Morgan", "Analyst, Corporate Banking", null, "https://www.linkedin.com/in/demo-amara-nwosu", 21],
+  ["Lucas", "Moreno", "Accenture", "Analyst, Data & AI", "lucas.moreno@accenture.example", null, 15],
+  ["Chloe", "Bennett", "Lazard", "Analyst, Restructuring", null, "https://www.linkedin.com/in/demo-chloe-bennett", 9],
+  ["Ryan", "Takahashi", "Ankura", "Senior Associate", "ryan.takahashi@ankura.example", "https://www.linkedin.com/in/demo-ryan-takahashi", 4],
 ];
 
 export const contacts = people.map(([first_name, last_name, company, title, email, linkedin_url, d]) => ({
@@ -127,7 +127,7 @@ export const profiles = [
   {
     id: USER_ID,
     full_name: USER.name,
-    my_linkedin_url: "https://www.linkedin.com/in/mayaokafor",
+    my_linkedin_url: "https://www.linkedin.com/in/demo-maya-okafor",
     resume_url: `${USER_ID}/resume.pdf`,
     avatar_url: null,
     resume_text:

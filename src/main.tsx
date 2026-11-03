@@ -4,6 +4,7 @@ import { ClerkProvider } from '@clerk/clerk-react'
 import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.tsx'
+import { isDemoMode } from './demo/mode'
 
 // Publishable by design: it identifies the Clerk instance and is already visible
 // in the JavaScript every visitor downloads. Nothing is protected by hiding it --
@@ -39,34 +40,68 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ClerkProvider
-      publishableKey={CLERK_KEY}
-      afterSignOutUrl="/"
-      appearance={{
-        variables: {
-          colorBackground: '#0b1420',
-          colorPrimary: '#00e5ff',
-          colorText: '#ffffff',
-          colorInputBackground: 'rgba(255,255,255,0.04)',
-          borderRadius: '0.75rem',
-        },
-      }}
-    >
-    <Toaster
-      theme="dark"
-      position="top-right"
-      toastOptions={{
-        style: {
-          background: 'rgba(11, 20, 32, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          color: 'white',
-          backdropFilter: 'blur(16px)',
-        },
-      }}
-    />
-    <App />
-    </ClerkProvider>
-  </StrictMode>,
+const toaster = (
+  <Toaster
+    theme="dark"
+    position="top-right"
+    toastOptions={{
+      style: {
+        background: 'rgba(11, 20, 32, 0.95)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'white',
+        backdropFilter: 'blur(16px)',
+      },
+    }}
+  />
 )
+
+const root = createRoot(document.getElementById('root')!)
+
+if (isDemoMode) {
+  // The public demo at /demo: no Clerk, no real database. The demo chunk installs the
+  // in-memory client and the network guard when it loads, so wait for it before rendering.
+  import('./demo/boot')
+    .then(({ DemoApp }) => {
+      root.render(
+        <StrictMode>
+          {toaster}
+          <DemoApp />
+        </StrictMode>,
+      )
+    })
+    .catch((error) => {
+      // Without this a failed demo chunk leaves /demo as a blank dark page.
+      console.error('Demo failed to load:', error)
+      root.render(
+        <div className="flex min-h-screen items-center justify-center px-6 text-center text-white">
+          <p>
+            The demo didn't load.{' '}
+            <a href="/demo" className="underline decoration-white/30 underline-offset-4 hover:decoration-white">
+              Try again
+            </a>
+          </p>
+        </div>,
+      )
+    })
+} else {
+  root.render(
+    <StrictMode>
+      <ClerkProvider
+        publishableKey={CLERK_KEY}
+        afterSignOutUrl="/"
+        appearance={{
+          variables: {
+            colorBackground: '#0b1420',
+            colorPrimary: '#00e5ff',
+            colorText: '#ffffff',
+            colorInputBackground: 'rgba(255,255,255,0.04)',
+            borderRadius: '0.75rem',
+          },
+        }}
+      >
+        {toaster}
+        <App />
+      </ClerkProvider>
+    </StrictMode>,
+  )
+}

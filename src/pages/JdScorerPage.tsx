@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { invokeAi } from "@/features/ai/client";
 import { inputCls } from "@/components/ui/styles";
 import { useProfile } from "@/features/profile/profileContext";
 import { errorMessage } from "../lib/utils";
@@ -106,18 +106,13 @@ export default function JdScorerPage({ onGoToSettings }: Props) {
     setErrorMsg(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("score-jd", {
-        body: {
-          resume_text: resumeText,
-          jd_text: jdText.trim(),
-        },
+      // invokeAi surfaces the server's own message (e.g. the daily free-AI limit)
+      // instead of supabase-js's "non-2xx status code".
+      const data = await invokeAi<ScoreResult>("score-jd", {
+        resume_text: resumeText,
+        jd_text: jdText.trim(),
       });
-
-      if (fnError) throw new Error(fnError.message);
-      const fnErr = (data as { error?: string } | null)?.error;
-      if (fnErr) throw new Error(fnErr);
-
-      setResult(data as ScoreResult);
+      setResult(data);
     } catch (e) {
       setErrorMsg(errorMessage(e, "Scoring failed. Please try again."));
     } finally {

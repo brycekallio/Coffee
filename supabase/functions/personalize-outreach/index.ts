@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
-import { HttpError, requirePower, resolveTier } from "../_shared/tier.ts";
-import { callLLM, unfence } from "../_shared/llm.ts";
+import { callModel, HttpError, requirePower, resolveTier } from "../_shared/tier.ts";
+import { unfence } from "../_shared/llm.ts";
 
 // Rewrites a draft outreach message against the sender's resume and the recipient's
 // details. Power tier only.
@@ -63,7 +63,7 @@ serve(async (req) => {
       throw new HttpError("current_message is required", 400);
     }
 
-    const result = await callLLM(resolved.creds, {
+    const result = await callModel(resolved, {
       prompt: buildPrompt({
         resume_text: body.resume_text ?? null,
         contact_info: (body.contact_info ?? "").trim() || "No contact selected",

@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/demo/mode";
 import * as pdfjsLib from "pdfjs-dist";
 // pdf.js refuses to run an API build against a mismatched worker build — getDocument()
 // throws "The API version <x> does not match the Worker version <y>". This used to point
@@ -43,6 +44,7 @@ export async function parsePdfToText(file: File): Promise<string> {
  * signed URLs (the `resumes` bucket is private) without depending on range support.
  */
 export async function parsePdfFromUrl(url: string): Promise<string> {
+  if (isDemoMode) throw new Error("Resume files aren't available in the demo.");
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Could not download the resume (HTTP ${res.status}).`);

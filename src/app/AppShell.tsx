@@ -1,5 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { useClerk } from "@clerk/clerk-react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import Logo from "@/components/ui/Logo";
 import ContactsPage from "@/features/contacts/ContactsPage";
 import { useProfile } from "@/features/profile/profileContext";
@@ -34,9 +33,18 @@ function PageFallback() {
  * The signed-in app: top nav and whichever page is open. Every feature owns its own
  * data, so all this holds is navigation state and the nav's outreach badge.
  */
-export default function AppShell() {
+export default function AppShell({
+  onSignOut,
+  signOutLabel = "Sign out",
+  banner,
+}: {
+  /** What the profile menu's last item does. App passes Clerk's signOut; the demo sends you to sign up. */
+  onSignOut: () => void | Promise<void>;
+  signOutLabel?: string;
+  /** Pinned above the nav, inside the sticky header (the demo's "sample data" bar). */
+  banner?: ReactNode;
+}) {
   const user = useSession();
-  const clerk = useClerk();
   const { profile, needsOnboarding } = useProfile();
 
   const { route, navigate } = useRoute();
@@ -71,7 +79,7 @@ export default function AppShell() {
     clearCachedUserId();
     // Signing out unmounts this tree (App drops to the auth page), which discards every
     // feature's state — nothing to reset by hand.
-    await clerk.signOut();
+    await onSignOut();
   }
 
   function openDetails(contactId: string) {
@@ -130,6 +138,7 @@ export default function AppShell() {
 
       {/* Top Nav */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.04] bg-depth-0">
+        {banner}
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 md:px-6">
           {/* Left: Logo + Nav Links */}
           <div className="flex items-center gap-1 md:gap-1.5">
@@ -281,7 +290,7 @@ export default function AppShell() {
                         <svg className="h-4 w-4 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
-                        Sign out
+                        {signOutLabel}
                       </button>
                     </div>
                   </div>

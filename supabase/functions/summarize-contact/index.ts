@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
-import { HttpError, resolveTier } from "../_shared/tier.ts";
-import { callLLM } from "../_shared/llm.ts";
+import { callModel, HttpError, resolveTier } from "../_shared/tier.ts";
 
 // Short "who is this person" brief before reaching out. Available on every tier.
 //
@@ -88,7 +87,7 @@ serve(async (req) => {
       throw new HttpError("Contact data is required", 400);
     }
 
-    const result = await callLLM(resolved.creds, {
+    const result = await callModel(resolved, {
       prompt: buildPrompt(body.contact, body.meetings ?? []),
       // The summary is 2–3 sentences, but reasoning models think first — hence the gap
       // between the visible answer and the budget.

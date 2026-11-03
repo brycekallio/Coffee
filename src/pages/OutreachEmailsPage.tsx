@@ -8,6 +8,7 @@ import { useProfile } from "@/features/profile/profileContext";
 import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
 import { toast } from "sonner";
+import { DEMO_READ_ONLY_MESSAGE, isDemoMode } from "../demo/mode";
 import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 import { useContacts } from "@/features/contacts/contactsContext";
@@ -110,6 +111,12 @@ function openOutreach(
   subject: string,
   message: string,
 ) {
+  // The demo never hands a draft to the visitor's mail or Messages app: the sample
+  // contacts aren't real people to write to. The demo turns this into its sign-up toast.
+  if (isDemoMode) {
+    toast.error(DEMO_READ_ONLY_MESSAGE);
+    return;
+  }
   if (channel === "email") {
     const mailto = `mailto:${contact?.email ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
     window.open(mailto, "_self");
