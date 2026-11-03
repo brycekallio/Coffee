@@ -29,7 +29,7 @@ export default function BulkBar(p: BulkBarProps) {
       <button onClick={p.onStar} disabled={p.busy} className={btn}>
         {p.allStarred ? "Unstar" : "Star"}
       </button>
-      <TagMenu known={p.knownTags} selectedRows={p.selectedRows} onChange={p.onTag} buttonCls={btn} />
+      <TagMenu known={p.knownTags} selectedRows={p.selectedRows} onChange={p.onTag} buttonCls={btn} disabled={p.busy} />
       <button onClick={p.onMove} disabled={p.busy} className={btn}>
         {p.moveLabel}
       </button>

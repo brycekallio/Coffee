@@ -59,12 +59,15 @@ export function useBulkList<T extends BulkRow>(opts: BulkListOptions<T>) {
       onFailed: (ids, e, batch) => {
         toast.dismiss(`undo-${batch}`);
         toast.error(errorMessage(e, `Couldn't delete ${count(ids.length, latestRef.current.noun)}.`));
+        // Some chunks may have gone through before the failure: show what is really left.
+        void latestRef.current.reload();
       },
     });
   }, [queue]);
 
-  // Leaving the page inside the Undo window commits the delete rather than losing it.
-  useEffect(() => () => void queue.flush(), [queue]);
+  // Leaving the page inside the Undo window does NOT commit early: the timer keeps running
+  // (the queue outlives the component), so the Undo toast, which is app-wide, still works
+  // until the window ends. Closing the tab inside the window leaves the rows undeleted.
 
   const shown = useMemo(() => starredFirst(rows.filter((r) => !hidden.has(r.id))), [rows, hidden]);
 
@@ -82,7 +85,13 @@ export function useBulkList<T extends BulkRow>(opts: BulkListOptions<T>) {
       toast(`${count(ids.length, noun)} deleted`, {
         id: `undo-${batch}`,
         duration: UNDO_MS,
-        action: { label: "Undo", onClick: () => queue.undo(batch) },
+        action: {
+          label: "Undo",
+          onClick: () => {
+            // The delete may already be on its way (the toast can outlive the window, e.g. on hover).
+            if (!queue.undo(batch)) toast.error("Too late to undo: already deleted.");
+          },
+        },
       });
     },
     [queue],
@@ -90,10 +99,11 @@ export function useBulkList<T extends BulkRow>(opts: BulkListOptions<T>) {
 
   const star = useCallback(async (ids: string[]) => {
     const { rows, setRows, api, reload } = latestRef.current;
-    const picked = rows.filter((r) => ids.includes(r.id));
+    const wanted = new Set(ids);
+    const picked = rows.filter((r) => wanted.has(r.id));
     if (picked.length === 0) return;
     const value = nextStarValue(picked);
-    if (!isDemoMode) setRows((cur) => cur.map((r) => (ids.includes(r.id) ? { ...r, starred: value } : r)));
+    if (!isDemoMode) setRows((cur) => cur.map((r) => (wanted.has(r.id) ? { ...r, starred: value } : r)));
     try {
       await api.setStarred(picked.map((r) => r.id), value);
     } catch (e) {
@@ -104,7 +114,8 @@ export function useBulkList<T extends BulkRow>(opts: BulkListOptions<T>) {
 
   const tag = useCallback(async (ids: string[], tagName: string, mode: "add" | "remove") => {
     const { rows, setRows, api, reload } = latestRef.current;
-    const groups = planTagChange(rows.filter((r) => ids.includes(r.id)), tagName, mode);
+    const wanted = new Set(ids);
+    const groups = planTagChange(rows.filter((r) => wanted.has(r.id)), tagName, mode);
     if (groups.length === 0) return;
     if (!isDemoMode) {
       const byId = new Map(groups.flatMap((g) => g.ids.map((id) => [id, g.tags] as const)));

@@ -100,7 +100,9 @@ describe("every bulk request names the signed-in user", () => {
     for (const c of calls.filter((c) => c.method !== "POST")) {
       expect(c.url.searchParams.get("owner_id")).toBe(`eq.${ME}`);
     }
-    expect(calls.map((c) => c.url.pathname.split("/").pop())).toContain("contact_meetings");
+    const tables = calls.map((c) => c.url.pathname.split("/").pop());
+    // Every table with a foreign key to contacts is checked, or a move would cascade-delete it.
+    for (const t of ["contact_meetings", "meeting_notes", "applications", "scheduled_outreach"]) expect(tables).toContain(t);
   });
 });
 

@@ -71,4 +71,27 @@ describe("Network -> Watchlist mapping", () => {
     const t = { owner_id: "u1", id: "t", person_name: "Mary Jane Watson", company: "", role: null, status: "contacted", next_action_date: null, notes: null, created_at: "x", starred: false, tags: [] };
     expect(targetToContact(t)).toMatchObject({ first_name: "Mary", last_name: "Jane Watson", company: null });
   });
+
+  it("round trip keeps last contacted (no column on the Watchlist)", () => {
+    const c = { ...contact, last_touch_at: "2026-10-01T15:30:00+00:00" };
+    const t = contactToTarget(c);
+    expect(t.notes).toContain("Last contacted: 2026-10-01T15:30:00+00:00");
+    const back = targetToContact({ ...(t as Tables<"watchlist_targets">), id: "t1", created_at: "x" });
+    expect(back.last_touch_at).toBe("2026-10-01T15:30:00+00:00");
+    expect(back.notes).toBe("Met at the Leeds night.");
+  });
+
+  it("round trip keeps the Watchlist status (no column in the Network)", () => {
+    const t = { owner_id: "u1", id: "t", person_name: "Ana Diaz", company: "Bain", role: null, status: "contacted", next_action_date: null, notes: "Coffee chat soon", created_at: "x", starred: false, tags: [] };
+    const c = targetToContact(t);
+    expect(c.notes).toBe("Watchlist status: contacted\nCoffee chat soon");
+    const again = contactToTarget({ ...contact, ...(c as Tables<"contacts">), email: null, phone: null, linkedin_url: null, last_touch_at: null });
+    expect(again.status).toBe("contacted");
+    expect(again.notes).toBe("Coffee chat soon");
+  });
+
+  it("a default status adds no line", () => {
+    const t = { owner_id: "u1", id: "t", person_name: "Ana", company: "", role: null, status: "not_contacted", next_action_date: null, notes: null, created_at: "x", starred: false, tags: [] };
+    expect(targetToContact(t).notes).toBeNull();
+  });
 });

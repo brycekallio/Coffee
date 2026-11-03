@@ -9,10 +9,11 @@ interface TagMenuProps {
   selectedRows: { tags: string[] }[];
   onChange: (tag: string, mode: "add" | "remove") => void;
   buttonCls: string;
+  disabled?: boolean;
 }
 
 /** "Tag" button + popover: tick a tag to add it to the selection, untick to remove it, or make a new one. */
-export default function TagMenu({ known, selectedRows, onChange, buttonCls }: TagMenuProps) {
+export default function TagMenu({ known, selectedRows, onChange, buttonCls, disabled }: TagMenuProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const root = useRef<HTMLDivElement>(null);
@@ -41,7 +42,7 @@ export default function TagMenu({ known, selectedRows, onChange, buttonCls }: Ta
   // A tag typed here that nobody has yet still shows up (as ticked) once it's applied.
   return (
     <div ref={root} className="relative">
-      <button onClick={() => setOpen((o) => !o)} aria-haspopup="dialog" aria-expanded={open} className={buttonCls}>
+      <button onClick={() => setOpen((o) => !o)} disabled={disabled} aria-haspopup="dialog" aria-expanded={open} className={buttonCls}>
         Tag
       </button>
       {open ? (
