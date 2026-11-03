@@ -10,8 +10,12 @@ import Checkbox from "@/features/bulk/Checkbox";
 import { StarMark, TagChips } from "@/features/bulk/marks";
 import { allTags, hasTag, nextStarValue } from "@/features/bulk/tags";
 import { useSelection } from "@/features/bulk/useSelection";
+import type { ContactFields } from "../../../supabase/functions/_shared/contactFields.ts";
 import * as api from "./api";
 import { useContacts } from "./contactsContext";
+import { mergeIntoForm } from "./fillFromProfile";
+import LinkedInImportModal from "./LinkedInImportModal";
+import PasteProfileFill from "./PasteProfileFill";
 
 interface ContactsPageProps {
   openDetails: (contactId: string) => void;
@@ -75,6 +79,30 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
   const [contactEmail, setContactEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+
+  /** Pasted-profile result → the draft. Fields the AI didn't find keep whatever is typed. */
+  function applyFill(found: Partial<ContactFields>) {
+    const next = mergeIntoForm(
+      { first: firstName, last: lastName, company, title: jobTitle, email: contactEmail, phone, linkedin: linkedinUrl },
+      {
+        first: found.first_name,
+        last: found.last_name,
+        company: found.company,
+        title: found.title,
+        email: found.email,
+        phone: found.phone,
+        linkedin: found.linkedin_url,
+      },
+    );
+    setFirstName(next.first);
+    setLastName(next.last);
+    setCompany(next.company);
+    setJobTitle(next.title);
+    setContactEmail(next.email);
+    setPhone(next.phone);
+    setLinkedinUrl(next.linkedin);
+  }
 
   async function addContact() {
     try {
@@ -147,6 +175,7 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
       {/* Add contact — 1/3. On a phone the list (the job) comes first and the form follows. */}
       <div className="order-last lg:order-none lg:col-span-1">
         <Card title="Add a person" subtitle="Add someone once; log every coffee after.">
+          <PasteProfileFill onFill={applyFill} />
           <div className="grid gap-3">
             <div className="grid grid-cols-2 gap-3">
               <input className={inputCls} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -165,8 +194,16 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
             >
               Add person
             </button>
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="text-left text-sm text-white/60 hover:text-white hover:underline cursor-pointer"
+            >
+              Have many people? Import your LinkedIn connections
+            </button>
           </div>
         </Card>
+        {importOpen ? <LinkedInImportModal onClose={() => setImportOpen(false)} /> : null}
       </div>
 
       {/* Network list — 2/3 */}
@@ -253,7 +290,7 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
               <div className="px-6 py-10 text-center">
                 <p className="text-sm text-white/80">{search.trim() ? "Nobody matches that search." : "Your network is empty."}</p>
                 {!search.trim() ? (
-                  <p className="mt-1 text-sm text-white/60">Add the first person you've had coffee with, or import a CSV from Settings.</p>
+                  <p className="mt-1 text-sm text-white/60">Add the first person you've had coffee with, paste a LinkedIn profile, or import your connections.</p>
                 ) : null}
               </div>
             ) : (

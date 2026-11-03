@@ -103,6 +103,14 @@ export const SUGGESTED_MODELS: Record<AiProvider, { id: string; label: string }[
   ],
 };
 
+/** A failed AI call with its HTTP status, so callers can tell "daily limit" (429) from "down" (5xx). */
+export class AiHttpError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = "AiHttpError";
+  }
+}
+
 interface InvokeResult<T> {
   data: T;
 }
@@ -141,7 +149,7 @@ export async function invokeAi<T>(
     if (status === 402) {
       throw new PowerTierRequiredError(detail, tool);
     }
-    throw new Error(detail);
+    throw new AiHttpError(detail, status);
   }
 
   const payload = data as { error?: string } & InvokeResult<T>;
