@@ -107,7 +107,7 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
       <div className="lg:col-span-1">
         <Card title={editingAppId ? "Edit Application" : "Track Application"} subtitle="Keep tabs on where you've applied.">

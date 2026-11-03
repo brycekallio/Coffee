@@ -107,7 +107,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-10 md:px-6">
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Profile — 2/3 */}
         <div className="lg:col-span-2">
           <Card title="Profile" subtitle="Used to personalize your outreach drafts and job matches.">

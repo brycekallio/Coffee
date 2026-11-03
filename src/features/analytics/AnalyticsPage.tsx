@@ -125,7 +125,7 @@ export default function AnalyticsPage() {
         </div>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Contacts Added Over Time */}
         <Card
           title="People added"

@@ -227,7 +227,7 @@ export default function WatchlistPage() {
 
   /* ── render ────────────────────────────────────────────── */
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
       <div className="lg:col-span-1">
         <Card
@@ -371,14 +371,17 @@ export default function WatchlistPage() {
                   onClear={sel.clear}
                 />
               ) : (
-                <div className="grid min-w-0 flex-1 grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 text-xs text-white/30 font-medium">
-                  <div>Name</div>
-                  <div>Company</div>
-                  <div>Role</div>
-                  <div>Status</div>
-                  <div>Next Action</div>
-                  <div>Actions</div>
-                </div>
+                <>
+                  <span className="text-xs text-white/60 md:hidden">Select all</span>
+                  <div className="hidden min-w-0 flex-1 grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 text-xs font-medium text-white/60 md:grid">
+                    <div>Name</div>
+                    <div>Company</div>
+                    <div>Role</div>
+                    <div>Status</div>
+                    <div>Next Action</div>
+                    <div>Actions</div>
+                  </div>
+                </>
               )}
             </div>
             <div className="h-px w-full bg-white/[0.04]" />
@@ -397,7 +400,7 @@ export default function WatchlistPage() {
                 <div key={t.id}>
                   <div className={`flex items-center gap-3 px-4 transition-colors hover:bg-white/[0.02] ${sel.selected.has(t.id) ? "bg-white/[0.05]" : ""}`}>
                   <Checkbox state={sel.selected.has(t.id) ? "all" : "none"} label={`Select ${t.person_name}`} onToggle={(shift) => sel.onToggle(t.id, shift)} />
-                  <div className="grid min-w-0 flex-1 grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 py-3">
+                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate font-medium text-white" title={t.person_name}>
@@ -405,37 +408,42 @@ export default function WatchlistPage() {
                         </span>
                         {t.starred ? <StarMark /> : null}
                       </div>
+                      <div className="mt-0.5 truncate text-sm text-white/60 md:hidden">
+                        {[t.company, t.role].filter(Boolean).join(" \u00b7 ") || "\u2014"}
+                      </div>
                       <TagChips tags={t.tags} />
                     </div>
-                    <div className="truncate text-sm text-white/50" title={t.company}>
+                    <div className="hidden truncate text-sm text-white/50 md:block" title={t.company}>
                       {t.company || "\u2014"}
                     </div>
-                    <div className="truncate text-sm text-white/50" title={t.role ?? ""}>
+                    <div className="hidden truncate text-sm text-white/50 md:block" title={t.role ?? ""}>
                       {t.role ?? "\u2014"}
                     </div>
-                    <div className="text-sm">
+                    <div className="row-span-2 text-sm md:row-span-1">
                       <span
                         className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[t.status] ?? "bg-white/[0.04] text-white/40"}`}
                       >
                         {STATUS_LABEL[t.status] ?? t.status}
                       </span>
                     </div>
-                    <div className="font-data text-sm text-white/40">
-                      {t.next_action_date ?? "\u2014"}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => startEdit(t)}
-                        className="text-xs font-medium text-white/35 transition-colors hover:text-white cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteTarget(t.id)}
-                        className="text-xs font-medium text-danger/50 transition-colors hover:text-danger cursor-pointer"
-                      >
-                        Delete
-                      </button>
+                    <div className="col-span-2 flex items-center justify-between gap-4 md:contents">
+                      <div className="font-data text-sm text-white/60 md:text-white/40">
+                        {t.next_action_date ? <><span className="md:hidden">Next: </span>{t.next_action_date}</> : "\u2014"}
+                      </div>
+                      <div className="flex gap-3 md:gap-2">
+                        <button
+                          onClick={() => startEdit(t)}
+                          className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer md:text-white/35"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteTarget(t.id)}
+                          className="text-xs font-medium text-danger/70 transition-colors hover:text-danger cursor-pointer md:text-danger/50"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                   </div>

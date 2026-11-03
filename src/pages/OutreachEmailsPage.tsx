@@ -557,7 +557,7 @@ export default function OutreachEmailsPage() {
 
   return (
     <>
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Compose — 1/3. On a phone the due queue (the job) comes first. */}
       <div className="order-last space-y-6 lg:order-none lg:col-span-1">
         <Card

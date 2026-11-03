@@ -127,7 +127,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
           </p>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Contact info — 1/3 */}
           <div className="lg:col-span-1">
             <Card
