@@ -3,7 +3,7 @@
 -- Why: the free tier runs on the project's one OpenRouter key, which allows 50 requests a
 -- day across ALL users. Sign-ups are open, so one account could spend the whole day's
 -- quota. Each free-tier request now counts against the caller's own daily allowance
--- (FREE_AI_DAILY_LIMIT_PER_USER, default 10) before the model is called; see
+-- (FREE_AI_DAILY_LIMIT_PER_USER, default 5) before the model is called; see
 -- spendFreeRequest() in supabase/functions/_shared/tier.ts.
 --
 -- Additive only: one new table, one new function. Nothing existing changes.

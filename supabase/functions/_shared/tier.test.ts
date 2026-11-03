@@ -173,25 +173,25 @@ describe("per-user free-tier cap", () => {
     throw new Error("expected a refusal");
   }
 
-  it("defaults to 10 free requests a day per user", () => {
-    expect(freeDailyLimit()).toBe(10);
+  it("defaults to 5 free requests a day per user", () => {
+    expect(freeDailyLimit()).toBe(5);
   });
 
-  it("lets 10 through, then refuses the 11th with a friendly 429 before calling the model", async () => {
-    const r = await spendAs("user-1", 10);
-    expect(llmCalls).toHaveLength(10);
+  it("lets 5 through, then refuses the 6th with a friendly 429 before calling the model", async () => {
+    const r = await spendAs("user-1", 5);
+    expect(llmCalls).toHaveLength(5);
 
     const err = await refusal(callModel(r, ask));
     expect(err).toBeInstanceOf(HttpError);
     expect(err.status).toBe(429);
-    expect(err.extra).toMatchObject({ reason: "free_daily_limit", limit: 10 });
-    expect(err.message).toMatch(/today's 10 free AI requests/);
+    expect(err.extra).toMatchObject({ reason: "free_daily_limit", limit: 5 });
+    expect(err.message).toMatch(/today's 5 free AI requests/);
     expect(err.message).toMatch(/Settings → AI engine/);
-    expect(llmCalls).toHaveLength(10); // the shared key was not spent on the refused call
+    expect(llmCalls).toHaveLength(5); // the shared key was not spent on the refused call
   });
 
   it("counts each user separately, keyed on the server-resolved user id", async () => {
-    await spendAs("user-1", 10);
+    await spendAs("user-1", 5);
     const r2 = await spendAs("user-2", 1);
     expect(r2.userId).toBe("user-2");
     expect(db.usage.get("user-2")).toBe(1);
@@ -210,7 +210,7 @@ describe("per-user free-tier cap", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     for (const bad of ["ten", "-1", "2.5", "Infinity", "1e3", "0x10", "9999999999"]) {
       env.set("FREE_AI_DAILY_LIMIT_PER_USER", bad);
-      expect(freeDailyLimit()).toBe(10);
+      expect(freeDailyLimit()).toBe(5);
     }
   });
 
@@ -242,12 +242,12 @@ describe("per-user free-tier cap", () => {
 
   it("gives the slot back when the provider rate-limited the shared key (it did no work)", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const r = await spendAs("user-1", 9);
+    const r = await spendAs("user-1", 4);
     provider.status = 429;
     await expect(callModel(r, ask)).rejects.toMatchObject({ status: 429 });
-    expect(db.usage.get("user-1")).toBe(9);
+    expect(db.usage.get("user-1")).toBe(4);
     provider.status = 200;
-    await callModel(r, ask); // the 10th still works
+    await callModel(r, ask); // the 5th still works
     await expect(callModel(r, ask)).rejects.toMatchObject({ extra: { reason: "free_daily_limit" } });
   });
 

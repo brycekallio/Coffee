@@ -174,7 +174,7 @@ export async function resolveTier(req: Request): Promise<Resolved> {
  *
  * Users with their own key (power tier) are never counted.
  */
-export const DEFAULT_FREE_DAILY_LIMIT = 10;
+export const DEFAULT_FREE_DAILY_LIMIT = 5;
 
 export function freeDailyLimit(): number {
   const raw = Deno.env.get("FREE_AI_DAILY_LIMIT_PER_USER")?.trim();
