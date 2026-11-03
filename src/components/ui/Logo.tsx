@@ -1,5 +1,7 @@
 interface LogoProps {
   size?: "sm" | "lg";
+  /** Large logo only: "start" left-aligns the stack (the sign-in page's hero column). */
+  align?: "center" | "start";
 }
 
 function CoffeeCupIcon({ px }: { px: number }) {
@@ -26,10 +28,10 @@ function CoffeeCupIcon({ px }: { px: number }) {
   );
 }
 
-export default function Logo({ size = "sm" }: LogoProps) {
+export default function Logo({ size = "sm", align = "center" }: LogoProps) {
   if (size === "lg") {
     return (
-      <div className="flex flex-col items-center gap-3">
+      <div className={`flex flex-col gap-3 ${align === "start" ? "items-start" : "items-center"}`}>
         <span className="text-glow">
           <CoffeeCupIcon px={56} />
         </span>

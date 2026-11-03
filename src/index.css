@@ -113,47 +113,87 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   background: none;
 }
 
-/* ── Auth Particles ─────────────────────────────────── */
+/* ── Sign-in illustration (AuthIllustration) ───────────
+   Resting state = the finished picture: kettle tilted, stream running, cup full,
+   contacts connected. The 9s loop only applies when motion is allowed. */
 
-@keyframes particle-rise {
-  0% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(20px);
-    opacity: 0;
-  }
+.pour-kettle {
+  transform: rotate(-22deg);
+}
+.pour-stream {
+  stroke-dasharray: 100;
+}
+.pour-ripple-wrap {
+  opacity: 0;
+}
+.pour-coffee,
+.pour-node,
+.pour-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-@keyframes particle-rise-alt {
-  0% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.7;
-  }
-  90% {
-    opacity: 0.7;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(-15px);
-    opacity: 0;
-  }
+@keyframes pour-tilt {
+  0%, 10% { transform: rotate(0deg); }
+  28%, 72% { transform: rotate(-22deg); }
+  88%, 100% { transform: rotate(0deg); }
+}
+@keyframes pour-stream {
+  0%, 24% { stroke-dashoffset: 100; opacity: 0; }
+  30% { stroke-dashoffset: 100; opacity: 1; }
+  38%, 70% { stroke-dashoffset: 0; opacity: 1; }
+  78%, 100% { stroke-dashoffset: -100; opacity: 1; }
+}
+@keyframes pour-fill {
+  0%, 30% { transform: scale(0.25); opacity: 0; }
+  66%, 90% { transform: scale(1); opacity: 0.92; }
+  100% { transform: scale(1); opacity: 0; }
+}
+@keyframes pour-landing {
+  0%, 34% { opacity: 0; }
+  38%, 70% { opacity: 1; }
+  76%, 100% { opacity: 0; }
+}
+@keyframes pour-ripple {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+@keyframes pour-node {
+  0%, 52% { opacity: 0; transform: translateY(14px) scale(0.4); }
+  62%, 84% { opacity: 1; transform: translateY(0) scale(1); }
+  94%, 100% { opacity: 0; transform: translateY(-6px) scale(0.6); }
+}
+@keyframes pour-link {
+  0%, 60% { opacity: 0; }
+  70%, 84% { opacity: 1; }
+  94%, 100% { opacity: 0; }
 }
 
-.particle {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  will-change: transform, opacity;
+@media (prefers-reduced-motion: no-preference) {
+  .pour-kettle {
+    animation: pour-tilt 9s var(--ease-smooth) infinite;
+  }
+  .pour-stream {
+    animation: pour-stream 9s var(--ease-smooth) infinite;
+  }
+  .pour-coffee {
+    animation: pour-fill 9s var(--ease-smooth) infinite;
+  }
+  .pour-ripple-wrap {
+    animation: pour-landing 9s linear infinite;
+  }
+  .pour-ripple {
+    animation: pour-ripple 1.4s var(--ease-out) infinite;
+  }
+  .pour-node {
+    animation: pour-node 9s var(--ease-smooth) infinite both;
+  }
+  .pour-node-2 { animation-delay: 0.12s; }
+  .pour-node-3 { animation-delay: 0.24s; }
+  .pour-node-4 { animation-delay: 0.36s; }
+  .pour-link {
+    animation: pour-link 9s var(--ease-smooth) infinite both;
+  }
 }
 
 /* ── Auth Entry Transitions ───────────────────────── */
@@ -321,11 +361,6 @@ button, a, input, select, textarea {
   .living-canvas,
   .living-canvas-auth {
     animation: none;
-  }
-
-  .particle {
-    animation: none !important;
-    display: none;
   }
 
   .auth-form-enter,
