@@ -1,10 +1,21 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { currentUserId } from "../lib/appSession";
 import type { WatchlistTarget } from "../types";
 import Card from "../components/ui/Card";
 import { inputCls, selectCls } from "@/components/ui/styles";
 import { toast } from "sonner";
+import { useSession } from "@/app/session";
+import { useContacts } from "@/features/contacts/contactsContext";
+import BulkBar from "@/features/bulk/BulkBar";
+import Checkbox from "@/features/bulk/Checkbox";
+import { StarMark, TagChips } from "@/features/bulk/marks";
+import { moveTargetsToContacts } from "@/features/bulk/moveApi";
+import { allTags, hasTag, nextStarValue } from "@/features/bulk/tags";
+import { useBulkList } from "@/features/bulk/useBulkList";
+import { useSelection } from "@/features/bulk/useSelection";
+import * as watchlistApi from "@/features/watchlist/api";
+import { errorMessage } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_contacted", label: "Not Contacted" },
@@ -28,7 +39,9 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default function WatchlistPage() {
   /* ── state ─────────────────────────────────────────────── */
-  const [targets, setTargets] = useState<WatchlistTarget[]>([]);
+  const user = useSession();
+  const { reload: reloadContacts } = useContacts();
+  const [rawTargets, setTargets] = useState<WatchlistTarget[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [personName, setPersonName] = useState("");
@@ -73,6 +86,44 @@ export default function WatchlistPage() {
   const loadTargets = async () => {
     setLoading(true);
     applyTargets(await queryTargets());
+  };
+
+  // Bulk select: delete (with Undo), star, tag, move to the Network.
+  const bulkList = useBulkList({
+    rows: rawTargets,
+    setRows: setTargets,
+    reload: loadTargets,
+    noun: { one: "person", many: "people" },
+    api: {
+      remove: (ids) => watchlistApi.deleteTargets(user.id, ids),
+      setStarred: (ids, starred) => watchlistApi.setTargetsStarred(user.id, ids, starred),
+      setTags: (group) => watchlistApi.setTargetsTags(user.id, group),
+    },
+  });
+  const allTargets = bulkList.rows; // starred first, minus any waiting out their Undo window
+  const [tagFilter, setTagFilter] = useState("");
+  const knownTags = useMemo(() => allTags(allTargets), [allTargets]);
+  const activeTag = knownTags.some((t) => t === tagFilter) ? tagFilter : "";
+  const targets = useMemo(
+    () => (activeTag ? allTargets.filter((t) => hasTag(t.tags, activeTag)) : allTargets),
+    [allTargets, activeTag],
+  );
+  const order = useMemo(() => targets.map((t) => t.id), [targets]);
+  const sel = useSelection(order);
+  const selectedRows = targets.filter((t) => sel.selected.has(t.id));
+  const [moving, setMoving] = useState(false);
+
+  const moveSelected = async () => {
+    setMoving(true);
+    try {
+      const { moved } = await moveTargetsToContacts(user.id, sel.ids);
+      if (moved > 0) toast.success(`Moved ${moved} ${moved === 1 ? "person" : "people"} to your Network.`);
+    } catch (e) {
+      toast.error(errorMessage(e, "Couldn't move them."));
+    } finally {
+      await Promise.all([loadTargets(), reloadContacts()]);
+      setMoving(false);
+    }
   };
 
   const addTarget = async () => {
@@ -275,24 +326,60 @@ export default function WatchlistPage() {
       <div className="lg:col-span-2">
         <Card
           title="Watchlist"
-          subtitle={loading ? "Loading..." : `${targets.length} target${targets.length !== 1 ? "s" : ""}`}
+          subtitle={loading ? "Loading..." : `${allTargets.length} target${allTargets.length !== 1 ? "s" : ""}`}
           right={
-            <button
-              onClick={loadTargets}
-              className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              {knownTags.length > 0 ? (
+                <select
+                  className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 outline-none"
+                  aria-label="Filter by tag"
+                  value={activeTag}
+                  onChange={(e) => setTagFilter(e.target.value)}
+                >
+                  <option value="">All tags</option>
+                  {knownTags.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <button
+                onClick={loadTargets}
+                className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
+              >
+                Refresh
+              </button>
+            </div>
           }
         >
           <div className="mt-2 rounded-section bg-depth-0/40">
-            <div className="grid grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/30 font-medium">
-              <div>Name</div>
-              <div>Company</div>
-              <div>Role</div>
-              <div>Status</div>
-              <div>Next Action</div>
-              <div>Actions</div>
+            <div className="flex min-h-[3.25rem] items-center gap-3 px-4 py-2">
+              <Checkbox state={sel.all} label="Select all people" onToggle={() => sel.onToggleAll()} />
+              {sel.count > 0 ? (
+                <BulkBar
+                  count={sel.count}
+                  allStarred={!nextStarValue(selectedRows)}
+                  knownTags={knownTags}
+                  selectedRows={selectedRows}
+                  moveLabel="Move to Network"
+                  busy={moving}
+                  onStar={() => void bulkList.star(sel.ids)}
+                  onTag={(tag, mode) => void bulkList.tag(sel.ids, tag, mode)}
+                  onMove={() => void moveSelected()}
+                  onDelete={() => bulkList.remove(sel.ids)}
+                  onClear={sel.clear}
+                />
+              ) : (
+                <div className="grid min-w-0 flex-1 grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 text-xs text-white/30 font-medium">
+                  <div>Name</div>
+                  <div>Company</div>
+                  <div>Role</div>
+                  <div>Status</div>
+                  <div>Next Action</div>
+                  <div>Actions</div>
+                </div>
+              )}
             </div>
             <div className="h-px w-full bg-white/[0.04]" />
 
@@ -308,12 +395,20 @@ export default function WatchlistPage() {
             ) : (
               targets.map((t) => (
                 <div key={t.id}>
-                  <div className="grid grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
-                    <div className="truncate font-medium text-white" title={t.person_name}>
-                      {t.person_name}
+                  <div className={`flex items-center gap-3 px-4 transition-colors hover:bg-white/[0.02] ${sel.selected.has(t.id) ? "bg-white/[0.05]" : ""}`}>
+                  <Checkbox state={sel.selected.has(t.id) ? "all" : "none"} label={`Select ${t.person_name}`} onToggle={(shift) => sel.onToggle(t.id, shift)} />
+                  <div className="grid min-w-0 flex-1 grid-cols-[1.4fr_1.2fr_1fr_1fr_1fr_0.8fr] items-center gap-3 py-3">
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-medium text-white" title={t.person_name}>
+                          {t.person_name}
+                        </span>
+                        {t.starred ? <StarMark /> : null}
+                      </div>
+                      <TagChips tags={t.tags} />
                     </div>
                     <div className="truncate text-sm text-white/50" title={t.company}>
-                      {t.company}
+                      {t.company || "\u2014"}
                     </div>
                     <div className="truncate text-sm text-white/50" title={t.role ?? ""}>
                       {t.role ?? "\u2014"}
@@ -342,6 +437,7 @@ export default function WatchlistPage() {
                         Delete
                       </button>
                     </div>
+                  </div>
                   </div>
                   <div className="h-px w-full bg-white/[0.03]" />
                 </div>

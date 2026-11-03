@@ -378,3 +378,50 @@ button, a, input, select, textarea {
     animation: none;
   }
 }
+
+/* ── Bulk-select checkbox ──────────────────────────────
+   Neutral on purpose: white when on, never the accent. 16px, flat. */
+
+.bulk-check {
+  appearance: none;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  border-radius: var(--radius-badge);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 0.75rem;
+  display: inline-block;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.bulk-check:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.bulk-check:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.bulk-check:checked,
+.bulk-check:indeterminate,
+.bulk-check[data-state="all"],
+.bulk-check[data-state="some"] {
+  background-color: #fff;
+  border-color: #fff;
+}
+
+.bulk-check:checked,
+.bulk-check[data-state="all"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23081418' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.5l2.5 2.5 4.5-5.5'/%3E%3C/svg%3E");
+}
+
+.bulk-check:indeterminate,
+.bulk-check[data-state="some"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23081418' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 6h6'/%3E%3C/svg%3E");
+}

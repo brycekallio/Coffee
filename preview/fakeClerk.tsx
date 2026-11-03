@@ -36,3 +36,7 @@ export function SignIn() {
     </div>
   );
 }
+/** Sign-up form stand-in (AuthPage imports it); same footprint as SignIn. */
+export function SignUp() {
+  return <SignIn />;
+}

@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import type { MoveResult } from "@/features/bulk/moveApi";
 import type { Contact } from "@/types";
 
 /**
@@ -14,6 +15,14 @@ export interface ContactsValue {
   /** Asks for confirmation, deletes, reloads. Resolves true if the contact is gone. */
   deleteContact: (id: string) => Promise<boolean>;
   editContact: (contact: Contact) => void;
+  /** Bulk actions for the Network list. Delete waits out an 8-second Undo window. */
+  bulk: {
+    remove: (ids: string[]) => void;
+    star: (ids: string[]) => Promise<void>;
+    tag: (ids: string[], tag: string, mode: "add" | "remove") => Promise<void>;
+    /** Moves people to the Watchlist; resolves to how many moved and how many stayed (they have meetings or applications). */
+    moveToWatchlist: (ids: string[]) => Promise<MoveResult>;
+  };
 }
 
 export const ContactsContext = createContext<ContactsValue | null>(null);
