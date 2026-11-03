@@ -159,7 +159,9 @@ export type Database = {
           notes: string | null
           owner_id: string
           phone: string | null
+          starred: boolean
           status: string
+          tags: string[]
           title: string | null
           updated_at: string | null
         }
@@ -176,7 +178,9 @@ export type Database = {
           notes?: string | null
           owner_id: string
           phone?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
           title?: string | null
           updated_at?: string | null
         }
@@ -193,7 +197,9 @@ export type Database = {
           notes?: string | null
           owner_id?: string
           phone?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
           title?: string | null
           updated_at?: string | null
         }
@@ -405,7 +411,9 @@ export type Database = {
           owner_id: string
           person_name: string
           role: string | null
+          starred: boolean
           status: string
+          tags: string[]
         }
         Insert: {
           company: string
@@ -416,7 +424,9 @@ export type Database = {
           owner_id: string
           person_name: string
           role?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
         }
         Update: {
           company?: string
@@ -427,7 +437,9 @@ export type Database = {
           owner_id?: string
           person_name?: string
           role?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
         }
         Relationships: []
       }

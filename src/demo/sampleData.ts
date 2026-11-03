@@ -41,6 +41,9 @@ export const contacts = people.map(([first_name, last_name, company, title, emai
   status: "to_contact",
   created_at: iso(d),
   last_touch_at: null, next_touch_at: null, notes: null, updated_at: null,
+  // Bulk select: a couple of starred people and tags so the demo shows them.
+  starred: ["Raman", "Herrera"].includes(last_name),
+  tags: ({ Raman: ["Consulting"], Choi: ["Consulting"], Herrera: ["Consulting", "Case prep"], Weiss: ["Banking"], Park: ["Banking"], Nwosu: ["Banking"] } as Record<string, string[]>)[last_name] ?? [],
 }));
 
 const byLast = (last: string) => contacts.find((c) => c.last_name === last)!.id;
@@ -121,6 +124,8 @@ export const watchlist_targets = [
   next_action_date: date(-(inDays as number)),
   notes: null,
   created_at: iso(30),
+  starred: false,
+  tags: [] as string[],
 }));
 
 export const profiles = [

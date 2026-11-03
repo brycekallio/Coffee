@@ -6,7 +6,7 @@ import type { Tables } from "./lib/database.types";
 /** Loaded in App.loadContacts. `status` is kept for DB compatibility; not shown in UI. */
 export type Contact = Pick<
   Tables<"contacts">,
-  "id" | "owner_id" | "first_name" | "last_name" | "company" | "title" | "email" | "phone" | "linkedin_url" | "status" | "created_at"
+  "id" | "owner_id" | "first_name" | "last_name" | "company" | "title" | "email" | "phone" | "linkedin_url" | "status" | "created_at" | "starred" | "tags"
 >;
 
 export type ContactMeeting = Tables<"contact_meetings">;

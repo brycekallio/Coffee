@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import Card from "@/components/ui/Card";
-import { inputCls } from "@/components/ui/styles";
+import { inputCls, selectCls } from "@/components/ui/styles";
 import { useSession } from "@/app/session";
 import { ensureUrl, errorMessage, todayISODate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import BulkBar from "@/features/bulk/BulkBar";
+import Checkbox from "@/features/bulk/Checkbox";
+import { StarMark, TagChips } from "@/features/bulk/marks";
+import { allTags, hasTag, nextStarValue } from "@/features/bulk/tags";
+import { useSelection } from "@/features/bulk/useSelection";
 import * as api from "./api";
 import { useContacts } from "./contactsContext";
 
@@ -18,21 +23,49 @@ const STALE_DAYS = 30;
 
 export default function ContactsPage({ openDetails, onFollowUp }: ContactsPageProps) {
   const user = useSession();
-  const { contacts: allContacts, loading: loadingContacts, reload: loadContacts, editContact: openEdit } =
+  const { contacts: allContacts, loading: loadingContacts, reload: loadContacts, editContact: openEdit, bulk } =
     useContacts();
 
   const [search, setSearch] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const knownTags = useMemo(() => allTags(allContacts), [allContacts]);
+  // A filter on a tag nobody has any more (its last row was untagged) shows everyone again.
+  const activeTag = knownTags.some((t) => t === tagFilter) ? tagFilter : "";
   const contacts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return allContacts;
-    return allContacts.filter((c) =>
-      [c.first_name, c.last_name, c.company, c.title, c.email, c.phone]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
+    return allContacts.filter(
+      (c) =>
+        (!activeTag || hasTag(c.tags, activeTag)) &&
+        (!q ||
+          [c.first_name, c.last_name, c.company, c.title, c.email, c.phone]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(q)),
     );
-  }, [allContacts, search]);
+  }, [allContacts, search, activeTag]);
+
+  const order = useMemo(() => contacts.map((c) => c.id), [contacts]);
+  const sel = useSelection(order);
+  const selectedRows = contacts.filter((c) => sel.selected.has(c.id));
+  const [moving, setMoving] = useState(false);
+
+  async function moveSelected() {
+    const ids = sel.ids;
+    setMoving(true);
+    try {
+      const { moved, blocked } = await bulk.moveToWatchlist(ids);
+      if (moved > 0) toast.success(`Moved ${moved} ${moved === 1 ? "person" : "people"} to your Watchlist.`);
+      if (blocked > 0)
+        toast(`${blocked} ${blocked === 1 ? "person stayed" : "people stayed"} in your Network`, {
+          description: "They have meetings, applications or outreach logged, and the Watchlist can't hold those.",
+        });
+    } catch (e) {
+      toast.error(errorMessage(e, "Couldn't move them."));
+    } finally {
+      setMoving(false);
+    }
+  }
 
   // Add-contact draft.
   const [firstName, setFirstName] = useState("");
@@ -156,20 +189,60 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
             </button>
           }
         >
-          <input
-            className={inputCls}
-            placeholder="Search name, company, job title, email, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex gap-2">
+            <input
+              className={inputCls}
+              placeholder="Search name, company, job title, email, phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {knownTags.length > 0 ? (
+              <select
+                className={`${selectCls} w-40! shrink-0`}
+                aria-label="Filter by tag"
+                value={activeTag}
+                onChange={(e) => setTagFilter(e.target.value)}
+              >
+                <option value="">All tags</option>
+                {knownTags.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
 
           <div className="mt-4 rounded-section bg-depth-0/40">
-            {/* Columns: who · company · days since you last met · the one action. Below md each row is two lines. */}
-            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_7.5rem_6.5rem] items-center gap-4 px-4 py-3 text-xs text-white/60 md:grid">
-              <div>Name</div>
-              <div>Company</div>
-              <div className="text-right">Last met</div>
-              <div />
+            {/* Select-all, then either the column labels or (with a selection) the bulk actions.
+                Columns: who · company · days since you last met · the one action. Below md each row is two lines. */}
+            <div className="flex min-h-[3.25rem] items-center gap-3 px-4 py-2">
+              <Checkbox state={sel.all} label="Select all people" onToggle={() => sel.onToggleAll()} />
+              {sel.count > 0 ? (
+                <BulkBar
+                  count={sel.count}
+                  allStarred={!nextStarValue(selectedRows)}
+                  knownTags={knownTags}
+                  selectedRows={selectedRows}
+                  moveLabel="Move to Watchlist"
+                  busy={moving}
+                  onStar={() => void bulk.star(sel.ids)}
+                  onTag={(tag, mode) => void bulk.tag(sel.ids, tag, mode)}
+                  onMove={() => void moveSelected()}
+                  onDelete={() => bulk.remove(sel.ids)}
+                  onClear={sel.clear}
+                />
+              ) : (
+                <>
+                  <span className="text-xs text-white/60 md:hidden">Select all</span>
+                  <div className="hidden min-w-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_7.5rem_6.5rem] items-center gap-4 text-xs text-white/60 md:grid">
+                    <div>Name</div>
+                    <div>Company</div>
+                    <div className="text-right">Last met</div>
+                    <div />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="h-px w-full bg-white/[0.06]" />
@@ -190,16 +263,23 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
                 const days = daysSince(lastMeetingDates[c.id]);
                 const stale = days !== null && days >= STALE_DAYS;
 
+                const picked = sel.selected.has(c.id);
+
                 return (
-                  <div key={c.id} className="px-4">
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_7.5rem_6.5rem]">
+                  <div key={c.id} className={`px-4 transition-colors ${picked ? "bg-white/[0.05]" : ""}`}>
+                    <div className="flex items-center gap-3">
+                    <Checkbox state={picked ? "all" : "none"} label={`Select ${displayName}`} onToggle={(shift) => sel.onToggle(c.id, shift)} />
+                    <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_7.5rem_6.5rem]">
                       <div className="min-w-0">
-                        <button
-                          onClick={() => openDetails(c.id)}
-                          className="block max-w-full truncate text-left font-medium text-white hover:underline cursor-pointer"
-                        >
-                          {displayName}
-                        </button>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <button
+                            onClick={() => openDetails(c.id)}
+                            className="block min-w-0 truncate text-left font-medium text-white hover:underline cursor-pointer"
+                          >
+                            {displayName}
+                          </button>
+                          {c.starred ? <StarMark /> : null}
+                        </div>
                         <div className="mt-0.5 truncate text-sm text-white/60">
                           <span className="md:hidden">{[c.title, c.company].filter(Boolean).join(" · ") || "\u2014"}</span>
                           <span className="hidden md:inline">{c.title || "\u2014"}</span>
@@ -212,6 +292,7 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
                             </>
                           ) : null}
                         </div>
+                        <TagChips tags={c.tags} />
                       </div>
 
                       <div className="hidden truncate text-sm text-white/80 md:block" title={c.company ?? ""}>
@@ -235,6 +316,7 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
                           Edit
                         </button>
                       </div>
+                    </div>
                     </div>
 
                     <div className="h-px w-full bg-white/[0.04]" />
