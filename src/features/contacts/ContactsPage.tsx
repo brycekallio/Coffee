@@ -13,7 +13,6 @@ import { useSelection } from "@/features/bulk/useSelection";
 import type { ContactFields } from "../../../supabase/functions/_shared/contactFields.ts";
 import * as api from "./api";
 import { useContacts } from "./contactsContext";
-import { mergeIntoForm } from "./fillFromProfile";
 import LinkedInImportModal from "./LinkedInImportModal";
 import PasteProfileFill from "./PasteProfileFill";
 
@@ -81,27 +80,22 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [importOpen, setImportOpen] = useState(false);
 
-  /** Pasted-profile result → the draft. Fields the AI didn't find keep whatever is typed. */
+  /**
+   * Pasted-profile result → the draft. Only the fields the AI found are set, and nothing is
+   * read from this render's state: the AI call takes seconds, and anything typed meanwhile
+   * must survive (a blank never erases what's typed).
+   */
   function applyFill(found: Partial<ContactFields>) {
-    const next = mergeIntoForm(
-      { first: firstName, last: lastName, company, title: jobTitle, email: contactEmail, phone, linkedin: linkedinUrl },
-      {
-        first: found.first_name,
-        last: found.last_name,
-        company: found.company,
-        title: found.title,
-        email: found.email,
-        phone: found.phone,
-        linkedin: found.linkedin_url,
-      },
-    );
-    setFirstName(next.first);
-    setLastName(next.last);
-    setCompany(next.company);
-    setJobTitle(next.title);
-    setContactEmail(next.email);
-    setPhone(next.phone);
-    setLinkedinUrl(next.linkedin);
+    const setters: [string | undefined, (v: string) => void][] = [
+      [found.first_name, setFirstName],
+      [found.last_name, setLastName],
+      [found.company, setCompany],
+      [found.title, setJobTitle],
+      [found.email, setContactEmail],
+      [found.phone, setPhone],
+      [found.linkedin_url, setLinkedinUrl],
+    ];
+    for (const [value, set] of setters) if (value) set(value);
   }
 
   async function addContact() {

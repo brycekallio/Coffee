@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ContactFields } from "../../../supabase/functions/_shared/contactFields.ts";
 import { inputCls } from "@/components/ui/styles";
 import { fillFromProfileText, PASTE_CHAR_LIMIT } from "./fillFromProfile";
@@ -32,11 +32,15 @@ export default function PasteProfileFill({ onFill }: Props) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
+  // Bumped on Close, so an answer that arrives after the box was closed is dropped.
+  const runId = useRef(0);
 
   async function run() {
     setBusy(true);
     setNotice(null);
+    const id = ++runId.current;
     const out = await fillFromProfileText(text);
+    if (id !== runId.current) return;
     setBusy(false);
     const found = Object.keys(out.fields) as (keyof ContactFields)[];
     if (found.length > 0) onFill(out.fields);
@@ -94,12 +98,16 @@ export default function PasteProfileFill({ onFill }: Props) {
         </p>
       ) : null}
 
-      <p className="mt-2 text-xs text-white/60">Uses 1 of your 5 free AI requests today.</p>
+      <p className="mt-2 text-xs text-white/60">Uses one of your free AI requests for today (no limit with your own API key).</p>
       <div className="mt-3 flex items-center justify-end">
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              runId.current++;
+              setBusy(false);
+              setOpen(false);
+            }}
             className="whitespace-nowrap rounded-button px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:text-white cursor-pointer"
           >
             Close

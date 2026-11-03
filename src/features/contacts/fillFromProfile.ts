@@ -1,13 +1,14 @@
 import { AiHttpError, invokeAi } from "@/features/ai/client";
 import {
   cleanContactFields,
+  FILL_TEXT_CHAR_LIMIT,
   extractObvious,
   isEmptyFields,
   type ContactFields,
 } from "../../../supabase/functions/_shared/contactFields.ts";
 
 /** Same limit the Edge Function enforces; the textarea uses it too. */
-export const PASTE_CHAR_LIMIT = 15_000;
+export const PASTE_CHAR_LIMIT = FILL_TEXT_CHAR_LIMIT;
 
 export type FillOutcome =
   /** The AI read the text. `fields` has only the non-empty values. */
@@ -46,14 +47,4 @@ export async function fillFromProfileText(text: string): Promise<FillOutcome> {
       message,
     };
   }
-}
-
-/** Merge for the form: a value the AI found replaces the field; a blank never erases what's typed. */
-export function mergeIntoForm<T extends Record<string, string>>(current: T, found: Partial<Record<keyof T, string>>): T {
-  const next = { ...current };
-  for (const key of Object.keys(found) as (keyof T)[]) {
-    const v = found[key];
-    if (v) next[key] = v as T[keyof T];
-  }
-  return next;
 }

@@ -11,11 +11,10 @@
  * (size limit + the 5/day free cap) and tests can pass a fake.
  */
 
-import { type ContactFields, groundContactFields, isEmptyFields } from "./contactFields.ts";
+import { type ContactFields, FILL_TEXT_CHAR_LIMIT, groundContactFields, isEmptyFields } from "./contactFields.ts";
 import { type LlmRequest, type LlmResponse, parseJsonObject } from "./llm.ts";
 
-/** Longest paste accepted. A whole profile page is ~5–12k characters. */
-export const FILL_TEXT_CHAR_LIMIT = 15_000;
+export { FILL_TEXT_CHAR_LIMIT };
 
 /** Raised for input problems, mapped to HTTP 400/422 by the function. */
 export class FillInputError extends Error {

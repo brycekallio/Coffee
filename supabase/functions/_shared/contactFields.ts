@@ -14,6 +14,9 @@
  *   - every field has a length cap.
  */
 
+/** Longest pasted profile text accepted (browser textarea and Edge Function). A whole page is ~5–12k. */
+export const FILL_TEXT_CHAR_LIMIT = 15_000;
+
 export const FIELD_LIMITS = {
   name: 80,
   company: 120,
@@ -23,11 +26,12 @@ export const FIELD_LIMITS = {
   linkedin: 200,
 } as const;
 
-// C0/C1 controls, zero-width chars, bidi embeddings/overrides/isolates, BOM, line/paragraph separators.
+// C0/C1 controls, zero-width space and direction marks (not ZWNJ/ZWJ U+200C/D: Persian,
+// Indic and emoji text need them), bidi embeddings/overrides/isolates, BOM, line/paragraph separators.
 
 const INVISIBLE = new RegExp(
   "[" +
-    [[0, 0x1f], [0x7f, 0x9f], [0x200b, 0x200f], [0x2028, 0x202e], [0x2060, 0x2069], [0xfeff, 0xfeff]]
+    [[0, 0x1f], [0x7f, 0x9f], [0x200b, 0x200b], [0x200e, 0x200f], [0x2028, 0x202e], [0x2060, 0x2069], [0xfeff, 0xfeff]]
       .map(([a, b]) => String.fromCharCode(a) + "-" + String.fromCharCode(b))
       .join("") +
     "]",
@@ -94,6 +98,8 @@ export function cleanLinkedInUrl(value: unknown): string {
   } catch {
     return "";
   }
+  // A link at the end of a sentence ("…/in/jane-doe.") keeps its full stop; slugs never end in one.
+  slug = slug.replace(/[.]+$/, "");
   if (!/^[\p{L}\p{N}_.%-]{1,100}$/u.test(slug)) return "";
   return `https://www.linkedin.com/in/${encodeURIComponent(slug)}`;
 }
@@ -145,19 +151,34 @@ export function cleanContactFields(raw: unknown): ContactFields {
  * email, phone and URL are facts the page either printed or didn't, so they must appear
  * (digits-only for phones, slug for LinkedIn) in what the user pasted.
  */
+const EMAIL_IN_TEXT = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const LINKEDIN_IN_TEXT = /(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/[^\s)"'<>,]+/gi;
+/** A run of phone-looking characters: digits with the usual separators, no letters between. */
+const PHONE_IN_TEXT = /\+?\d[\d ().-]{5,}\d/g;
+
+/**
+ * Whole emails, phone numbers and LinkedIn links written in the text, compared whole. Not a
+ * substring test: "doe@example.co" is not grounded by "jane.doe@example.com", "/in/priya" not
+ * by "/in/priya-raman", and a phone must be one run of digits, not digits glued together from
+ * dates and counts ("Jan 2019 · 5 yrs 10 mos · 500+" is not 201-951-0500).
+ */
 export function groundContactFields(raw: unknown, sourceText: string): ContactFields {
   const f = cleanContactFields(raw);
-  const lower = sourceText.toLowerCase();
-  if (f.email && !lower.includes(f.email.toLowerCase())) f.email = "";
+  if (f.email) {
+    const emails = new Set((sourceText.match(EMAIL_IN_TEXT) ?? []).map((e) => e.replace(/\.+$/, "").toLowerCase()));
+    if (!emails.has(f.email.toLowerCase())) f.email = "";
+  }
   if (f.phone) {
     const digits = f.phone.replace(/\D/g, "");
-    if (!sourceText.replace(/\D/g, "").includes(digits)) f.phone = "";
+    const runs = (sourceText.match(PHONE_IN_TEXT) ?? []).map((p) => p.replace(/\D/g, ""));
+    // Equal, or the same number with/without a country code (one ends with the other).
+    const ok = runs.some((r) => r === digits || (Math.min(r.length, digits.length) >= 7 && (r.endsWith(digits) || digits.endsWith(r))));
+    if (!ok) f.phone = "";
   }
   if (f.linkedin_url) {
     const slug = linkedInKey(f.linkedin_url);
-    if (!slug || !lower.includes(`linkedin.com/in/${slug}`) && !lower.includes(`linkedin.com/in/${encodeURIComponent(slug).toLowerCase()}`)) {
-      f.linkedin_url = "";
-    }
+    const slugs = new Set((sourceText.match(LINKEDIN_IN_TEXT) ?? []).map((l) => linkedInKey(l)).filter(Boolean));
+    if (!slug || !slugs.has(slug)) f.linkedin_url = "";
   }
   return f;
 }

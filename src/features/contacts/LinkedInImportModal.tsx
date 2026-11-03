@@ -30,14 +30,16 @@ const btnNeutral =
  */
 export default function LinkedInImportModal({ onClose }: { onClose: () => void }) {
   const user = useSession();
-  const { contacts, reload } = useContacts();
+  const { reload } = useContacts();
   const [fileName, setFileName] = useState("");
   const [parsed, setParsed] = useState<ParsedConnections | null>(null);
+  // The whole Network's matching fields, fetched per file (the shared list stops at 1,000).
+  const [existing, setExisting] = useState<Awaited<ReturnType<typeof api.listContactMatchKeys>>>([]);
   const [error, setError] = useState("");
   const [importing, setImporting] = useState(false);
   const [shown, setShown] = useState(PAGE);
 
-  const checked = useMemo(() => (parsed ? markDuplicates(parsed.people, contacts) : []), [parsed, contacts]);
+  const checked = useMemo(() => (parsed ? markDuplicates(parsed.people, existing) : []), [parsed, existing]);
   const fresh = useMemo(() => checked.filter((p) => !p.duplicate), [checked]);
   const order = useMemo(() => fresh.map((p) => p.id), [fresh]);
   const sel = useSelection(order);
@@ -54,12 +56,21 @@ export default function LinkedInImportModal({ onClose }: { onClose: () => void }
       setError("That file is bigger than 5 MB, so it isn't a LinkedIn connections export.");
       return;
     }
+    let result: ParsedConnections;
     try {
-      setParsed(parseConnectionsCsv(await file.text()));
-      setFileName(file.name);
+      result = parseConnectionsCsv(await file.text());
     } catch (e) {
       setError(e instanceof ConnectionsFileError ? e.message : "Couldn't read that file.");
+      return;
     }
+    try {
+      setExisting(await api.listContactMatchKeys());
+    } catch (e) {
+      setError(errorMessage(e, "Couldn't check who is already in your Network. Try again."));
+      return;
+    }
+    setParsed(result);
+    setFileName(file.name);
   }
 
   async function runImport() {
@@ -74,8 +85,8 @@ export default function LinkedInImportModal({ onClose }: { onClose: () => void }
     } catch (e) {
       // Chunks before the failing one are saved; they now show as "already in your Network".
       await reload();
-      toast.error(errorMessage(e, "Import stopped part-way."), {
-        description: "Anyone already saved is marked as in your Network. Choose the file again to finish.",
+      toast.error(errorMessage(e, "Import stopped."), {
+        description: "If some people were saved, they'll show as already in your Network when you choose the file again.",
       });
       setParsed(null);
       setFileName("");

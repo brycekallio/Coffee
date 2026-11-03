@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase", () => ({ supabase: { functions: { invoke } } }));
 
-const { fillFromProfileText, mergeIntoForm } = await import("./fillFromProfile");
+const { fillFromProfileText } = await import("./fillFromProfile");
 
 const PROFILE = "Priya Raman\nSenior Consultant at FTI\nlinkedin.com/in/priya-demo\npriya@example.com";
 
@@ -48,12 +48,5 @@ describe("fillFromProfileText", () => {
   it("never throws: supabase-js reports a network failure as an error value", async () => {
     invoke.mockResolvedValue({ data: null, error: new Error("Failed to send a request to the Edge Function") });
     await expect(fillFromProfileText(PROFILE)).resolves.toMatchObject({ kind: "fallback", reason: "error" });
-  });
-});
-
-describe("mergeIntoForm", () => {
-  it("fills from the AI but never erases what the user typed", () => {
-    const form = { first: "Typed", last: "", company: "Keep Co" };
-    expect(mergeIntoForm(form, { first: "Priya", last: "Raman", company: "" })).toEqual({ first: "Priya", last: "Raman", company: "Keep Co" });
   });
 });

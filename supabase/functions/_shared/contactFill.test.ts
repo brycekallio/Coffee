@@ -130,3 +130,40 @@ describe("cleanLinkedInUrl", () => {
     expect(cleanLinkedInUrl("https://uk.linkedin.com/in/ada?x=1")).toBe("https://www.linkedin.com/in/ada");
   });
 });
+
+describe("grounding compares whole values (review 2026-11-02)", () => {
+  const TEXT = `Jane Doe
+Jan 2019 - Present · 5 yrs 10 mos
+500+ connections
+Contact: jane.doe@example.com · +1 (202) 555-0148
+See linkedin.com/in/jane-doe-42. Thanks`;
+
+  it("refuses a phone glued together from dates and counts", () => {
+    expect(groundContactFields({ phone: "201-951-0500" }, TEXT).phone).toBe("");
+  });
+  it("keeps a real phone, with or without its country code", () => {
+    expect(groundContactFields({ phone: "202-555-0148" }, TEXT).phone).toBe("202-555-0148");
+    expect(groundContactFields({ phone: "+1 202 555 0148" }, TEXT).phone).toBe("+1 202 555 0148");
+  });
+  it("refuses an email that is only a piece of one in the text", () => {
+    expect(groundContactFields({ email: "doe@example.com" }, TEXT).email).toBe("");
+    expect(groundContactFields({ email: "jane.doe@example.co" }, TEXT).email).toBe("");
+    expect(groundContactFields({ email: "Jane.Doe@example.com" }, TEXT).email).toBe("Jane.Doe@example.com");
+  });
+  it("refuses a LinkedIn slug that is only a prefix of the one in the text", () => {
+    expect(groundContactFields({ linkedin_url: "linkedin.com/in/jane-doe" }, TEXT).linkedin_url).toBe("");
+    expect(groundContactFields({ linkedin_url: "https://www.linkedin.com/in/jane-doe-42" }, TEXT).linkedin_url).toBe("https://www.linkedin.com/in/jane-doe-42");
+  });
+  it("drops a full stop after a link at the end of a sentence", () => {
+    expect(extractObvious(TEXT).linkedin_url).toBe("https://www.linkedin.com/in/jane-doe-42");
+    expect(cleanLinkedInUrl("linkedin.com/in/jane-doe.")).toBe("https://www.linkedin.com/in/jane-doe");
+  });
+});
+
+describe("cleanText keeps joiners real names need", () => {
+  it("keeps ZWNJ in a Persian-style name, still drops zero-width space and bidi overrides", async () => {
+    const { cleanText } = await import("./contactFields.ts");
+    expect(cleanText("Mehr‌dad", 80)).toBe("Mehr‌dad");
+    expect(cleanText("Ev​il‮Name", 80)).toBe("Ev il Name");
+  });
+});

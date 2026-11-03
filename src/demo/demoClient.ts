@@ -41,6 +41,7 @@ class Query implements PromiseLike<QueryResult> {
   private payload: Row | Row[] | null = null;
   private returning = false;
   private mode: "many" | "single" | "maybe" = "many";
+  private window: [number, number] | null = null;
 
   constructor(private db: Db, private table: string, private readOnly: boolean) {
     db[table] ??= [];
@@ -58,6 +59,7 @@ class Query implements PromiseLike<QueryResult> {
   gte(c: string, v: string) { this.filters.push((r) => String(r[c]) >= v); return this; }
   order(col: string, o: { ascending?: boolean } = {}) { this.orders.push({ col, asc: o.ascending ?? true }); return this; }
   limit() { return this; }
+  range(from: number, to: number) { this.window = [from, to]; return this; }
   single() { this.mode = "single"; return this; }
   maybeSingle() { this.mode = "maybe"; return this; }
 
@@ -91,6 +93,7 @@ class Query implements PromiseLike<QueryResult> {
       }
       return 0;
     });
+    if (this.window) out = out.slice(this.window[0], this.window[1] + 1);
     const copy = structuredClone(out);
     if (this.mode === "single" || this.mode === "maybe") return copy[0] ?? null;
     return copy;

@@ -30,6 +30,8 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_ROWS = 10_000;
 /** Cells longer than this are cut while reading, so one giant cell can't eat memory. */
 const MAX_CELL_CHARS = 1_000;
+/** LinkedIn writes 7 columns; extra cells past this are dropped so a row of commas can't eat memory. */
+const MAX_COLS = 50;
 /** The notes preamble is a handful of lines; the header must show up within this many rows. */
 const HEADER_SEARCH_ROWS = 25;
 
@@ -56,7 +58,7 @@ export function readCsvRows(text: string, maxRows: number): { rows: string[][]; 
     if (cell.length < MAX_CELL_CHARS) cell += c;
   };
   const endCell = () => {
-    row.push(cell);
+    if (row.length < MAX_COLS) row.push(cell);
     cell = "";
     cellStart = true;
   };
@@ -189,8 +191,10 @@ export interface CheckedConnection extends Connection {
 }
 
 const lc = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+// Existing contacts are cleaned the same way imported rows are, so "Goldman  Sachs" typed
+// by hand still matches "Goldman Sachs" from LinkedIn.
 const nameKey = (first: string | null, last: string | null, company: string | null) => {
-  const f = lc(first), l = lc(last), c = lc(company);
+  const f = lc(cleanText(first, FIELD_LIMITS.name)), l = lc(cleanText(last, FIELD_LIMITS.name)), c = lc(cleanText(company, FIELD_LIMITS.company));
   return f && l && c ? `${f}|${l}|${c}` : "";
 };
 

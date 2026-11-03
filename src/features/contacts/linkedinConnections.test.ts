@@ -216,3 +216,15 @@ describe("buildConnectionInserts", () => {
     expect(new Set(out.map((r) => r.owner_id))).toEqual(new Set(["owner-1"]));
   });
 });
+
+describe("review fixes (2026-11-02)", () => {
+  it("caps columns per row, so a row of commas can't grow without bound", () => {
+    const { rows } = readCsvRows("a" + ",x".repeat(10_000) + "\n", 10);
+    expect(rows[0].length).toBe(50);
+  });
+  it("matches an existing contact whose name/company has extra spaces", () => {
+    const people = parseConnectionsCsv("First Name,Last Name,URL,Email Address,Company,Position,Connected On\nAda,Lovelace,,,Goldman Sachs,Analyst,05 Mar 2024\n").people;
+    const out = markDuplicates(people, [{ first_name: " Ada", last_name: "Lovelace", company: "Goldman  Sachs", email: null, linkedin_url: null }]);
+    expect(out[0].duplicate).toBe("name");
+  });
+});
