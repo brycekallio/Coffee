@@ -22,6 +22,13 @@ export interface DemoClientOptions {
 const latency = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 const readOnlyError = () => ({ message: DEMO_READ_ONLY_MESSAGE, code: "DEMO_READ_ONLY" });
 
+// Column defaults the real database applies on insert (bulk-select columns), so a row written
+// in the writable preview has the same shape as one read back from Postgres.
+const INSERT_DEFAULTS: Record<string, Row> = {
+  contacts: { starred: false, tags: [], status: "to_contact" },
+  watchlist_targets: { starred: false, tags: [] },
+};
+
 let nextId = 9000;
 const newId = () => `00000000-0000-4000-9000-${String(++nextId).padStart(12, "0")}`;
 
@@ -34,6 +41,7 @@ class Query implements PromiseLike<QueryResult> {
   private payload: Row | Row[] | null = null;
   private returning = false;
   private mode: "many" | "single" | "maybe" = "many";
+  private window: [number, number] | null = null;
 
   constructor(private db: Db, private table: string, private readOnly: boolean) {
     db[table] ??= [];
@@ -51,6 +59,7 @@ class Query implements PromiseLike<QueryResult> {
   gte(c: string, v: string) { this.filters.push((r) => String(r[c]) >= v); return this; }
   order(col: string, o: { ascending?: boolean } = {}) { this.orders.push({ col, asc: o.ascending ?? true }); return this; }
   limit() { return this; }
+  range(from: number, to: number) { this.window = [from, to]; return this; }
   single() { this.mode = "single"; return this; }
   maybeSingle() { this.mode = "maybe"; return this; }
 
@@ -62,6 +71,7 @@ class Query implements PromiseLike<QueryResult> {
       const items = (Array.isArray(this.payload) ? this.payload : [this.payload!]).map((v) => ({
         id: newId(),
         created_at: new Date().toISOString(),
+        ...structuredClone(INSERT_DEFAULTS[this.table] ?? {}),
         ...v,
       }));
       rows.unshift(...items);
@@ -83,6 +93,7 @@ class Query implements PromiseLike<QueryResult> {
       }
       return 0;
     });
+    if (this.window) out = out.slice(this.window[0], this.window[1] + 1);
     const copy = structuredClone(out);
     if (this.mode === "single" || this.mode === "maybe") return copy[0] ?? null;
     return copy;
@@ -148,6 +159,20 @@ const canned: Record<string, (body: Row) => unknown> = {
       body.mode === "rewrite"
         ? "MAYA OKAFOR\nB.S. Business Administration (Finance), Data Science minor — University of Colorado Boulder, 2027\n\nEXPERIENCE\nResearch Assistant, Leeds Finance Dept — Built a Python pipeline that cleans and normalizes 40,000 SEC filings for faculty research.\nAnalyst Intern, Boulder Community Foundation — Automated grant reporting with Tableau dashboards used by the board.\n\nSKILLS\nPython, SQL, Excel modeling (DCF, LBO), Tableau"
         : "• Lead with the Python/SQL pipeline project; the posting names both.\n• Add the words \"stakeholder reporting\" to the Foundation internship.\n• Move coursework below experience.\n• Quantify the dashboard work (how many board members, how often).",
+  }),
+  // Obviously fake person and link (DESIGN.md: never a URL that could be a real profile).
+  "fill-contact-from-text": () => ({
+    tier: "free",
+    model: "nvidia/nemotron-3-super-120b-a12b:free",
+    fields: {
+      first_name: "Sam",
+      last_name: "Rivera",
+      company: "Northgate Capital (demo)",
+      title: "Associate",
+      email: "",
+      phone: "",
+      linkedin_url: "https://www.linkedin.com/in/demo-sam-rivera",
+    },
   }),
   "personalize-outreach": () => ({
     model: "nvidia/nemotron-3-super-120b-a12b:free",

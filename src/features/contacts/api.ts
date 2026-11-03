@@ -19,6 +19,27 @@ export async function listContacts(): Promise<Contact[]> {
   return data;
 }
 
+/**
+ * Every contact's matching fields, paged past PostgREST's 1,000-row default, for the
+ * LinkedIn import's duplicate check. `listContacts` stops at 1,000, so a big Network would
+ * otherwise show older people as "new" and import them twice.
+ */
+export async function listContactMatchKeys(
+  pageSize = 1000,
+): Promise<Pick<Contact, "first_name" | "last_name" | "company" | "email" | "linkedin_url">[]> {
+  const out: Pick<Contact, "first_name" | "last_name" | "company" | "email" | "linkedin_url">[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("first_name, last_name, company, email, linkedin_url")
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < pageSize) return out;
+  }
+}
+
 /** Inserts in chunks — PostgREST payloads stay small even for a large CSV. */
 export async function createContacts(values: TablesInsert<"contacts">[], chunkSize = 200): Promise<void> {
   for (let i = 0; i < values.length; i += chunkSize) {
