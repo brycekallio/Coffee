@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { initialsFromName } from "@/lib/utils";
 import type { Page } from "@/types";
 import { useSession } from "./session";
+import NetworkToggle from "./NetworkToggle";
 import { useRoute } from "./useRoute";
 
 // Contacts is the landing page, so it stays in the entry chunk. Everything else loads
@@ -52,7 +53,6 @@ export default function AppShell({
   const selectedContactId = route.contactId ?? "";
   const setPage = (next: Page) => navigate({ page: next });
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dueOutreachCount, setDueOutreachCount] = useState(0);
 
@@ -151,48 +151,12 @@ export default function AppShell({
 
             {/* Desktop nav links */}
             <div className="hidden items-center gap-0.5 md:flex">
-              {/* Network dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setNetworkDropdownOpen((v) => !v)}
-                  className={navLinkCls(page === "contacts" || page === "contact_details" || page === "network_watchlist")}
-                >
-                  <span className="flex items-center gap-1">
-                    Network
-                    <svg className={`h-3 w-3 transition-transform duration-200 ${networkDropdownOpen ? "rotate-180" : ""} ${page === "contacts" || page === "contact_details" || page === "network_watchlist" ? "text-white/60" : "text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </span>
-                </button>
-                {networkDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setNetworkDropdownOpen(false)} />
-                    <div className="absolute left-0 z-50 mt-2 w-52 overflow-hidden rounded-xl bg-depth-1/95 border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-                      <div className="p-1.5">
-                        <button
-                          onClick={() => { setPage("contacts"); setNetworkDropdownOpen(false); }}
-                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${page === "contacts" || page === "contact_details" ? "bg-glow/[0.08] text-glow font-medium" : "text-white/60 hover:bg-white/[0.04] hover:text-white"}`}
-                        >
-                          <svg className={`h-4 w-4 ${page === "contacts" || page === "contact_details" ? "text-glow/70" : "text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Contacts
-                        </button>
-                        <button
-                          onClick={() => { setPage("network_watchlist"); setNetworkDropdownOpen(false); }}
-                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${page === "network_watchlist" ? "bg-glow/[0.08] text-glow font-medium" : "text-white/60 hover:bg-white/[0.04] hover:text-white"}`}
-                        >
-                          <svg className={`h-4 w-4 ${page === "network_watchlist" ? "text-glow/70" : "text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          Watchlist
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+              <button
+                onClick={() => { setPage("contacts"); }}
+                className={navLinkCls(page === "contacts" || page === "contact_details" || page === "network_watchlist")}
+              >
+                Network
+              </button>
 
               <button
                 onClick={() => { setPage("outreach_emails"); }}
@@ -318,16 +282,10 @@ export default function AppShell({
           className={`overflow-hidden transition duration-300 ease-out md:hidden ${mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
         >
           <div className="border-t border-white/[0.04] px-4 pb-4 pt-2 space-y-0.5">
-            <button onClick={() => { setPage("contacts"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "contacts" || page === "contact_details")} block w-full text-left py-2.5`}>
+            <button onClick={() => { setPage("contacts"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "contacts" || page === "contact_details" || page === "network_watchlist")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Network
-              </span>
-            </button>
-            <button onClick={() => { setPage("network_watchlist"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "network_watchlist")} block w-full text-left py-2.5`}>
-              <span className="flex items-center gap-3">
-                <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                Watchlist
               </span>
             </button>
             <button onClick={() => { setPage("outreach_emails"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "outreach_emails")} block w-full text-left py-2.5`}>
@@ -369,7 +327,14 @@ export default function AppShell({
       <div className="page-enter">
         {title ? (
           <header className="mx-auto max-w-7xl px-4 pb-6 pt-8 md:px-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+            {page === "contacts" || page === "network_watchlist" ? (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+                <NetworkToggle page={page} onChange={setPage} />
+              </div>
+            ) : (
+              <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+            )}
             {subtitle ? <p className="mt-1 text-sm text-white/60">{subtitle}</p> : null}
           </header>
         ) : null}
