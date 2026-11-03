@@ -1,6 +1,3 @@
-// NOTE: contacts/watchlist_targets `starred` and `tags` were added by hand for
-// docs/migration_2026-11-02_bulk_select.sql (not yet applied live). After applying it,
-// regenerate this file and confirm the diff is empty.
 // Generated from the live project (ypyvkqysnowgegcjydnd) — do not edit by hand.
 // Regenerate after any schema change: Supabase MCP `generate_typescript_types`, or
 //   npx supabase gen types typescript --project-id ypyvkqysnowgegcjydnd > src/lib/database.types.ts
@@ -150,8 +147,6 @@ export type Database = {
       }
       contacts: {
         Row: {
-          starred: boolean
-          tags: string[]
           company: string | null
           created_at: string | null
           email: string | null
@@ -164,13 +159,13 @@ export type Database = {
           notes: string | null
           owner_id: string
           phone: string | null
+          starred: boolean
           status: string
+          tags: string[]
           title: string | null
           updated_at: string | null
         }
         Insert: {
-          starred?: boolean
-          tags?: string[]
           company?: string | null
           created_at?: string | null
           email?: string | null
@@ -183,13 +178,13 @@ export type Database = {
           notes?: string | null
           owner_id: string
           phone?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
           title?: string | null
           updated_at?: string | null
         }
         Update: {
-          starred?: boolean
-          tags?: string[]
           company?: string | null
           created_at?: string | null
           email?: string | null
@@ -202,7 +197,9 @@ export type Database = {
           notes?: string | null
           owner_id?: string
           phone?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
           title?: string | null
           updated_at?: string | null
         }
@@ -406,8 +403,6 @@ export type Database = {
       }
       watchlist_targets: {
         Row: {
-          starred: boolean
-          tags: string[]
           company: string
           created_at: string
           id: string
@@ -416,11 +411,11 @@ export type Database = {
           owner_id: string
           person_name: string
           role: string | null
+          starred: boolean
           status: string
+          tags: string[]
         }
         Insert: {
-          starred?: boolean
-          tags?: string[]
           company: string
           created_at?: string
           id?: string
@@ -429,11 +424,11 @@ export type Database = {
           owner_id: string
           person_name: string
           role?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
         }
         Update: {
-          starred?: boolean
-          tags?: string[]
           company?: string
           created_at?: string
           id?: string
@@ -442,7 +437,9 @@ export type Database = {
           owner_id?: string
           person_name?: string
           role?: string | null
+          starred?: boolean
           status?: string
+          tags?: string[]
         }
         Relationships: []
       }

@@ -1,6 +1,6 @@
 -- Bulk select on Network and Watchlist (2026-11-02): "starred" and "tags" on both tables.
 --
--- NOT APPLIED to the live project (ypyvkqysnowgegcjydnd) by the worker that wrote it.
+-- APPLIED to the live project (ypyvkqysnowgegcjydnd) 2026-11-02 as migration bulk_select_starred_tags.
 -- Apply BEFORE deploying the branch worker/coffee-bulk-select: the app selects these
 -- columns, so deploying first makes the contact list fail to load (PGRST 42703).
 --
