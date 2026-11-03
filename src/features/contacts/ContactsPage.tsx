@@ -143,7 +143,7 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
     return Math.max(0, Math.floor(ms / 86_400_000));
   }
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Add contact — 1/3. On a phone the list (the job) comes first and the form follows. */}
       <div className="order-last lg:order-none lg:col-span-1">
         <Card title="Add a person" subtitle="Add someone once; log every coffee after.">
