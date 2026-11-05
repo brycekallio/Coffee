@@ -9,6 +9,7 @@ const PATHS: Record<Exclude<Page, "contact_details">, string> = {
   outreach_emails: "/outreach",
   applications: "/applications",
   jd_scorer: "/jd-scorer",
+  resume_review: "/resume-review",
   analytics: "/analytics",
   settings: "/settings",
   onboarding: "/welcome",

@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { DEMO_READ_ONLY_MESSAGE } from "./mode";
+import { DEMO_QUESTIONS, DEMO_REVIEW } from "./demoResumeReview";
 import * as seed from "./sampleData";
 
 type Row = Record<string, unknown>;
@@ -152,6 +153,10 @@ const canned: Record<string, (body: Row) => unknown> = {
       { name: "Education", score: 80, notes: "Finance with a Data Science minor fits the D&A track." },
     ],
   }),
+  "review-resume": (body) =>
+    body.mode === "review"
+      ? { mode: "review", review: DEMO_REVIEW, tier: "free", model: "nvidia/nemotron-3-super-120b-a12b:free" }
+      : { mode: "questions", questions: DEMO_QUESTIONS, tier: "free", model: "nvidia/nemotron-3-super-120b-a12b:free" },
   "adjust-resume": (body) => ({
     model: "nvidia/nemotron-3-super-120b-a12b:free",
     tier: "free",

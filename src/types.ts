@@ -39,7 +39,8 @@ export type Page =
   | "onboarding"
   | "network_watchlist"
   | "outreach_emails"
-  | "jd_scorer";
+  | "jd_scorer"
+  | "resume_review";
 
 /** status: "not_contacted" | "contacted" | "scheduled" | "completed" | "follow_up_sent" */
 export type WatchlistTarget = Tables<"watchlist_targets">;

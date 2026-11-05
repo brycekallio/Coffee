@@ -244,7 +244,8 @@ export async function spendFreeRequest(resolved: Resolved, now = new Date()): Pr
  */
 const REFUNDED_PROVIDER_STATUSES = new Set([401, 403, 429]);
 
-async function refundFreeRequest(resolved: Resolved): Promise<void> {
+export async function refundFreeRequest(resolved: Resolved): Promise<void> {
+  if (resolved.tier !== "free") return;
   const { error } = await serviceClient().rpc("refund_free_ai_request", { p_user: resolved.userId });
   if (error) console.error("refund_free_ai_request failed:", error.message);
 }
@@ -273,9 +274,14 @@ function assertFreePromptSize(resolved: Resolved, req: LlmRequest): void {
  * The one way an AI function calls a model for a user: checks the free tier's size limit,
  * counts the request against the daily cap, then calls. A refused request costs no slot.
  */
-export async function callModel(resolved: Resolved, req: LlmRequest): Promise<LlmResponse> {
+export async function callModel(
+  resolved: Resolved,
+  req: LlmRequest,
+  /** `alreadySpent`: this is a retry inside a request that was already counted. */
+  opts: { alreadySpent?: boolean } = {},
+): Promise<LlmResponse> {
   assertFreePromptSize(resolved, req);
-  await spendFreeRequest(resolved);
+  if (!opts.alreadySpent) await spendFreeRequest(resolved);
   try {
     return await callLLM(resolved.creds, req);
   } catch (e) {
