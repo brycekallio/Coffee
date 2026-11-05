@@ -13,9 +13,8 @@
 [build.environment]
   NODE_VERSION = "20"
 
-  # electron and puppeteer have postinstall scripts that download a ~276MB
-  # Electron binary and ~512MB of Chromium. Both exist for the desktop build and
-  # scripts/worker.ts; neither is reachable from the web bundle. Netlify installs
+  # electron has a postinstall script that downloads a ~276MB Electron binary.
+  # It exists for the desktop build; it is not reachable from the web bundle. Netlify installs
   # devDependencies, so without these flags every cold install pulls ~790MB that
   # is then thrown away.
   ELECTRON_SKIP_BINARY_DOWNLOAD = "1"

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  cleanLinkedIn,
   inferByHeader,
   inferFieldMap,
   isEmail,
@@ -57,13 +56,6 @@ describe("field predicates", () => {
     expect(isLinkedInUrl("https://www.linkedin.com/in/ada")).toBe(true);
     expect(isLinkedInUrl("in/ada-lovelace")).toBe(true);
     expect(isLinkedInUrl("https://linkedin.com/feed")).toBe(false);
-  });
-
-  it("normalises LinkedIn values to full URLs, or null", () => {
-    expect(cleanLinkedIn("in/ada")).toBe("https://www.linkedin.com/in/ada");
-    expect(cleanLinkedIn("linkedin.com/in/ada")).toBe("https://linkedin.com/in/ada");
-    expect(cleanLinkedIn("not a profile")).toBeNull();
-    expect(cleanLinkedIn("")).toBeNull();
   });
 
   it("tells names from companies", () => {

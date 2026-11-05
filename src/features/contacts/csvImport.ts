@@ -1,4 +1,5 @@
-import { cleanLinkedIn, cleanPhone, isEmail, splitName } from "@/lib/csvHelper";
+import { splitName } from "@/lib/csvHelper";
+import { cleanEmail, cleanLinkedInUrl, cleanPhone } from "../../../supabase/functions/_shared/contactFields.ts";
 import type { TablesInsert } from "@/lib/database.types";
 import type { FieldMap } from "@/types";
 
@@ -36,9 +37,9 @@ export function buildContactInserts(
       ({ first, last } = splitName(r[map.full_name]));
     }
 
-    const email = isEmail(emailRaw) ? emailRaw.trim() : "";
-    const phone = cleanPhone(phoneRaw) ?? "";
-    const linkedin = cleanLinkedIn(liRaw) ?? "";
+    const email = cleanEmail(emailRaw);
+    const phone = cleanPhone(phoneRaw);
+    const linkedin = cleanLinkedInUrl(liRaw);
 
     const nameKey = [first, last, companyRaw || ""].map((p) => p.trim().toLowerCase());
     const dedupeKey =
