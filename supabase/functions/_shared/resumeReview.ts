@@ -37,7 +37,7 @@ import {
 
 export { bandFor, RUBRIC, SCORE_BANDS, segmentName, SEGMENTS, STAGE_LABELS, STAGES } from "./resumeRules.ts";
 export type { RubricKey, Stage } from "./resumeRules.ts";
-import { bandFor, segmentName } from "./resumeRules.ts";
+import { bandFor, segmentCode, segmentName } from "./resumeRules.ts";
 
 
 const DATA_RULE =
@@ -45,14 +45,25 @@ const DATA_RULE =
 
 /* ── Limits and input ──────────────────────────────────────────────────────── */
 
+const RESUME_LIMIT = 9_000;
+const POSTING_LIMIT = 4_500;
+
 export const LIMITS = {
-  resume: 12_000,
-  posting: 6_000,
+  resume: RESUME_LIMIT,
+  posting: POSTING_LIMIT,
   title: 100,
   question: 300,
   answer: 800,
   maxQuestions: 8,
 } as const;
+
+/**
+ * The free tier's per-request prompt cap (system + prompt characters); tier.ts's
+ * FREE_PROMPT_CHAR_LIMIT, which a test keeps in sync. The step-2 prompt is the biggest one, so
+ * LIMITS above are sized so that a full resume, posting and 8 full answers still fit under it
+ * together with the step-2 system prompt (a test builds that worst case).
+ */
+export const FREE_PROMPT_BUDGET = 40_000;
 
 export class ReviewInputError extends Error {
   constructor(message: string, readonly status: 400 | 413 | 422) {
@@ -75,7 +86,8 @@ export interface ReviewInput {
 }
 
 function tidy(raw: string): string {
-  return raw.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  // < and > are dropped (as cleanText does) so student text cannot write "</resume>" and escape its data tags
+  return raw.replace(/[<>]/g, "").replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** Validates and bounds what the browser sent. Throws a user-readable ReviewInputError. */
@@ -118,7 +130,30 @@ export function prepareReviewInput(body: unknown, withAnswers: boolean): ReviewI
     }
   }
 
-  return { resume, posting, stage, title, answers };
+  const prepared = { resume, posting, stage, title, answers };
+  // Step 1 is cheap, but step 2 will need room for the answers: refuse now, before a request is spent.
+  if (!withAnswers) assertReviewFits(prepared);
+  return prepared;
+}
+
+/**
+ * Throws if step 2 (the review) could not fit `budget` characters once the student has given
+ * every answer at full length. Called by the questions step so the problem shows up before
+ * the first request is spent, not after.
+ */
+export function assertReviewFits(input: ReviewInput, budget = FREE_PROMPT_BUDGET): void {
+  const worst = {
+    ...input,
+    answers: Array.from({ length: LIMITS.maxQuestions }, () => ({ question: "q".repeat(LIMITS.question), answer: "a".repeat(LIMITS.answer) })),
+  };
+  const req = buildReviewRequest(worst);
+  const size = req.prompt.length + (req.system?.length ?? 0);
+  if (size > budget) {
+    throw new ReviewInputError(
+      `Your resume and job posting together are too long for the review step (${(input.resume.length + input.posting.length).toLocaleString("en-US")} characters). Trim the resume or the posting.`,
+      413,
+    );
+  }
 }
 
 /* ── Prompts ───────────────────────────────────────────────────────────────── */
@@ -160,7 +195,8 @@ export function buildQuestionsRequest(input: ReviewInput): LlmRequest {
   };
 }
 
-const REVIEW_SYSTEM = `You are an expert early-career recruiter and career coach reviewing a resume. Employers use skills-based hiring and AI screening: they want evidence of teamwork, problem-solving, communication, quantitative skills and responsible AI fluency.
+function reviewSystem(stage: Stage): string {
+  return `You are an expert early-career recruiter and career coach reviewing a resume. Employers use skills-based hiring and AI screening: they want evidence of teamwork, problem-solving, communication, quantitative skills and responsible AI fluency.
 ${DATA_RULE}
 
 CU BOULDER RULES (these outrank every other advice; judge the resume against them and cite them in your notes and fixes):
@@ -170,9 +206,8 @@ SCORING RUBRIC (100 points). Score each dimension as a whole number from 0 to it
 ${RUBRIC.map((r) => `- ${r.key} (max ${r.max}) ${r.label}: ${r.excellent}`).join("\n")}
 Be honest and calibrated: a typical early-career resume scores 50-75. Do not inflate. Do not give a total; it is computed for you.
 
-STAGE LENS:
-${Object.values(STAGE_LENS).join("\n")}
-Use the lens for the stage given.
+STAGE LENS (${STAGE_LABELS[stage]}):
+${STAGE_LENS[stage]}
 
 BULLET METHOD: ${BULLET_FORMULA}
 
@@ -194,14 +229,15 @@ HARD RULES
 Reply with ONLY one JSON object, no markdown fences, no commentary, in exactly this shape:
 {"segment":"<A-K>","rubric":{${RUBRIC.map((r) => `"${r.key}":{"score":<0-${r.max}>,"note":"<one sentence, under 160 chars>"}`).join(",")}},"strengths":["<3 items, each under 160 chars>"],"fixes":["<3 priority fixes in order of impact, each under 200 chars>"],"rewrites":[{"original":"<exact bullet from the resume>","questions":["<1-3 short questions the student must answer>"],"rewrite":"<draft using the formula, placeholders for anything unknown>"}],"missing_evidence":["<up to 6 questions or facts to gather before the next draft>"],"keywords_present":["<up to 8 posting keywords the resume has>"],"keywords_missing":["<up to 8 posting or segment keywords the resume lacks and could truthfully add>"],"red_flags":["<up to 5 flags from the list that actually apply, naming where>"],"interview":[{"bullet":"<a resume bullet an interviewer will probe>","story":"<the story to prepare, under 200 chars>"}]}
 Give 3 strengths, 3 fixes, 3 interview items, and 3 to 6 rewrites (the weakest bullets first). If there is no posting, keywords_present and keywords_missing come from the segment's keyword list.`;
+}
 
 export function buildReviewRequest(input: ReviewInput): LlmRequest {
   const answers = input.answers.length
     ? input.answers.map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`).join("\n\n")
     : "(the student skipped every question)";
   return {
-    system: REVIEW_SYSTEM,
-    prompt: `${targetBlock(input)}\n<answers>\n${answers}\n</answers>\n\nStage lens to apply: ${STAGE_LENS[input.stage]}`,
+    system: reviewSystem(input.stage),
+    prompt: `${targetBlock(input)}\n<answers>\n${answers}\n</answers>`,
     // Compact JSON, but reasoning models spend output tokens on thinking first.
     maxTokens: 8000,
     json: true,
@@ -325,6 +361,30 @@ export function readModelJson(text: string): Record<string, unknown> {
   throw new ReviewFormatError();
 }
 
+/**
+ * Runs a model call and parses its answer. A garbled answer (ReviewFormatError) is retried once
+ * without counting another request (`call(true)`); if the retry is garbled too, `giveUp` runs
+ * (it refunds the student's slot) and the error is thrown. Other errors pass straight through.
+ */
+export async function callWithFormatRetry<T>(
+  call: (isRetry: boolean) => Promise<{ text: string; model: string }>,
+  parse: (text: string) => T,
+  giveUp: () => Promise<void>,
+): Promise<{ value: T; model: string }> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await call(attempt > 0);
+    try {
+      return { value: parse(res.text), model: res.model };
+    } catch (e) {
+      if (!(e instanceof ReviewFormatError)) throw e;
+      if (attempt >= 1) {
+        await giveUp();
+        throw e;
+      }
+    }
+  }
+}
+
 function strList(v: unknown, max: number, len: number): string[] {
   if (!Array.isArray(v)) return [];
   const out: string[] = [];
@@ -361,12 +421,14 @@ export function parseQuestions(modelText: string): ReviewQuestion[] {
 
 /* ── No invented numbers ──────────────────────────────────────────────────── */
 
-const NUMBER = /\$?\d[\d,]*(?:\.\d+)?(?:%|[kKmMbB]\b|\+)?/g;
+// A number is not part of a name or code: no letter, digit or slash right before it (S3, EC2, GPT-4, 24/7),
+// none right after it unless it is a unit (3D, Q3, 24/7 stay words). A trailing comma is never part of it.
+const NUMBER = /(?<![A-Za-z\d/])(?<![A-Za-z]-)\$?\d+(?:,\d{3})*(?:\.\d+)?(?:%|[kKmMbB]\b|x\b|\+)?(?![A-Za-z\d/])/g;
 const SCALE: Record<string, number> = { k: 1e3, m: 1e6, b: 1e9 };
 
 /** 40% -> 40, $310K -> 310000, 120,000 -> 120000, 2.1K -> 2100. Null when it is not a number. */
 function numberValue(token: string): number | null {
-  const m = token.replace(/[$,\s+]/g, "").match(/^(\d+(?:\.\d+)?)([%kKmMbB]?)$/);
+  const m = token.replace(/[$,\s+]/g, "").match(/^(\d+(?:\.\d+)?)([%kKmMbBx]?)$/);
   if (!m) return null;
   const n = Number(m[1]);
   const unit = m[2].toLowerCase();
@@ -380,7 +442,7 @@ export function numbersIn(text: string): Set<number> {
     const v = numberValue(t);
     if (v !== null) out.add(v);
     // "40" in "40%" is the same fact whether or not the unit is written
-    const bare = numberValue(t.replace(/[%kKmMbB+]$/, ""));
+    const bare = numberValue(t.replace(/[%kKmMbBx+]$/, ""));
     if (bare !== null) out.add(bare);
   }
   return out;
@@ -396,7 +458,7 @@ export function stripInventedNumbers(text: string, known: Set<number>): { text: 
   const cleaned = text.replace(NUMBER, (token) => {
     const v = numberValue(token);
     if (v === null) return token;
-    const bare = numberValue(token.replace(/[%kKmMbB+]$/, ""));
+    const bare = numberValue(token.replace(/[%kKmMbBx+]$/, ""));
     if (known.has(v) || (bare !== null && known.has(bare))) return token;
     replaced++;
     return "[X]";
@@ -515,7 +577,7 @@ export function parseReview(modelText: string, input: ReviewInput): ReviewResult
     band: bandFor(score),
     stage: input.stage,
     target_title: input.title,
-    segment: segName ? { code: String(raw.segment).trim().toUpperCase().slice(0, 1), name: segName } : null,
+    segment: segName ? { code: segmentCode(raw.segment) ?? "", name: segName } : null,
     strengths,
     fixes,
     rubric,

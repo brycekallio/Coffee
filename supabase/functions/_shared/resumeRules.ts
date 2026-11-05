@@ -202,9 +202,20 @@ export const SEGMENTS: readonly Segment[] = [
   },
 ];
 
+/** The segment code for a model's value: exactly one letter A-K (a separator after it is fine), or a segment name. */
+export function segmentCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim();
+  const letter = v.match(/^([A-Ka-k])(?:[\s.:)\-–—]|$)/);
+  if (letter) return letter[1].toUpperCase();
+  const lower = v.toLowerCase();
+  if (!lower) return null;
+  return SEGMENTS.find((s) => s.name.toLowerCase() === lower)?.code ?? SEGMENTS.find((s) => s.name.toLowerCase().startsWith(lower) && lower.length >= 4)?.code ?? null;
+}
+
 export function segmentName(code: unknown): string | null {
-  if (typeof code !== "string") return null;
-  return SEGMENTS.find((s) => s.code === code.trim().toUpperCase().slice(0, 1))?.name ?? null;
+  const c = segmentCode(code);
+  return SEGMENTS.find((s) => s.code === c)?.name ?? null;
 }
 
 /* ── Shared prompt pieces (playbook 1.2, 1.3, 1.6, 1.8, 1.9) ───────────────── */

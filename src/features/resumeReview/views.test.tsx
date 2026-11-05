@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DEMO_QUESTIONS, DEMO_REVIEW } from "@/demo/demoResumeReview";
 import { RUBRIC } from "../../../supabase/functions/_shared/resumeReview.ts";
+import { bandTone } from "./bandTone";
 import { IntakeForm, QuestionsForm, ReviewReport } from "./views";
 
 const noop = () => {};
@@ -80,5 +81,47 @@ describe("Resume review page, step by step", () => {
       expect(w.rewrite.split(/\s+/).length).toBeLessThanOrEqual(20);
       expect(w.rewrite).not.toMatch(/\b(a|an|the)\b/i);
     }
+  });
+});
+
+describe("score colour follows the score band", () => {
+  it("82 is Targeted fixes, 62 and 58 are both Restructure, 90 is Ready, 30 is Rebuild", () => {
+    expect(bandTone(82).label).toBe("Targeted fixes");
+    expect(bandTone(62).bar).toBe(bandTone(58).bar);
+    expect(bandTone(62).label).toBe("Restructure");
+    expect(bandTone(90).label).toBe("Ready to submit");
+    expect(new Set([90, 82, 62, 30].map((n) => bandTone(n).bar)).size).toBe(4);
+  });
+});
+
+describe("intake: a saved resume can always be replaced", () => {
+  it("offers 'Use different text' next to the loaded resume", () => {
+    const html = renderToStaticMarkup(
+      <IntakeForm values={{ stage: "student", targetTitle: "", jobPosting: "", pastedResume: "" }}
+        hasProfileResume={true} resumeWords={312} profileChars={2000} busy={false}
+        onChange={noop} onSubmit={noop} onGoToSettings={noop} />,
+    );
+    expect(html).toContain("Use different text");
+  });
+
+  it("with own text on, shows the box and the character count", () => {
+    const html = renderToStaticMarkup(
+      <IntakeForm values={{ stage: "student", targetTitle: "", jobPosting: "", pastedResume: "x".repeat(500), useOwnText: true }}
+        hasProfileResume={true} resumeWords={312} profileChars={20000} busy={false}
+        onChange={noop} onSubmit={noop} onGoToSettings={noop} />,
+    );
+    expect(html).toContain('id="rr-resume"');
+    expect(html).toContain("500 / 9,000");
+  });
+
+  it("warns before sending when the saved resume is over the limit, and disables the button", () => {
+    const html = renderToStaticMarkup(
+      <IntakeForm values={{ stage: "student", targetTitle: "", jobPosting: "", pastedResume: "" }}
+        hasProfileResume={true} resumeWords={3000} profileChars={20000} busy={false}
+        onChange={noop} onSubmit={noop} onGoToSettings={noop} />,
+    );
+    expect(html).toContain("20,000");
+    expect(html).toContain("9,000");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Ask me the right questions/);
   });
 });

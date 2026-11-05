@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { bandTone } from "./bandTone";
 import { inputCls } from "@/components/ui/styles";
 import {
+  LIMITS,
   STAGE_LABELS,
   STAGES,
   type ReviewQuestion,
@@ -15,10 +17,10 @@ const card = "rounded-xl border border-white/[0.06] bg-depth-1/80";
 const eyebrow = "text-xs font-semibold text-white/40";
 
 function ratioColor(ratio: number) {
-  return ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.6 ? "bg-yellow-500" : "bg-red-500";
+  return bandTone(ratio * 100).bar;
 }
 function ratioText(ratio: number) {
-  return ratio >= 0.8 ? "text-emerald-400" : ratio >= 0.6 ? "text-yellow-400" : "text-red-400";
+  return bandTone(ratio * 100).text;
 }
 
 export function Spinner() {
@@ -42,12 +44,18 @@ export interface IntakeValues {
   targetTitle: string;
   jobPosting: string;
   pastedResume: string;
+  /** Replace the saved profile resume with the text in the box. */
+  useOwnText?: boolean;
 }
+
+const fmt = (n: number) => n.toLocaleString("en-US");
 
 export function IntakeForm(props: {
   values: IntakeValues;
   hasProfileResume: boolean;
   resumeWords: number;
+  /** Length of the saved profile resume, for the limit hint. */
+  profileChars?: number;
   busy: boolean;
   onChange: (next: IntakeValues) => void;
   onSubmit: () => void;
@@ -55,16 +63,30 @@ export function IntakeForm(props: {
 }) {
   const { values, hasProfileResume, busy } = props;
   const set = (patch: Partial<IntakeValues>) => props.onChange({ ...values, ...patch });
-  const hasResume = hasProfileResume || values.pastedResume.trim().length >= 80;
+  const showBox = !hasProfileResume || values.useOwnText === true;
+  const resumeChars = showBox ? values.pastedResume.trim().length : (props.profileChars ?? 0);
+  const postingChars = values.jobPosting.trim().length;
+  const resumeTooLong = resumeChars > LIMITS.resume;
+  const postingTooLong = postingChars > LIMITS.posting;
+  const hasResume = (showBox ? resumeChars >= 80 : hasProfileResume) && !resumeTooLong && !postingTooLong;
+  const hint = (n: number, max: number) => (
+    <p className={`mt-1.5 text-xs ${n > max ? "text-red-400" : "text-white/40"}`}>
+      {fmt(n)} / {fmt(max)} characters{n > max ? ". Too long: trim it before sending." : ""}
+    </p>
+  );
 
   return (
     <div className="space-y-5">
-      {hasProfileResume ? (
-        <div className="flex items-center gap-3 rounded-xl border border-glow/20 bg-glow/[0.04] px-4 py-3.5">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white/80">Resume loaded</p>
-            <p className="mt-0.5 text-xs text-white/50">{props.resumeWords.toLocaleString("en-US")} words · uploaded from your profile</p>
+      {!showBox ? (
+        <div className="rounded-xl border border-glow/20 bg-glow/[0.04] px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white/80">Resume loaded</p>
+              <p className="mt-0.5 text-xs text-white/50">{props.resumeWords.toLocaleString("en-US")} words · uploaded from your profile</p>
+            </div>
+            <button type="button" onClick={() => set({ useOwnText: true })} className={quietBtn}>Use different text</button>
           </div>
+          {resumeTooLong ? hint(resumeChars, LIMITS.resume) : null}
         </div>
       ) : (
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-4">
@@ -76,7 +98,13 @@ export function IntakeForm(props: {
             value={values.pastedResume}
             onChange={(e) => set({ pastedResume: e.target.value })}
           />
-          <button type="button" onClick={props.onGoToSettings} className={`${quietBtn} mt-3`}>Upload a PDF in Settings →</button>
+          {hint(resumeChars, LIMITS.resume)}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={props.onGoToSettings} className={quietBtn}>Upload a PDF in Settings →</button>
+            {hasProfileResume ? (
+              <button type="button" onClick={() => set({ useOwnText: false })} className={quietBtn}>Use my saved resume</button>
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -123,6 +151,7 @@ export function IntakeForm(props: {
           value={values.jobPosting}
           onChange={(e) => set({ jobPosting: e.target.value })}
         />
+        {postingChars > 0 ? hint(postingChars, LIMITS.posting) : null}
       </div>
 
       <button type="button" onClick={props.onSubmit} disabled={busy || !hasResume} className={primaryBtn}>

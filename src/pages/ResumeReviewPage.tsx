@@ -28,7 +28,9 @@ export default function ResumeReviewPage({ onGoToSettings }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resumeText = profileResume || values.pastedResume.trim();
+  // The profile resume is the default, but the student can always swap in text they edit here
+  // (a scanned PDF with no text, or a resume over the length limit, would otherwise be a dead end).
+  const resumeText = profileResume && !values.useOwnText ? profileResume : values.pastedResume.trim();
   const target = { resumeText, jobPosting: values.jobPosting.trim(), stage: values.stage, targetTitle: values.targetTitle.trim() };
 
   async function askQuestions() {
@@ -77,8 +79,12 @@ export default function ResumeReviewPage({ onGoToSettings }: Props) {
             values={values}
             hasProfileResume={profileResume.length > 0}
             resumeWords={profileResume ? profileResume.split(/\s+/).length : 0}
+            profileChars={profileResume.length}
             busy={busy}
-            onChange={setValues}
+            onChange={(next) =>
+              // "Use different text" starts from the saved resume so the student can trim or fix it
+              setValues(next.useOwnText && !values.useOwnText && !next.pastedResume ? { ...next, pastedResume: profileResume } : next)
+            }
             onSubmit={askQuestions}
             onGoToSettings={onGoToSettings}
           />

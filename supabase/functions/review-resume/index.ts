@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.177.1/http/server.ts";
 import { errorResponse, json, preflight } from "../_shared/http.ts";
-import { callModel, HttpError, resolveTier } from "../_shared/tier.ts";
+import { callModel, HttpError, refundFreeRequest, resolveTier } from "../_shared/tier.ts";
 import {
   buildQuestionsRequest,
   buildReviewRequest,
+  callWithFormatRetry,
   parseQuestions,
   parseReview,
   prepareReviewInput,
@@ -20,7 +21,7 @@ import {
 //
 // Deploy: supabase functions deploy review-resume --project-ref ypyvkqysnowgegcjydnd
 
-/** 12k resume + 6k posting + answers is at most ~230 KB as JSON when every char is escaped. */
+/** 9k resume + 4.5k posting + answers is at most ~230 KB as JSON when every char is escaped. */
 const MAX_BODY_BYTES = 256 * 1024;
 
 async function readBody(req: Request): Promise<unknown> {
@@ -48,12 +49,22 @@ serve(async (req) => {
     const input = prepareReviewInput(body, mode === "review");
 
     if (mode === "questions") {
-      const result = await callModel(resolved, buildQuestionsRequest(input));
-      return json({ mode, questions: parseQuestions(result.text), model: result.model, tier: resolved.tier });
+      const req = buildQuestionsRequest(input);
+      const out = await callWithFormatRetry(
+        (isRetry) => callModel(resolved, req, { alreadySpent: isRetry }),
+        parseQuestions,
+        () => refundFreeRequest(resolved),
+      );
+      return json({ mode, questions: out.value, model: out.model, tier: resolved.tier });
     }
 
-    const result = await callModel(resolved, buildReviewRequest(input));
-    return json({ mode, review: parseReview(result.text, input), model: result.model, tier: resolved.tier });
+    const req = buildReviewRequest(input);
+    const out = await callWithFormatRetry(
+      (isRetry) => callModel(resolved, req, { alreadySpent: isRetry }),
+      (text) => parseReview(text, input),
+      () => refundFreeRequest(resolved),
+    );
+    return json({ mode, review: out.value, model: out.model, tier: resolved.tier });
   } catch (e) {
     if (e instanceof ReviewInputError) return json({ error: e.message }, e.status);
     if (e instanceof ReviewFormatError) return json({ error: e.message }, 422);

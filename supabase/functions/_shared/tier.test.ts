@@ -48,7 +48,7 @@ vi.mock("jsr:@supabase/supabase-js@2", () => ({
   }),
 }));
 
-const { resolveTier, requirePower, HttpError, callModel, freeDailyLimit, resetPhrase, FREE_PROMPT_CHAR_LIMIT } =
+const { resolveTier, requirePower, HttpError, callModel, refundFreeRequest, freeDailyLimit, resetPhrase, FREE_PROMPT_CHAR_LIMIT } =
   await import("./tier.ts");
 const { FREE_MODEL, FREE_MODEL_CHAIN } = await import("./llm.ts");
 
@@ -268,6 +268,16 @@ describe("per-user free-tier cap", () => {
     expect(llmCalls).toHaveLength(0);
     await callModel(r, { prompt: "x".repeat(FREE_PROMPT_CHAR_LIMIT), maxTokens: 10 }); // exactly at the limit is fine
     expect(llmCalls).toHaveLength(1);
+  });
+
+  it("alreadySpent skips the count (a retry inside one request), and refundFreeRequest gives the slot back", async () => {
+    const r = await resolveTier(authed());
+    await callModel(r, ask);
+    await callModel(r, ask, { alreadySpent: true });
+    expect(db.usage.get("user-1")).toBe(1);
+    expect(llmCalls).toHaveLength(2);
+    await refundFreeRequest(r);
+    expect(db.usage.get("user-1")).toBe(0);
   });
 
   it("does not limit prompt size for a user with their own key", async () => {
