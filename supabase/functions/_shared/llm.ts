@@ -14,8 +14,20 @@
 
 export type Provider = "openrouter" | "anthropic";
 
-/** Primary free model: open-weight 120B MoE (12B active), 262K context, JSON mode. */
-export const FREE_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+/** Built-in default for the free model: open-weight 120B MoE (12B active), 262K context, JSON mode. */
+export const DEFAULT_FREE_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+
+/**
+ * Primary free model. The model name is config, not a constant: when OpenRouter retires the
+ * default, set the `FREE_AI_MODEL` Supabase secret instead of redeploying code. Read once per
+ * function instance (secrets changes restart instances). Blank or missing means the default.
+ */
+export function resolveFreeModel(override: string | undefined | null): string {
+  return override?.trim() || DEFAULT_FREE_MODEL;
+}
+export const FREE_MODEL = resolveFreeModel(
+  (globalThis as { Deno?: { env: { get(k: string): string | undefined } } }).Deno?.env.get("FREE_AI_MODEL"),
+);
 
 /**
  * Fallback chain for the free tier. OpenRouter walks this list on *any* error from

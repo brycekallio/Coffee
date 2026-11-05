@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +16,7 @@ interface EventBody {
 
 /** Refresh an expired access token and persist the new one. */
 async function refreshAndPersist(
-  serviceClient: ReturnType<typeof createClient>,
+  serviceClient: SupabaseClient,
   userId: string,
   refreshToken: string
 ): Promise<string | null> {

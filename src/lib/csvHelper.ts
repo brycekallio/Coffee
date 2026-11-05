@@ -1,4 +1,6 @@
 import type { ParsedCsv, FieldMap } from "../types";
+// One definition of a valid email, shared with the Edge Functions (see contactFields.ts).
+import { cleanEmail } from "../../supabase/functions/_shared/contactFields.ts";
 
 export type { ParsedCsv, FieldMap };
 
@@ -77,8 +79,7 @@ export function normHeader(h: string) {
 }
 
 export function isEmail(v: unknown) {
-  const s = String(v ?? "").trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  return cleanEmail(v) !== "";
 }
 
 export function isPhone(v: unknown) {
@@ -89,20 +90,6 @@ export function isPhone(v: unknown) {
 export function isLinkedInUrl(v: unknown) {
   const s = String(v ?? "").trim().toLowerCase();
   return /linkedin\.com\/(in|company|pub)\//.test(s) || /^in\/[a-z0-9\-_%.]+/i.test(s);
-}
-
-export function cleanLinkedIn(v: unknown): string | null {
-  let s = String(v ?? "").trim();
-  if (!s) return null;
-  if (/^in\//i.test(s)) s = `https://www.linkedin.com/${s}`;
-  if (!/^https?:\/\//i.test(s) && s.toLowerCase().includes("linkedin.com/")) s = `https://${s}`;
-  return isLinkedInUrl(s) ? s : null;
-}
-
-export function cleanPhone(v: unknown): string | null {
-  const s = String(v ?? "").trim();
-  if (!s) return null;
-  return s.replaceAll(/\s+/g, " ");
 }
 
 export function looksLikeName(v: unknown) {
