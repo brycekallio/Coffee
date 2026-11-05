@@ -10,21 +10,10 @@
 // folder, which is also where they will look for it later.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { type Deliver, processDue } from "./process.ts";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
-
-/** How far past its time a message may still go out. */
-const MAX_LATENESS_MINUTES = 120;
-
-interface Due {
-  id: string;
-  owner_id: string;
-  contact_id: string | null;
-  subject: string | null;
-  message: string;
-  scheduled_at: string;
-}
 
 const svc = () =>
   createClient(
@@ -76,9 +65,29 @@ function encodeMessage(to: string, from: string, subject: string, body: string):
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+/** Sends one message from the owner's own Gmail. Reasons are shown to the user, so keep them short. */
+const deliver: Deliver = async (refreshToken, to, subject, body) => {
+  const token = await accessTokenFor(refreshToken);
+  if (!token) return { ok: false, reason: "Not sent: Google access was revoked, reconnect Gmail in Settings" };
+
+  // "me" resolves to the authenticated mailbox, so the From line is correct
+  // without us storing the address.
+  const send = await fetch(GMAIL_SEND_URL, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ raw: encodeMessage(to, "me", subject, body) }),
+  });
+  if (send.ok) return { ok: true };
+
+  // Google states the reason plainly (a disabled API, a missing scope, a revoked grant).
+  // It goes to the function logs; the row carries only the short version.
+  console.error("Gmail refused the message", send.status, (await send.text()).slice(0, 200));
+  return { ok: false, reason: `Not sent: Gmail refused it (${send.status})` };
+};
+
 Deno.serve(async (req) => {
-  // Shared secret, because cron cannot present a user session. Compared in full
-  // rather than short-circuiting on the first differing byte.
+  // Shared secret, because cron cannot present a user session. A plain comparison, not
+  // constant-time: harmless for a long random secret at this scale.
   const given = req.headers.get("x-cron-secret") ?? "";
   const want = Deno.env.get("CRON_SECRET") ?? "";
   if (!want || given.length !== want.length || given !== want) {
@@ -87,89 +96,13 @@ Deno.serve(async (req) => {
     });
   }
 
-  const db = svc();
-  const now = new Date();
-  const floor = new Date(now.getTime() - MAX_LATENESS_MINUTES * 60_000);
-
-  const { data: due, error } = await db
-    .from("scheduled_outreach")
-    .select("id, owner_id, contact_id, subject, message, scheduled_at")
-    .eq("status", "scheduled")
-    .eq("channel", "email")
-    .lte("scheduled_at", now.toISOString())
-    .gte("scheduled_at", floor.toISOString())   // don't resurrect week-old messages
-    .limit(50);
-
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  let results;
+  try {
+    results = await processDue(svc(), { now: new Date(), deliver });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500, headers: { "content-type": "application/json" },
     });
-  }
-
-  const results = { sent: 0, failed: 0, skipped: 0 };
-
-  for (const row of (due ?? []) as Due[]) {
-    // Claim it first. Two cron ticks can overlap if one runs long, and sending
-    // the same outreach twice is worse than sending it late.
-    const { data: claimed } = await db
-      .from("scheduled_outreach")
-      .update({ status: "sending" })
-      .eq("id", row.id)
-      .eq("status", "scheduled")
-      .select("id");
-    if (!claimed?.length) { results.skipped++; continue; }
-
-    const fail = async (reason: string) => {
-      await db.from("scheduled_outreach")
-        .update({ status: "failed", failure_reason: reason.slice(0, 200) })
-        .eq("id", row.id);
-      results.failed++;
-    };
-
-    const { data: profile } = await db
-      .from("profiles")
-      .select("google_calendar_refresh_token")
-      .eq("id", row.owner_id)
-      .single();
-
-    const refresh = profile?.google_calendar_refresh_token;
-    if (!refresh) { await fail("Gmail is not connected"); continue; }
-
-    let to: string | null = null;
-    if (row.contact_id) {
-      const { data: c } = await db
-        .from("contacts").select("email").eq("id", row.contact_id).single();
-      to = c?.email ?? null;
-    }
-    if (!to) { await fail("Contact has no email address"); continue; }
-
-    const token = await accessTokenFor(refresh);
-    if (!token) { await fail("Google access was revoked; reconnect Gmail"); continue; }
-
-    // "me" resolves to the authenticated mailbox, so the From line is correct
-    // without us storing the address.
-    const send = await fetch(GMAIL_SEND_URL, {
-      method: "POST",
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        raw: encodeMessage(to, "me", row.subject ?? "(no subject)", row.message),
-      }),
-    });
-
-    if (!send.ok) {
-      // Google states the reason plainly -- a disabled API, a missing scope, a
-      // revoked grant. Recording only the status turned a one-line diagnosis
-      // into guesswork once already.
-      const detail = (await send.text()).slice(0, 200);
-      console.error("Gmail refused the message", send.status, detail);
-      await fail(`Gmail refused the message (${send.status}): ${detail}`);
-      continue;
-    }
-
-    await db.from("scheduled_outreach")
-      .update({ status: "sent", sent_at: new Date().toISOString() })
-      .eq("id", row.id);
-    results.sent++;
   }
 
   return new Response(JSON.stringify(results), {
