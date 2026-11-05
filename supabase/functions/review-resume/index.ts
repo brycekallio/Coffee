@@ -49,18 +49,18 @@ serve(async (req) => {
     const input = prepareReviewInput(body, mode === "review");
 
     if (mode === "questions") {
-      const req = buildQuestionsRequest(input);
+      const llmReq = buildQuestionsRequest(input);
       const out = await callWithFormatRetry(
-        (isRetry) => callModel(resolved, req, { alreadySpent: isRetry }),
+        (isRetry) => callModel(resolved, llmReq, { alreadySpent: isRetry }),
         parseQuestions,
         () => refundFreeRequest(resolved),
       );
       return json({ mode, questions: out.value, model: out.model, tier: resolved.tier });
     }
 
-    const req = buildReviewRequest(input);
+    const llmReq = buildReviewRequest(input);
     const out = await callWithFormatRetry(
-      (isRetry) => callModel(resolved, req, { alreadySpent: isRetry }),
+      (isRetry) => callModel(resolved, llmReq, { alreadySpent: isRetry }),
       (text) => parseReview(text, input),
       () => refundFreeRequest(resolved),
     );

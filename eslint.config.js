@@ -20,4 +20,14 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Edge Functions: a const declared later in a block shadows the handler's `req` and
+    // crashes at runtime (TDZ). That shipped once in review-resume; lint catches it now.
+    files: ['supabase/functions/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-use-before-define': ['error', { functions: false, classes: false }],
+      'no-shadow': 'off',
+      '@typescript-eslint/no-shadow': 'error',
+    },
+  },
 ])
