@@ -108,6 +108,8 @@ describe("demo mode makes no network requests", () => {
     ["adjust-resume", { mode: "suggestions" }],
     ["adjust-resume", { mode: "rewrite" }],
     ["personalize-outreach", {}],
+    ["review-resume", { mode: "questions" }],
+    ["review-resume", { mode: "review" }],
   ];
 
   it.each(AI_TOOLS)("%s returns a canned result without fetch", async (name, body) => {

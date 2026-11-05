@@ -21,6 +21,7 @@ const OnboardingPage = lazy(() => import("@/features/profile/OnboardingPage"));
 const WatchlistPage = lazy(() => import("@/pages/WatchlistPage"));
 const OutreachEmailsPage = lazy(() => import("@/pages/OutreachEmailsPage"));
 const JdScorerPage = lazy(() => import("@/pages/JdScorerPage"));
+const ResumeReviewPage = lazy(() => import("@/pages/ResumeReviewPage"));
 
 function PageFallback() {
   return (
@@ -113,6 +114,8 @@ export default function AppShell({
         return { title: "Applications" };
       case "jd_scorer":
         return { title: "Job description match", subtitle: "Paste a posting to see how your resume lines up." };
+      case "resume_review":
+        return { title: "Resume review", subtitle: "Answer a few questions about your resume, then get a scored review." };
       case "analytics":
         return { title: "Analytics" };
       case "settings":
@@ -182,6 +185,13 @@ export default function AppShell({
                 className={navLinkCls(page === "jd_scorer")}
               >
                 JD Comparison
+              </button>
+
+              <button
+                onClick={() => { setPage("resume_review"); }}
+                className={navLinkCls(page === "resume_review")}
+              >
+                Resume review
               </button>
 
               <button
@@ -307,6 +317,12 @@ export default function AppShell({
                 JD Comparison
               </span>
             </button>
+            <button onClick={() => { setPage("resume_review"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "resume_review")} block w-full text-left py-2.5`}>
+              <span className="flex items-center gap-3">
+                <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                Resume review
+              </span>
+            </button>
             <button onClick={() => { setPage("analytics"); setMobileMenuOpen(false); }} className={`${navLinkCls(page === "analytics")} block w-full text-left py-2.5`}>
               <span className="flex items-center gap-3">
                 <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -362,6 +378,9 @@ export default function AppShell({
 
         {/* JD SCORER PAGE */}
         {page === "jd_scorer" ? <JdScorerPage onGoToSettings={() => setPage("settings")} /> : null}
+
+        {/* RESUME REVIEW PAGE */}
+        {page === "resume_review" ? <ResumeReviewPage onGoToSettings={() => setPage("settings")} /> : null}
 
         {/* NETWORK WATCHLIST PAGE */}
         {page === "network_watchlist" ? <WatchlistPage /> : null}

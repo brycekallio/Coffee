@@ -10,6 +10,7 @@ describe("routes", () => {
       { page: "outreach_emails" },
       { page: "applications" },
       { page: "jd_scorer" },
+      { page: "resume_review" },
       { page: "analytics" },
       { page: "settings" },
       { page: "onboarding" },

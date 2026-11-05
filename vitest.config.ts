@@ -12,7 +12,7 @@ export default mergeConfig(
       },
     },
     test: {
-      include: ["src/**/*.test.ts", "supabase/functions/**/*.test.ts"],
+      include: ["src/**/*.test.ts", "src/**/*.test.tsx", "supabase/functions/**/*.test.ts"],
       environment: "node",
     },
   }),
