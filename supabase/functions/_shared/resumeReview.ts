@@ -21,9 +21,11 @@ import { type LlmRequest, parseJsonObject } from "./llm.ts";
 import {
   ATS_CHECKLIST,
   BULLET_FORMULA,
+  CU_RULES,
   HIDDEN_EVIDENCE,
   RED_FLAGS,
   REVIEWER_QUESTIONS,
+  RULES,
   RUBRIC,
   type RubricKey,
   SEGMENTS,
@@ -134,6 +136,7 @@ const QUESTIONS_SYSTEM = `You are an expert early-career recruiter and career co
 ${DATA_RULE}
 Method:
 - Reviewer mindset: ${REVIEWER_QUESTIONS}
+- CU rule to remember: bullets quantify with numbers and a time frame, so ask for them.
 - Hidden evidence to dig for: ${HIDDEN_EVIDENCE}.
 - Stage lens: use the stage given below.
 - Segment: work out which career segment (A-K below) the target title or posting belongs to, and use that segment's "Ask" lines as a starting point.
@@ -160,6 +163,9 @@ export function buildQuestionsRequest(input: ReviewInput): LlmRequest {
 const REVIEW_SYSTEM = `You are an expert early-career recruiter and career coach reviewing a resume. Employers use skills-based hiring and AI screening: they want evidence of teamwork, problem-solving, communication, quantitative skills and responsible AI fluency.
 ${DATA_RULE}
 
+CU BOULDER RULES (these outrank every other advice; judge the resume against them and cite them in your notes and fixes):
+${CU_RULES}
+
 SCORING RUBRIC (100 points). Score each dimension as a whole number from 0 to its maximum:
 ${RUBRIC.map((r) => `- ${r.key} (max ${r.max}) ${r.label}: ${r.excellent}`).join("\n")}
 Be honest and calibrated: a typical early-career resume scores 50-75. Do not inflate. Do not give a total; it is computed for you.
@@ -179,6 +185,7 @@ ${SEGMENTS.map((s) => `${s.code} ${s.name} | titles: ${s.titles} | must-have sig
 
 HARD RULES
 - NEVER invent numbers, names, tools, employers, dates or results. A rewrite may use a number only if it appears in the resume or in the student's answers. Anything the student did not give you becomes a placeholder such as [X], [Y], [N] or [tool]. Do not round, estimate or "improve" a number.
+- Every rewrite follows the CU bullet rules: starts with an action verb, no I/me/my and no articles (a, an, the), ${RULES.bulletMaxWords} words or fewer, in past tense unless the role is current. Never spell numbers out in words.
 - Rewrite only bullets that exist in the resume. "original" is copied exactly from the resume. The rewrite must stay true to what the original says plus what the answers add.
 - Use the student's answers as evidence. If an answer gives a number, you may use it. If the student skipped a question, leave the placeholder.
 - Do not quote statistics about the job market or hiring.

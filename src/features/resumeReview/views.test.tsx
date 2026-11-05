@@ -75,5 +75,10 @@ describe("Resume review page, step by step", () => {
     for (const r of DEMO_REVIEW.rubric) expect(r.score).toBeLessThanOrEqual(r.max);
     expect(DEMO_REVIEW.rewrites.every((w) => w.rewrite.includes("[X]") || w.rewrite.includes("[N]"))).toBe(true);
     expect(DEMO_REVIEW.rewrites).toHaveLength(3);
+    // CU bullet rules: 20 words or fewer, action verb first, no articles
+    for (const w of DEMO_REVIEW.rewrites) {
+      expect(w.rewrite.split(/\s+/).length).toBeLessThanOrEqual(20);
+      expect(w.rewrite).not.toMatch(/\b(a|an|the)\b/i);
+    }
   });
 });

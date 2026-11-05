@@ -19,7 +19,7 @@ const scores: Record<string, [number, string]> = {
   skill_proof: [11, "Problem-solving shows through the pipeline. Teamwork and communication are not shown anywhere yet."],
   ai_digital_fluency: [5, "Tools are named (Python, SQL, Tableau), but nothing says how you use AI or check its output."],
   experience_relevance: [12, "Research and the internship are in the right order. Ownership is clear on the pipeline, vaguer on the dashboards."],
-  clarity: [8, "Short and readable. A few bullets start with nouns instead of verbs."],
+  clarity: [8, "One page and readable. A few bullets start with nouns instead of action verbs."],
   ats_hygiene: [5, "Plain headings and consistent dates. Nothing here would trip a screener."],
 };
 
@@ -47,19 +47,19 @@ export const DEMO_REVIEW: ReviewResult = {
     {
       original: "built a Python pipeline cleaning 40k SEC filings",
       questions: ["Who used the cleaned data?", "How long did cleaning take before and after?"],
-      rewrite: "Built a Python pipeline that cleans 40k SEC filings, cutting prep time from [X] to [Y] and feeding [N] faculty research projects.",
+      rewrite: "Built Python pipeline cleaning 40k SEC filings, cutting prep time from [X] to [Y] for [N] faculty research projects.",
       replaced: 0,
     },
     {
       original: "grant reporting dashboards in Tableau",
       questions: ["How many people used them, and how often?", "What decision did a dashboard support?"],
-      rewrite: "Designed Tableau dashboards for grant reporting, used by [N] board members each [month/quarter] to decide [X].",
+      rewrite: "Designed Tableau dashboards for grant reporting, used by [N] board members each [quarter] to decide [X].",
       replaced: 0,
     },
     {
       original: "Excel modeling (DCF, LBO)",
       questions: ["Where did you build these models, and what did each one decide?"],
-      rewrite: "Built DCF and LBO models in Excel for [class / competition / project], valuing [company] at [X] and presenting the result to [audience].",
+      rewrite: "Built DCF and LBO models in Excel for [class project], valuing [company] at [X] and presenting results to [audience].",
       replaced: 0,
     },
   ],

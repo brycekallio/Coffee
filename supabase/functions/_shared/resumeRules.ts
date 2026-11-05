@@ -1,28 +1,60 @@
 /**
  * Every review rule in one place: rubric weights and bands, stage lens, page length, GPA
- * cutoffs, red flags, ATS checklist, bullet formula, segment matrices. The prompts in
+ * rule, red flags, ATS checklist, bullet rules, segment matrices. The prompts in
  * resumeReview.ts import from here and hard-code none of it.
  *
- * Source order (Bryce, 2026-11-05): CU Boulder's resume advice (Leeds, then CU Career
- * Services) is the source of truth; the playbook (assets/resume-advice/resume-review-playbook-2026-11.md)
- * only fills gaps. The playbook's market statistics are never used.
+ * Source order (Bryce, 2026-11-05): CU Boulder's resume advice (Leeds first, then CU Career
+ * Services) is the source of truth. The playbook (assets/resume-advice/resume-review-playbook-2026-11.md)
+ * only fills gaps: the scoring rubric and bands, intake questions, the 11 segment matrices,
+ * the no-numbers fallbacks, the verb bank, the file name and the ATS layout details. The
+ * playbook's market statistics are never used.
  *
- * TODO(CU rules): assets/resume-advice/cu-boulder-rules.md did not exist when this was
- * written. When it does, read its "Machine-usable summary" and overwrite the RULES values
- * below (and any stage-lens / red-flag line it contradicts). CU wins every conflict. Until
- * then every value below is the PLAYBOOK default, not CU's.
+ * Where each rule comes from (full table: assets/resume-advice/cu-boulder-rules.md):
+ *   CU:       page length, GPA, education format, coursework, section order, per-entry format,
+ *             bullet count/length/formula/verbs, pronouns and articles, tense, objective and
+ *             summary, header, street address, font and margins, skills, interests,
+ *             leadership, awards, high school, tailoring.
+ *   Playbook: rubric weights and score bands, intake/probing questions, segment matrices
+ *             (A-K), stage probing questions, no-numbers fallbacks, verb bank by skill,
+ *             ATS layout details (single column, no text boxes), file name, hygiene red
+ *             flags CU does not mention (acronyms, overclaiming, generic AI phrasing).
+ * CU wins every conflict: page length for recent grads, GPA (no 3.3/3.5 cutoffs), bullet
+ * length, high school content.
  */
 
 export const RULES = {
-  source: "playbook (CU rules not yet embedded)",
-  /** Page length for 0-3 years, as a sentence fragment used in prompts and the rubric. */
-  pageText: "One page (0-3 years).",
-  gpa: {
-    include: "3.3 or higher",
-    competitive: "3.5 or higher",
-    competitiveFields: "consulting and investment banking",
-  },
+  source: "CU Boulder (Leeds, then Career Services); playbook only for gaps",
+  pageText: "One page for students and new grads; 1.5-2 pages only for recent grads and alumni.",
+  gpaText: "List a GPA only if it is 3.0 or above, with two decimals, using the higher of cumulative or business GPA. Under 3.0, leave it off and point the student to CU Career Services.",
+  bulletMaxWords: 20,
 } as const;
+
+/** CU's "Machine-usable summary", the rules every review applies. CU outranks any other advice. */
+export const CU_RULES = [
+  `Length: ${RULES.pageText} If over one page, drop the font to 10 pt first.`,
+  "Font 10-12 pt, margins 0.5-1 in, consistent formatting and punctuation, no creative or graphic layout (ATS risk). Must read fine as PDF and as plain text.",
+  "Header: name, phone | CU email (first.last@colorado.edu) | custom LinkedIn URL. City and state only, never a street address.",
+  `GPA: ${RULES.gpaText}`,
+  'Education first for students and new grads: "University of Colorado Boulder - Leeds School of Business", Anticipated Graduation Month/Year, spelled-out degree and emphasis, minors, GPA, awards, coursework. Education moves lower as experience grows.',
+  "Relevant coursework: 3-7 courses by name, never course numbers, tailored to the job.",
+  "Order: Education, Honors and Awards (optional; one honor goes in Education), Experience, Relevant Projects (optional; one project goes in Education), Leadership/Activities, Skills, Interests/Additional (optional).",
+  "Every entry: organization, City, State, title, Month/Year - Month/Year or Present. Reverse chronological everywhere.",
+  "2-5 bullets per entry, best first. Formula: action verb + task + result/outcome. Detailed, not fragments.",
+  'Every bullet starts with an action verb. Avoid "responsible for", "helped with", and overused "led"/"managed".',
+  `No I/me/my/they/our. Drop articles (a, an, the). Keep each bullet ${RULES.bulletMaxWords} words or fewer.`,
+  "Quantify with numbers, percentages, scale and a time frame; numbers under 10 count. Never invent numbers. Say what YOU did, not the group.",
+  "Tense: past for finished roles, present for current roles; all-past is acceptable; do not mix within an entry.",
+  "No objective statement. Summary is optional: 1-3 titles, level, areas of experience, transferable skills, tailored to the posting (new grads and alumni; not needed for students).",
+  "Tailor keywords to each posting; be honest; proofread (typos are a fast reject).",
+  "Skills: tangible and taught (software, languages, certifications), no personal-strength adjectives; classify language level (Basic, Conversational, Proficient, Fluent).",
+  "Interests: optional, 3-4 specific conversation starters.",
+  "Leadership is not the same as work; quantify what you personally did (money raised, people recruited).",
+  "Awards: qualify with context; Dean's List for all eligible semesters.",
+  "AI use in projects: say how you used and prompted it, only if true.",
+  "High school: allowed only under Additional Information, for first-years; drop by junior year. Do not flag it as a red flag.",
+  "File name: CU gives no rule; suggest First-Last-Resume.pdf.",
+  "Use the playbook only for method: intake questions, rubric, bullet audit, no-number fallbacks. Never quote market statistics.",
+].map((l) => `- ${l}`).join("\n");
 
 /* ── Rubric (playbook 1.4) ─────────────────────────────────────────────────── */
 
@@ -32,7 +64,7 @@ export const RUBRIC = [
   { key: "skill_proof", label: "Skill proof", max: 15, excellent: "Teamwork, problem-solving, communication and analytical skills are shown through actions, not listed as adjectives." },
   { key: "ai_digital_fluency", label: "AI and digital fluency", max: 10, excellent: "Specific tools and uses, including how the candidate validated or improved AI output." },
   { key: "experience_relevance", label: "Experience relevance", max: 15, excellent: "Internships, projects and jobs come first in order of relevance. Ownership is clear." },
-  { key: "clarity", label: "Clarity", max: 10, excellent: `${RULES.pageText} Bullets are 1-2 lines and start with strong verbs. No filler.` },
+  { key: "clarity", label: "Clarity", max: 10, excellent: `Meets the CU page length. Bullets are detailed, ${RULES.bulletMaxWords} words or fewer, and start with action verbs. No filler.` },
   { key: "ats_hygiene", label: "ATS hygiene", max: 5, excellent: "Single column, standard headings, consistent dates, no graphics or tables for core content." },
 ] as const;
 
@@ -62,11 +94,11 @@ export const STAGE_LABELS: Record<Stage, string> = {
 
 export const STAGE_LENS: Record<Stage, string> = {
   student:
-    `Current student (freshman-junior). Order: Education, Experience (internships, jobs, research), Projects/Leadership, Skills. GPA only if ${RULES.gpa.include} (${RULES.gpa.competitive} for ${RULES.gpa.competitiveFields}); 3-6 relevant courses. Treat projects like jobs: title, tools, scope, result. Red flags: high school content after sophomore year, objective statements, club membership without contribution. Probe: what did this club accomplish because of you; how many people, how much money, what deadline.`,
+    "Current student. Education first, in the Leeds format. Experience can be internships, jobs, class projects and volunteer roles; treat projects like jobs (title, tools, scope, result). No summary needed. Leadership belongs in its own section, quantified. High school items only under Additional Information and only for first-years. Probe: what did this club accomplish because of you; how many people, how much money, what deadline.",
   new_grad:
-    "New graduate (0-12 months out). Education stays on top if it is the strongest credential, otherwise Experience first. A 2-3 line summary only if it names the target role plus the strongest proof point. Show internship conversion (return offers, extended internships, promotions). Explain gaps briefly; include certifications, freelance work and projects since graduating. Probe: what have you done since graduation that shows growth; which bullet would you defend for five minutes in an interview.",
+    "New graduate (0-12 months out). Education stays first. An optional 1-3 line summary tailored to the posting: titles, level, areas of experience, transferable skills. Show internship conversion (return offers, extended internships, promotions). Explain gaps briefly; include certifications, freelance work and projects since graduating. Probe: what have you done since graduation that shows growth; which bullet would you defend for five minutes in an interview.",
   early_career:
-    "Early career (1-3 years). Order: Experience, Skills, Education (GPA off unless exceptional or required). Show progression: scope growth, promotions, bigger clients, budget, team responsibility. Use business metrics: revenue, cost, cycle time, error rates, NPS, adoption, SLA. When pivoting, reframe bullets as problem, analysis, recommendation, impact. Probe: what decision did someone make because of your work; what would your manager say you are known for.",
+    "Recent grad or early career (1-3 years). Experience first and Education moves lower as experience grows; a page and a half to two pages is acceptable, one is fine. Show progression: scope growth, promotions, bigger clients, budget, team responsibility. Use business metrics: revenue, cost, cycle time, error rates, NPS, adoption, SLA. When pivoting, reframe bullets as problem, analysis, recommendation, impact. Probe: what decision did someone make because of your work; what would your manager say you are known for.",
 };
 
 interface Segment {
@@ -83,9 +115,9 @@ export const SEGMENTS: readonly Segment[] = [
   {
     code: "A", name: "Consulting and Strategy",
     titles: "Business Analyst, Associate Consultant, Consulting Analyst, Strategy Analyst, Technology Consultant, Economic Analyst, Corporate Strategy Associate",
-    musts: `academic excellence (GPA ${RULES.gpa.competitive} for top firms), structured problem-solving, quantitative evidence, leadership with outcomes, client-facing or stakeholder communication, case competitions or consulting clubs`,
+    musts: `academic excellence (GPA listed only per the CU rule; some consulting employers expect higher), structured problem-solving, quantitative evidence, leadership with outcomes, client-facing or stakeholder communication, case competitions or consulting clubs`,
     keywords: "market analysis, financial modeling, stakeholder interviews, recommendations, synthesized, benchmarking, due diligence, process improvement, Excel/PowerPoint, AI-assisted research",
-    redFlags: "vague team bullets, no numbers, a resume over the page limit, typos, interests section with nothing memorable. Format: dense and conservative; a short Additional line (languages, interests, certifications)",
+    redFlags: "vague team bullets, no numbers, a resume over the CU page limit, typos, interests section with nothing memorable. Format: dense and conservative; a short Additional line (languages, interests, certifications)",
     asks: "Which bullet shows you structuring an ambiguous problem? Where did you change someone's mind with data? What is an interest an interviewer would ask you about?",
   },
   {
@@ -93,7 +125,7 @@ export const SEGMENTS: readonly Segment[] = [
     titles: "IB Analyst, Financial Analyst, FP&A Analyst, Credit Analyst, Investment Analyst, Treasury Analyst",
     musts: "modeling (DCF, 3-statement, LBO), accounting fundamentals, deal or pitch exposure, student investment fund, certifications (BIWS/WSP, CFA Level I progress), Excel speed",
     keywords: "valuation, variance analysis, forecasting, budget, comps, pitch book, due diligence, Power BI, Python for finance",
-    redFlags: "passion for markets with no evidence, inflated deal claims, missing GPA",
+    redFlags: "passion for markets with no evidence, inflated deal claims",
     asks: "Walk me through a model you built: inputs, and what decision did it support? Any automation of a recurring report?",
   },
   {
@@ -191,11 +223,10 @@ export const HIDDEN_EVIDENCE = [
 ].join("; ");
 
 export const RED_FLAGS =
-  `1 objective statement; 2 responsibilities instead of results; 3 skills as adjectives (hard-working, detail-oriented); 4 over the page limit (${RULES.pageText}); 5 inconsistent formatting, tense or punctuation; 6 unexplained acronyms; 7 skills listed that no bullet uses; 8 overclaiming (led a 40-person team as an intern); 9 generic AI-sounding phrasing (spearheaded synergies, leveraged cutting-edge); 10 no sign of AI fluency in a segment that now expects it`;
+  `1 objective statement; 2 responsibilities instead of results ("responsible for", "helped with"); 3 skills as adjectives (hard-working, detail-oriented); 4 over the CU page length (${RULES.pageText}); 5 inconsistent formatting, punctuation, or tense within an entry; 6 first-person pronouns or articles in bullets; 7 bullets over ${RULES.bulletMaxWords} words, or short phrase fragments instead of detailed bullets; 8 GPA listed under 3.0, shown with one decimal, or the lower of two GPAs; 9 a street address; 10 course numbers instead of course names; 11 a skills section that lists tools no bullet uses; 12 overclaiming (led a 40-person team as an intern); 13 generic AI-sounding phrasing (spearheaded synergies, leveraged cutting-edge); 14 unexplained acronyms; 15 no sign of AI fluency in a segment that now expects it. High school content is NOT a red flag when it is under Additional Information.`;
 
 export const ATS_CHECKLIST =
-  "single column and standard headings (Education, Experience, Skills, Projects, Leadership); text-based, no text boxes or icons carrying key information; the posting's job title appears naturally; posting language mirrored only where truthful, no keyword stuffing; consistent dates (Mon YYYY); contact line has email, phone, city/state, LinkedIn, portfolio/GitHub if relevant. You only see plain text, so judge what the text shows and do not guess about visual layout";
+  "plain and readable as PDF and as plain text, no creative or graphic layout (CU); single column, no text boxes or icons carrying key information; standard headings (Education, Experience, Skills, Projects, Leadership); the posting's job title appears naturally; posting language mirrored only where truthful, no keyword stuffing; consistent dates (Month/Year - Month/Year or Present); header has phone, CU email, LinkedIn, city and state only. You only see plain text, so judge what the text shows and do not guess about visual layout";
 
 export const BULLET_FORMULA =
-  "Action verb + what you did + how (tool/method) + result (metric/outcome) + context (scale/stakeholders). Same idea: accomplished [X] as measured by [Y] by doing [Z]. With no numbers, use scale (people, records, stakeholders), frequency, speed (from X to Y), quality, or recognition. Verbs: problem-solving (diagnosed, modeled, identified, prioritized, redesigned); teamwork (coordinated, partnered, aligned, facilitated); communication (presented, wrote, synthesized, briefed, persuaded); leadership (launched, led, recruited, mentored, scaled); analytical (quantified, forecasted, segmented, benchmarked, tested)";
-
+  `CU formula: action verb + task + accomplishment or value added + result/outcome ("utilized X to do Y resulting in Z"). Detailed full bullets, ${RULES.bulletMaxWords} words or fewer, no pronouns or articles, never a short fragment; say what YOU did. Playbook method: accomplished [X] as measured by [Y] by doing [Z]. With no numbers, use scale (people, records, stakeholders), frequency, speed (from X to Y), quality, or recognition. Verbs (avoid overused led/managed): problem-solving (diagnosed, modeled, identified, prioritized, redesigned); teamwork (coordinated, partnered, aligned, facilitated); communication (presented, wrote, synthesized, briefed, persuaded); leadership (launched, recruited, mentored, scaled); analytical (quantified, forecasted, segmented, benchmarked, tested)`;

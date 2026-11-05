@@ -190,10 +190,17 @@ describe("rules live in one module", () => {
     expect(src).not.toMatch(/one[- ]page|two[- ]page/i);
   });
 
-  it("the prompts get the page and GPA rules from RULES", () => {
-    const text = `${buildReviewRequest(input()).system}`;
+  it("the prompts carry CU's rules and none of the playbook's GPA cutoffs", () => {
+    const text = [buildReviewRequest(input()), buildQuestionsRequest(input())].map((r) => `${r.system} ${r.prompt}`).join("\n");
     expect(text).toContain(RULES.pageText);
-    expect(text).toContain(RULES.gpa.include);
+    expect(text).toContain(RULES.gpaText);
+    expect(text).toContain("1.5-2 pages only for recent grads and alumni");
+    expect(text).toContain("3.0 or above");
+    expect(text).toContain("20 words or fewer");
+    expect(text).not.toMatch(/\b3\.[35]\b/);
+    // high school is allowed under Additional Information, not a red flag
+    expect(text).not.toMatch(/high school content after sophomore/i);
+    expect(text).toContain("High school content is NOT a red flag");
   });
 });
 
