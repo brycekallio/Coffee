@@ -70,12 +70,12 @@ export const contact_meetings = [
 
 export const applications = [
   ["FTI Consulting", "Interviewing", 18, "Raman"],
-  ["Deloitte", "Applied", 25, "Choi"],
+  ["Deloitte", "Offer", 25, "Choi"],
   ["Bain & Company", "Applied", 22, "Herrera"],
   ["Alvarez & Marsal", "Rejected", 39, "Bell"],
-  ["Guidehouse", "Applied", 11, "Fitzgerald"],
+  ["Guidehouse", "Networking", 11, "Fitzgerald"],
   ["Ankura", "Applied", 1, "Takahashi"],
-  ["Huron Consulting", "Applied", 8, null],
+  ["Huron Consulting", "Saved", 8, null],
 ].map(([company, status, d, last]) => ({
   id: id(),
   owner_id: USER_ID,
