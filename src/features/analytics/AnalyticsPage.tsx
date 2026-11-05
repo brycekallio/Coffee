@@ -1,3 +1,4 @@
+import { countByStatus } from "@/features/applications/statuses";
 import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/ui/Card";
 import type { ScheduledOutreach } from "@/types";
@@ -33,15 +34,7 @@ export default function AnalyticsPage() {
   }, []);
 
   // Data: Applications by status
-  const appsByStatus = useMemo(() => {
-    const counts: Record<string, number> = {};
-    applications.forEach((app) => {
-      counts[app.status] = (counts[app.status] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([status, count]) => ({ status, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [applications]);
+  const appsByStatus = useMemo(() => countByStatus(applications), [applications]);
 
   // Data: Outreach by channel
   const outreachByChannel = useMemo(() => {
@@ -115,7 +108,7 @@ export default function AnalyticsPage() {
                 }}
                 formatter={(value) => `${value} apps`}
               />
-              <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={96}>
+              <Bar dataKey="count" isAnimationActive={false} radius={[3, 3, 0, 0]} maxBarSize={96}>
                 {appsByStatus.map((entry) => (
                   <Cell key={entry.status} fill={CHART_HUE} />
                 ))}

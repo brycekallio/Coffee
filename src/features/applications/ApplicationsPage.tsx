@@ -8,11 +8,14 @@ import type { Application } from "@/types";
 import { useContacts } from "@/features/contacts/contactsContext";
 import * as api from "./api";
 import { useApplications } from "./useApplications";
+import { APPLICATION_STATUSES, normalizeStatus } from "./statuses";
 
 const STATUS_STYLE: Record<string, string> = {
-  Applied: "bg-white/[0.04] text-white/50",
+  Networking: "bg-white/[0.04] text-white/40",
+  Saved: "bg-white/[0.04] text-white/50",
+  Applied: "bg-white/[0.06] text-white/60",
   Interviewing: "bg-glow/[0.08] text-glow/80",
-  Accepted: "bg-glow/[0.12] text-glow",
+  Offer: "bg-glow/[0.12] text-glow",
   Rejected: "bg-danger/[0.08] text-danger/70",
 };
 
@@ -33,7 +36,7 @@ export default function ApplicationsPage() {
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [updatingStatusId, setUpdatingStatusId] = useState<string>("");
 
-  const KANBAN_COLUMNS = ["Bookmarked", "Applied", "Interview", "Offer", "Rejected"];
+  const KANBAN_COLUMNS = APPLICATION_STATUSES;
 
   function resetForm() {
     setEditingAppId(null);
@@ -87,7 +90,7 @@ export default function ApplicationsPage() {
     setAppCompany(a.company);
     setAppLink(a.link ?? "");
     setAppDate(a.date_applied ?? "");
-    setAppStatus(a.status);
+    setAppStatus(normalizeStatus(a.status));
     setAppContactId(a.contact_id ?? "");
   }
 
@@ -134,10 +137,9 @@ export default function ApplicationsPage() {
                   value={appStatus}
                   onChange={(e) => setAppStatus(e.target.value)}
                 >
-                  <option value="Applied">Applied</option>
-                  <option value="Interviewing">Interviewing</option>
-                  <option value="Accepted">Accepted</option>
-                  <option value="Rejected">Rejected</option>
+                  {APPLICATION_STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -254,8 +256,8 @@ export default function ApplicationsPage() {
                       </div>
                       <div className="font-data text-white/40">{app.date_applied || "\u2014"}</div>
                       <div className="text-sm">
-                        <span className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[app.status] ?? "bg-white/[0.04] text-white/50"}`}>
-                          {app.status}
+                        <span className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[normalizeStatus(app.status)] ?? "bg-white/[0.04] text-white/50"}`}>
+                          {normalizeStatus(app.status)}
                         </span>
                       </div>
                       <div className="flex gap-2">
@@ -290,18 +292,18 @@ export default function ApplicationsPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-5 gap-4">
+                <div className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-6 lg:overflow-visible">
                   {KANBAN_COLUMNS.map((columnStatus) => (
-                    <div key={columnStatus} className="flex flex-col">
+                    <div key={columnStatus} className="flex min-w-[160px] shrink-0 flex-col lg:min-w-0">
                       <div className="mb-3 flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-glow">{columnStatus}</h3>
                         <span className="text-xs font-data text-white/40">
-                          {applications.filter((app) => app.status === columnStatus).length}
+                          {applications.filter((app) => normalizeStatus(app.status) === columnStatus).length}
                         </span>
                       </div>
                       <div className="flex flex-col gap-2">
                         {applications
-                          .filter((app) => app.status === columnStatus)
+                          .filter((app) => normalizeStatus(app.status) === columnStatus)
                           .map((app) => (
                             <div
                               key={app.id}
@@ -324,16 +326,14 @@ export default function ApplicationsPage() {
                                 {app.date_applied || "No date"}
                               </div>
                               <select
-                                value={app.status}
+                                value={normalizeStatus(app.status)}
                                 onChange={(e) => updateApplicationStatus(app.id, e.target.value)}
                                 disabled={updatingStatusId === app.id}
                                 className={selectCls + " text-xs"}
                               >
-                                <option value="Bookmarked">Bookmarked</option>
-                                <option value="Applied">Applied</option>
-                                <option value="Interview">Interview</option>
-                                <option value="Offer">Offer</option>
-                                <option value="Rejected">Rejected</option>
+                                {APPLICATION_STATUSES.map((s) => (
+                                  <option key={s} value={s}>{s}</option>
+                                ))}
                               </select>
                               <div className="flex gap-2 mt-2 text-[11px]">
                                 <button
