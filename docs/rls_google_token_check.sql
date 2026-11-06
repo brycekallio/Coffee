@@ -57,6 +57,14 @@ insert into results values ('authenticated update google_connected -> denied', n
 insert into results values ('authenticated insert with token -> denied', not pg_temp.try($$insert into public.profiles(id, google_calendar_token) values (gen_random_uuid(),'x')$$));
 insert into results values ('authenticated select profile columns + google_connected -> ok', pg_temp.try('select id, full_name, resume_text, onboarding_completed_at, google_connected from public.profiles'));
 insert into results values ('authenticated update full_name (own row) -> ok', pg_temp.try($$update public.profiles set full_name='Alice2' where id=app_user_id()$$));
+-- break-it (2026-11-06): side doors to the token, and setting the flags yourself
+insert into results values ('authenticated update ... RETURNING token -> denied', not pg_temp.try($$update public.profiles set full_name='x' where id=app_user_id() returning google_calendar_refresh_token$$));
+insert into results values ('authenticated WHERE-clause oracle on token -> denied', not pg_temp.try($$select id from public.profiles where google_calendar_refresh_token like 'r%'$$));
+insert into results values ('authenticated ORDER BY token -> denied', not pg_temp.try($$select id from public.profiles order by google_calendar_token$$));
+insert into results values ('authenticated insert with google_gmail_send -> denied', not pg_temp.try($$insert into public.profiles(id, google_gmail_send) values (app_user_id(), true)$$));
+insert into results values ('authenticated upsert setting google_gmail_send -> denied', not pg_temp.try($$insert into public.profiles(id) values (app_user_id()) on conflict (id) do update set google_gmail_send=true$$));
+insert into results values ('client PROFILE_COLUMNS select -> ok', pg_temp.try($$select id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text, phone, career_interests, onboarding_completed_at, google_connected, google_gmail_send from public.profiles$$));
+insert into results values ('client updateProfile (update ... returning PROFILE_COLUMNS) -> ok', pg_temp.try($$update public.profiles set phone='1' where id=app_user_id() returning id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text, phone, career_interests, onboarding_completed_at, google_connected, google_gmail_send$$));
 set test.uid = '00000000-0000-0000-0000-000000000003';
 insert into results values ('authenticated insert own blank profile -> ok', pg_temp.try($$insert into public.profiles(id, full_name) values (app_user_id(),'x')$$));
 set test.uid = '00000000-0000-0000-0000-000000000001';
