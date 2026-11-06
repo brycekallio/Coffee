@@ -44,6 +44,17 @@ function parseIso(s: unknown): number | null {
 
 /** Refresh an expired access token and persist the new one. Null if Google refuses. */
 async function refreshAndPersist(deps: EventDeps, userId: string, refreshToken: string): Promise<string | null> {
+  try {
+    return await doRefresh(deps, userId, refreshToken);
+  } catch (err) {
+    // A network error or non-JSON reply is a failed refresh, not a crash. Log the kind only:
+    // messages can quote tokens.
+    (deps.log ?? console.error)("Google token refresh failed", err instanceof Error ? err.name : typeof err);
+    return null;
+  }
+}
+
+async function doRefresh(deps: EventDeps, userId: string, refreshToken: string): Promise<string | null> {
   const now = deps.now ?? Date.now;
   const res = await deps.fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

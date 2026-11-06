@@ -109,6 +109,30 @@ describe("create-calendar-event", () => {
     expect(updates).toEqual([]);
   });
 
+  it("refresh returns a non-JSON body -> same 401 reconnect response", async () => {
+    const { deps, f, updates } = setup(profile, [
+      new Response("expired", { status: 401 }),
+      new Response("<html>Bad gateway</html>", { status: 200 }),
+    ]);
+    const out = await run(GOOD, deps);
+    expect(out).toEqual({ status: 401, body: { error: "Google Calendar access expired. Reconnect it in Settings." } });
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(updates).toEqual([]);
+  });
+
+  it("refresh fetch rejects (network error) -> same 401 reconnect response, no secrets logged", async () => {
+    const logged: unknown[][] = [];
+    const { deps, f } = setup(profile, [
+      new Response("expired", { status: 401 }),
+      () => { throw new TypeError("network down R"); },
+    ]);
+    const out = await run(GOOD, { ...deps, log: (...a: unknown[]) => { logged.push(a); } });
+    expect(out).toEqual({ status: 401, body: { error: "Google Calendar access expired. Reconnect it in Settings." } });
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(logged)).not.toContain("R\"");
+    expect(JSON.stringify(logged)).not.toContain("network down");
+  });
+
   it("happy path sends the same body to Google and returns {success:true}", async () => {
     const { deps, f } = setup(profile, [ok()]);
     const out = await run(GOOD, deps);
