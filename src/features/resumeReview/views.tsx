@@ -23,7 +23,7 @@ function ratioText(ratio: number) {
   return bandTone(ratio * 100).text;
 }
 
-export function Spinner() {
+function Spinner() {
   return (
     <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -32,9 +32,9 @@ export function Spinner() {
   );
 }
 
-export const primaryBtn =
+const primaryBtn =
   "w-full rounded-xl bg-glow py-3 text-sm font-semibold text-depth-0 transition duration-300 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer";
-export const quietBtn =
+const quietBtn =
   "rounded-lg bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.10] hover:text-white cursor-pointer";
 
 /* ── Step 0: who and what ────────────────────────────────────────── */

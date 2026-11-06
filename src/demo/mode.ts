@@ -10,7 +10,7 @@
  * Deliberately has no imports, so the real app can read it without pulling in any demo
  * code.
  */
-export const DEMO_BASE = "/demo";
+const DEMO_BASE = "/demo";
 
 export const DEMO_READ_ONLY_MESSAGE = "This is a demo with sample data. Sign up to save your own changes.";
 

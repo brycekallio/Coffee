@@ -44,9 +44,6 @@ export const FREE_MODEL_CHAIN = [
   "openrouter/free",
 ];
 
-/** Prose-only free model. No JSON mode, but 1M context and the strongest reasoning. */
-export const FREE_MODEL_LONG_CONTEXT = "nvidia/nemotron-3-ultra-550b-a55b:free";
-
 /** Defaults offered in the UI when a power user picks a provider. */
 export const PROVIDER_DEFAULT_MODEL: Record<Provider, string> = {
   openrouter: "nvidia/nemotron-3-ultra-550b-a55b:free",
