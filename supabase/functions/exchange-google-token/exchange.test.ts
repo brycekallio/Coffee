@@ -29,6 +29,17 @@ describe("exchange-google-token", () => {
     expect(saved[0].google_connected).toBe(true);
   });
 
+  it("does not mark the profile auto-send connected when Gmail send was not granted", async () => {
+    const saved: Record<string, unknown>[] = [];
+    const out = await exchangeAndStore(input, {
+      fetch: google({ access_token: "A", refresh_token: "R", scope: "https://www.googleapis.com/auth/calendar.events" }) as never,
+      service: svc(saved),
+    });
+    expect(out.body).toEqual({ success: true, gmail_send: false });
+    // Outreach treats google_connected as permission to auto-send through Gmail.
+    expect(saved[0].google_connected).toBe(false);
+  });
+
   it("no refresh token returned -> does not overwrite the saved one or the flag", async () => {
     const saved: Record<string, unknown>[] = [];
     await exchangeAndStore(input, { fetch: google({ access_token: "A", scope: GMAIL_SEND_SCOPE }) as never, service: svc(saved) });
