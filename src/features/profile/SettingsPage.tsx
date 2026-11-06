@@ -216,7 +216,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   <div className="text-sm font-medium text-white">Google</div>
                   <div className="mt-0.5 text-xs text-white/40">
                     {googleLinked
-                      ? "Connected. Outreach goes on your calendar, and scheduled email sends from your Gmail."
+                      ? profile?.google_gmail_send
+                        ? "Connected. Outreach goes on your calendar, and scheduled email sends from your Gmail."
+                        : "Calendar is linked. Outreach goes on your calendar."
                       : "Add scheduled outreach to your calendar and send it from your own Gmail."}
                   </div>
                 </div>
