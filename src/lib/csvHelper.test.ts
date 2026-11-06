@@ -132,3 +132,19 @@ describe("detectors agree with the shared cleaners", () => {
     expect(isLinkedInUrl("https://www.linkedin.com/company/acme")).toBe(false);
   });
 });
+
+// Review 2026-11-06 (break-it): cleanPhone accepts any 7+ digit run of digits and
+// separators, so as a *detector* it now claims ISO date and numeric-ID columns as phone.
+// The old US-pattern regex did not. Expected to FAIL until isPhone is tightened.
+describe("review: phone detector must not claim date / id columns", () => {
+  it("an ISO date column is not inferred as phone", async () => {
+    const { isPhone, inferFieldMap } = await import("./csvHelper");
+    expect(isPhone("2024-01-15")).toBe(false);
+    const rows = [
+      { "Full Name": "Jane Doe", Met: "2024-01-15" },
+      { "Full Name": "John Roe", Met: "2024-02-03" },
+      { "Full Name": "Ann Poe", Met: "2024-03-09" },
+    ];
+    expect(inferFieldMap(["Full Name", "Met"], rows).phone).toBeUndefined();
+  });
+});
