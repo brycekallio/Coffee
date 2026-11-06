@@ -229,7 +229,7 @@ export default function WatchlistPage() {
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
-      <div className="lg:col-span-1">
+      <div className="order-2 lg:order-1 lg:col-span-1">
         <Card
           title={editingId ? "Edit target" : "Add target"}
           subtitle="Track people you want to network with."
@@ -323,7 +323,7 @@ export default function WatchlistPage() {
       </div>
 
       {/* List — 2/3 */}
-      <div className="lg:col-span-2">
+      <div className="order-1 lg:order-2 lg:col-span-2">
         <Card
           title="Watchlist"
           subtitle={loading ? "Loading..." : `${allTargets.length} target${allTargets.length !== 1 ? "s" : ""}`}
@@ -373,7 +373,7 @@ export default function WatchlistPage() {
               ) : (
                 <>
                   <span className="text-xs text-white/60 md:hidden">Select all</span>
-                  <div className="hidden min-w-0 flex-1 grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 text-xs font-medium text-white/60 md:grid">
+                  <div className="hidden min-w-0 flex-1 grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 text-xs font-medium text-white/60 md:grid">
                     <div>Name</div>
                     <div>Company</div>
                     <div>Role</div>
@@ -400,7 +400,7 @@ export default function WatchlistPage() {
                 <div key={t.id}>
                   <div className={`flex items-center gap-3 px-4 transition-colors hover:bg-white/[0.02] ${sel.selected.has(t.id) ? "bg-white/[0.05]" : ""}`}>
                   <Checkbox state={sel.selected.has(t.id) ? "all" : "none"} label={`Select ${t.person_name}`} onToggle={(shift) => sel.onToggle(t.id, shift)} />
-                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
+                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate font-medium text-white" title={t.person_name}>
@@ -421,25 +421,25 @@ export default function WatchlistPage() {
                     </div>
                     <div className="row-span-2 text-sm md:row-span-1">
                       <span
-                        className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[t.status] ?? "bg-white/[0.04] text-white/60"}`}
+                        className={`inline-block whitespace-nowrap rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[t.status] ?? "bg-white/[0.04] text-white/60"}`}
                       >
                         {STATUS_LABEL[t.status] ?? t.status}
                       </span>
                     </div>
                     <div className="col-span-2 flex items-center justify-between gap-4 md:contents">
-                      <div className="font-data text-sm text-white/60 md:text-white/60">
+                      <div className="font-data text-sm text-white/60">
                         {t.next_action_date ? <><span className="md:hidden">Next: </span>{t.next_action_date}</> : "\u2014"}
                       </div>
                       <div className="flex gap-3 md:gap-2">
                         <button
                           onClick={() => startEdit(t)}
-                          className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer md:text-white/60"
+                          className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => deleteTarget(t.id)}
-                          className="text-xs font-medium text-danger/70 transition-colors hover:text-danger cursor-pointer md:text-danger/80"
+                          className="text-xs font-medium text-danger/80 transition-colors hover:text-danger cursor-pointer"
                         >
                           Delete
                         </button>
