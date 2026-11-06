@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { exchangeAndStore } from "./exchange.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -50,59 +51,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ── Exchange code for tokens with Google ─────────────────────────────────
-    const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
-    const googleClientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
-
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: googleClientId,
-        client_secret: googleClientSecret,
-        redirect_uri,
-        grant_type: "authorization_code",
-      }),
-    });
-
-    const tokenData = await tokenRes.json() as {
-      access_token?: string;
-      refresh_token?: string;
-      expires_in?: number;
-      error?: string;
-    };
-
-    if (!tokenRes.ok || !tokenData.access_token) {
-      return new Response(
-        JSON.stringify({ error: tokenData.error ?? "Google token exchange failed" }),
-        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ── Store tokens in profiles ─────────────────────────────────────────────
-    const expiry = tokenData.expires_in
-      ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-      : null;
-
+    // ── Exchange code for tokens with Google, store them ─────────────────────
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    const { error: updateError } = await serviceClient
-      .from("profiles")
-      .update({
-        google_calendar_token: tokenData.access_token,
-        google_calendar_refresh_token: tokenData.refresh_token ?? null,
-        google_calendar_token_expiry: expiry,
-      })
-      .eq("id", appUserId);
-
-    if (updateError) {
-      return new Response(JSON.stringify({ error: updateError.message }), {
-        status: 500,
-        headers: { ...CORS, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
+    const out = await exchangeAndStore(
+      {
+        code,
+        redirectUri: redirect_uri,
+        userId: appUserId,
+        clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
+        clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
+      },
+      { fetch, service: serviceClient },
+    );
+    return new Response(JSON.stringify(out.body), {
+      status: out.status,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
