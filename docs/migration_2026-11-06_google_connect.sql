@@ -1,5 +1,6 @@
--- Google connect hardening, step 1 of 2 (ticket C, 2026-11-06). ADDITIVE ONLY: safe to apply
--- before or after the client deploy.
+-- Google connect hardening, step 1 of 2 (ticket C, 2026-11-06). ADDITIVE ONLY, but it MUST be applied
+-- FIRST, before the new client and Edge Functions deploy: they read and write these columns,
+-- and fail without them. (Old clients ignore the new columns, so applying early is safe.)
 --
 -- The browser used to read google_calendar_refresh_token just to ask "is Google connected?".
 -- This adds a plain yes/no flag the client reads instead. Only the Edge Functions
