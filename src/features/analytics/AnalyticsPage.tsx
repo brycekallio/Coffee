@@ -191,7 +191,7 @@ export default function AnalyticsPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-white/40">No outreach scheduled yet.</p>
+              <p className="text-sm text-white/60">No outreach scheduled yet.</p>
             )}
           </div>
         </Card>
@@ -214,14 +214,14 @@ export default function AnalyticsPage() {
                     {item.company || "Unknown"}
                   </div>
                 </div>
-                <div className="font-data text-sm font-medium text-white/50">
+                <div className="font-data text-sm font-medium text-white/60">
                   {item.count} {item.count === 1 ? "app" : "apps"}
                 </div>
               </div>
             ))
           ) : (
             <div className="rounded-input bg-depth-1/40 px-4 py-6 text-center">
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-white/60">
                 Start tracking applications to see top companies.
               </p>
             </div>

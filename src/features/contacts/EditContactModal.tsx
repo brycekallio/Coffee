@@ -50,7 +50,7 @@ export default function EditContactModal({ contact, onClose, onSaved }: Props) {
         </div>
 
         <input className={inputCls} placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
-        <input className={inputCls} placeholder="Job Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input className={inputCls} placeholder="Job title" value={title} onChange={(e) => setTitle(e.target.value)} />
         <input className={inputCls} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input className={inputCls} placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <input

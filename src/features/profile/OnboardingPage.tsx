@@ -24,10 +24,10 @@ const primaryBtn =
   "rounded-xl bg-glow px-6 py-3 text-sm font-semibold text-depth-0 transition duration-300 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:hover:shadow-none cursor-pointer";
 
 const secondaryBtn =
-  "rounded-xl bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/50 transition duration-200 hover:bg-white/[0.08] hover:text-white cursor-pointer";
+  "rounded-xl bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/60 transition duration-200 hover:bg-white/[0.08] hover:text-white cursor-pointer";
 
 const skipBtn =
-  "text-xs font-medium text-white/35 transition-colors duration-200 hover:text-white/70 cursor-pointer";
+  "text-xs font-medium text-white/60 transition-colors duration-200 hover:text-white/70 cursor-pointer";
 
 /* ── Floating label input ── */
 function FloatingInput({
@@ -61,7 +61,7 @@ function FloatingInput({
         className={`pointer-events-none absolute left-4 transition duration-200 ${
           active
             ? "top-1.5 text-[11px] font-medium text-glow/70"
-            : "top-3.5 text-sm text-white/30"
+            : "top-3.5 text-sm text-white/60"
         }`}
       >
         {label}
@@ -167,7 +167,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
         {/* Progress bar */}
         <div className="mb-8 auth-form-enter">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-medium text-white/25">
+            <span className="text-[11px] font-medium text-white/60">
               Step {step + 1} of {STEPS.length}
             </span>
             <span className="text-[11px] font-medium text-glow/50">
@@ -189,7 +189,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
             <h1 className="text-2xl font-bold text-white mb-1.5">
               {currentStep.title}
             </h1>
-            <p className="text-sm text-white/35">
+            <p className="text-sm text-white/60">
               {currentStep.sub}
             </p>
           </div>
@@ -227,7 +227,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
                 onChange={setMyLinkedInUrl}
                 placeholder="https://linkedin.com/in/you"
               />
-              <p className="text-[11px] text-white/25 px-1">
+              <p className="text-[11px] text-white/60 px-1">
                 Optional — you can add this later in Settings.
               </p>
               <div className="flex items-center justify-between pt-1">
@@ -251,7 +251,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
             <div className="space-y-4">
               <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] border-dashed p-5 text-center transition hover:border-glow/20 hover:bg-white/[0.04]">
                 <svg
-                  className="mx-auto h-7 w-7 text-white/15 mb-2"
+                  className="mx-auto h-7 w-7 text-white/60 mb-2"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -263,7 +263,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
                     d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
                   />
                 </svg>
-                <p className="text-xs text-white/30 mb-2">
+                <p className="text-xs text-white/60 mb-2">
                   {resumeFileName
                     ? `Uploaded: ${resumeFileName}`
                     : "Drop your resume here (PDF)"}
@@ -271,14 +271,14 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf"
-                  className="block w-full text-xs text-white/40 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-glow/[0.08] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-glow hover:file:bg-glow/15"
+                  className="block w-full text-xs text-white/60 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-glow/[0.08] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-glow hover:file:bg-glow/15"
                   onChange={handleResumePick}
                 />
                 {resumeUploading && (
                   <p className="mt-2 text-[11px] text-glow/60">Uploading…</p>
                 )}
               </div>
-              <p className="text-[11px] text-white/25 px-1">
+              <p className="text-[11px] text-white/60 px-1">
                 Optional — you can upload this later in Settings.
               </p>
               <div className="flex items-center justify-between pt-1">

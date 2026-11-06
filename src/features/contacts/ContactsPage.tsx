@@ -177,7 +177,7 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
             </div>
 
             <input className={inputCls} placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
-            <input className={inputCls} placeholder="Job Title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+            <input className={inputCls} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
             <input className={inputCls} placeholder="Email (recommended)" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
             <input className={inputCls} placeholder="Phone (recommended)" value={phone} onChange={(e) => setPhone(e.target.value)} />
             <input className={inputCls} placeholder="LinkedIn URL" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} />
