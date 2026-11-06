@@ -47,7 +47,7 @@ export default function TagMenu({ known, selectedRows, onChange, buttonCls, disa
       </button>
       {open ? (
         <div role="dialog" aria-label="Tag selected" className="absolute left-0 top-full z-30 mt-2 w-64 rounded-section bg-depth-2 p-3 shadow-xl shadow-black/40">
-          <input
+          <input name="draft"
             className={inputCls}
             placeholder="New tag, then Enter"
             maxLength={MAX_TAG_LENGTH}

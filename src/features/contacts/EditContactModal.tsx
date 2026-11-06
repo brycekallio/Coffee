@@ -45,15 +45,15 @@ export default function EditContactModal({ contact, onClose, onSaved }: Props) {
     <Modal title={`Edit Contact${name ? `: ${name}` : ""}`} open onClose={onClose}>
       <div className="grid gap-3">
         <div className="grid grid-cols-2 gap-3">
-          <input className={inputCls} placeholder="First name" value={first} onChange={(e) => setFirst(e.target.value)} />
-          <input className={inputCls} placeholder="Last name" value={last} onChange={(e) => setLast(e.target.value)} />
+          <input name="first" className={inputCls} placeholder="First name" value={first} onChange={(e) => setFirst(e.target.value)} />
+          <input name="last" className={inputCls} placeholder="Last name" value={last} onChange={(e) => setLast(e.target.value)} />
         </div>
 
-        <input className={inputCls} placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
-        <input className={inputCls} placeholder="Job title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <input className={inputCls} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input className={inputCls} placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <input
+        <input name="company" className={inputCls} placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
+        <input name="title" className={inputCls} placeholder="Job title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input name="email" className={inputCls} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input name="phone" className={inputCls} placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <input name="linkedIn"
           className={inputCls}
           placeholder="LinkedIn URL (paste full URL text)"
           value={linkedIn}

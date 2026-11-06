@@ -93,7 +93,7 @@ export default function ScheduleForm({
         {/* Contact */}
         <div>
           <div className="mb-1 text-xs font-medium text-white/60">Contact</div>
-          <select
+          <select name="selectedContactId" aria-label="Contact"
             className={selectCls}
             value={selectedContactId}
             onChange={(e) => setSelectedContactId(e.target.value)}
@@ -156,7 +156,7 @@ export default function ScheduleForm({
         {channel === "email" && (
           <div>
             <div className="mb-1 text-xs font-medium text-white/60">Subject</div>
-            <input
+            <input name="subject" aria-label="Subject"
               className={inputCls}
               placeholder="Email subject line"
               value={subject}
@@ -196,7 +196,7 @@ export default function ScheduleForm({
               </button>
             )}
           </div>
-          <textarea
+          <textarea name="message" aria-label="Message"
             className={inputCls + " min-h-[140px] resize-y"}
             placeholder="Write your message here..."
             value={message}
@@ -208,7 +208,7 @@ export default function ScheduleForm({
         {canAutoSend(profile, channel) && (
           <div>
             <div className="mb-1 text-xs font-medium text-white/60">Schedule for</div>
-            <input
+            <input name="scheduledAt" aria-label="Schedule for"
               className={inputCls}
               type="datetime-local"
               value={scheduledAt}

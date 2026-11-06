@@ -15,7 +15,7 @@ export default function Checkbox({ state, label, onToggle }: CheckboxProps) {
   }, [state]);
 
   return (
-    <input
+    <input name="bulkSelect"
       ref={ref}
       type="checkbox"
       className="bulk-check"

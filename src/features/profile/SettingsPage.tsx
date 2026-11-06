@@ -116,16 +116,18 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
           <Card title="Profile" subtitle="Used to personalize your outreach drafts and job matches.">
             <div className="grid gap-4">
 <label className="grid gap-2"><span className="text-sm font-medium text-white/80">Display name</span>
-              <input className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
+              <input id="settings-display-name" name="displayName" className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
 
 <label className="grid gap-2"><span className="text-sm font-medium text-white/80">LinkedIn profile URL</span>
-              <input className={inputCls} placeholder="https://www.linkedin.com/in/…" value={myLinkedInUrl} onChange={(e) => setMyLinkedInUrl(e.target.value)} /></label>
+              <input id="settings-linkedin-url" name="linkedinUrl" className={inputCls} placeholder="https://www.linkedin.com/in/…" value={myLinkedInUrl} onChange={(e) => setMyLinkedInUrl(e.target.value)} /></label>
 
 <label className="grid gap-2"><span className="text-sm font-medium text-white/80">Phone</span>
-              <input className={inputCls} type="tel" value={userPhone} onChange={(e) => setUserPhone(e.target.value)} /></label>
+              <input id="settings-phone" name="phone" className={inputCls} type="tel" value={userPhone} onChange={(e) => setUserPhone(e.target.value)} /></label>
 
 <label className="grid gap-2"><span className="text-sm font-medium text-white/80">Career interests</span>
               <textarea
+                id="settings-career-interests"
+                name="careerInterests"
                 className={`${inputCls} min-h-[80px] resize-y`}
                 placeholder="e.g. Data & analytics consulting, restructuring"
                 value={userCareerInterests}
@@ -141,6 +143,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
                 <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <input
+                    id="settings-resume-file"
+                    name="resumeFile"
+                    aria-label="Resume upload"
                     type="file"
                     accept=".pdf,.doc,.docx,application/pdf"
                     className="block w-full text-sm text-white/60 file:mr-4 file:cursor-pointer file:rounded-button file:border-0 file:bg-glow/[0.08] file:px-4 file:py-2 file:text-sm file:font-medium file:text-glow hover:file:bg-glow/15"
@@ -331,10 +336,10 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
               {/* Output mode — a full rewrite is a power-tier tool. */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/60">
+                <div id="settings-adjust-mode-label" className="mb-1 block text-xs font-medium text-white/60">
                   What should the AI produce?
-                </label>
-                <div className="flex flex-col gap-2 sm:flex-row">
+                </div>
+                <div role="group" aria-labelledby="settings-adjust-mode-label" className="flex flex-col gap-2 sm:flex-row">
                   <button
                     onClick={() => setAdjustMode("suggestions")}
                     className={`flex-1 rounded-input px-4 py-3 text-left transition-colors cursor-pointer ${
@@ -373,6 +378,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
               {/* Job description textarea */}
               <textarea
+                id="settings-job-description"
+                name="jobDescription"
+                aria-label="Paste the full job description here..."
                 className={`${inputCls} min-h-[120px] resize-y`}
                 placeholder="Paste the full job description here..."
                 value={jobDescription}
@@ -433,6 +441,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
           <Card title="Import contacts from CSV" subtitle="Smart Import detects columns automatically (email, phone, name, company, job title).">
             <div className="grid gap-4">
               <input
+                id="settings-csv-file"
+                name="csvFile"
+                aria-label="Import contacts from CSV"
                 type="file"
                 accept=".csv,text/csv"
                 className="block w-full text-sm text-white/60 file:mr-4 file:cursor-pointer file:rounded-button file:border-0 file:bg-glow/[0.08] file:px-4 file:py-2 file:text-sm file:font-medium file:text-glow hover:file:bg-glow/15"

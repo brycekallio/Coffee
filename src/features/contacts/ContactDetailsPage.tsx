@@ -265,11 +265,11 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                 <div className="grid gap-3 md:grid-cols-3 md:items-end">
                   <div>
                     <div className="mb-1 text-xs font-medium text-white/60">Meeting date</div>
-                    <input className={inputCls} type="date" value={meetingDraftDate} onChange={(e) => setMeetingDraftDate(e.target.value)} />
+                    <input name="meetingDraftDate" className={inputCls} type="date" value={meetingDraftDate} onChange={(e) => setMeetingDraftDate(e.target.value)} />
                   </div>
                   <div className="md:col-span-2">
                     <div className="mb-1 text-xs font-medium text-white/60">Label (optional)</div>
-                    <input
+                    <input name="meetingDraftTitle"
                       className={inputCls}
                       placeholder='e.g. "Coffee chat" or "Follow-up call"'
                       value={meetingDraftTitle}
@@ -320,7 +320,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                                 <span className="font-data">{formatDateLabel(draft.meeting_date || m.meeting_date)}</span>
                               </div>
 
-                              <input
+                              <input name="title"
                                 className={`${inputCls} w-full md:w-auto md:flex-1`}
                                 placeholder="Optional label"
                                 value={draft.title}
@@ -329,7 +329,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                             </div>
 
                             <div className="flex shrink-0 items-center gap-2">
-                              <input
+                              <input name="meeting_date"
                                 className={`${inputCls} w-36`}
                                 type="date"
                                 value={draft.meeting_date}
@@ -356,7 +356,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
                           </div>
 
                           <div className="mt-3">
-                            <textarea
+                            <textarea name="notes"
                               className="min-h-[160px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/50 outline-none transition duration-200 border border-white/[0.04] focus:border-glow/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-glow/10"
                               placeholder="What you discussed, next steps, reminders, personal details, follow-ups..."
                               value={draft.notes}
@@ -390,7 +390,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Meeting date</div>
-              <input
+              <input name="importDate"
                 type="date"
                 className="w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none border border-white/[0.06] focus:border-glow/30"
                 value={importDate}
@@ -399,7 +399,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
             </div>
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Label (optional)</div>
-              <input
+              <input name="importLabel"
                 className="w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/50 outline-none border border-white/[0.06] focus:border-glow/30"
                 placeholder='e.g. "Coffee chat"'
                 value={importLabel}
@@ -410,7 +410,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
 
           <div>
             <div className="mb-1 text-xs font-medium text-white/60">Transcript</div>
-            <textarea
+            <textarea name="importTranscript"
               className="min-h-[200px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/50 outline-none border border-white/[0.06] focus:border-glow/20 resize-y"
               placeholder="Paste your full meeting transcript here..."
               value={importTranscript}

@@ -172,15 +172,15 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
           <PasteProfileFill onFill={applyFill} />
           <div className="grid gap-3">
             <div className="grid grid-cols-2 gap-3">
-              <input className={inputCls} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-              <input className={inputCls} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <input name="firstName" className={inputCls} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <input name="lastName" className={inputCls} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
             </div>
 
-            <input className={inputCls} placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
-            <input className={inputCls} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-            <input className={inputCls} placeholder="Email (recommended)" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
-            <input className={inputCls} placeholder="Phone (recommended)" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <input className={inputCls} placeholder="LinkedIn URL" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} />
+            <input name="company" className={inputCls} placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
+            <input name="jobTitle" className={inputCls} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+            <input name="contactEmail" className={inputCls} placeholder="Email (recommended)" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+            <input name="phone" className={inputCls} placeholder="Phone (recommended)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input name="linkedinUrl" className={inputCls} placeholder="LinkedIn URL" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} />
 
             <button
               onClick={addContact}
@@ -221,14 +221,14 @@ export default function ContactsPage({ openDetails, onFollowUp }: ContactsPagePr
           }
         >
           <div className="flex gap-2">
-            <input
+            <input name="search"
               className={inputCls}
               placeholder="Search name, company, job title, email, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             {knownTags.length > 0 ? (
-              <select
+              <select name="activeTag"
                 className={`${selectCls} w-40! shrink-0`}
                 aria-label="Filter by tag"
                 value={activeTag}

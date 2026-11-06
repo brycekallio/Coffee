@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useId } from "react";
 import { toast } from "sonner";
 import Logo from "@/components/ui/Logo";
 import { useProfile } from "./profileContext";
@@ -43,12 +43,15 @@ function FloatingInput({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const fieldId = useId();
   const [focused, setFocused] = useState(false);
   const active = focused || value.length > 0;
 
   return (
     <div className="group relative">
       <input
+        id={fieldId}
+        name={fieldId}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -58,6 +61,7 @@ function FloatingInput({
         placeholder={active ? placeholder : " "}
       />
       <label
+        htmlFor={fieldId}
         className={`pointer-events-none absolute left-4 transition duration-200 ${
           active
             ? "top-1.5 text-[11px] font-medium text-glow/70"
@@ -268,7 +272,7 @@ export default function OnboardingPage({ onDone }: OnboardingPageProps) {
                     ? `Uploaded: ${resumeFileName}`
                     : "Drop your resume here (PDF)"}
                 </p>
-                <input
+                <input name="resumeFile"
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf"
                   className="block w-full text-xs text-white/60 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-glow/[0.08] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-glow hover:file:bg-glow/15"

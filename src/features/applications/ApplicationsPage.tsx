@@ -117,22 +117,22 @@ export default function ApplicationsPage() {
           <div className="grid gap-3">
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Company name</div>
-              <input className={inputCls} placeholder="e.g. FTI Consulting" value={appCompany} onChange={(e) => setAppCompany(e.target.value)} />
+              <input name="appCompany" aria-label="Company name" className={inputCls} placeholder="e.g. FTI Consulting" value={appCompany} onChange={(e) => setAppCompany(e.target.value)} />
             </div>
 
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Application link (optional)</div>
-              <input className={inputCls} placeholder="https://..." value={appLink} onChange={(e) => setAppLink(e.target.value)} />
+              <input name="appLink" aria-label="Application link (optional)" className={inputCls} placeholder="https://..." value={appLink} onChange={(e) => setAppLink(e.target.value)} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="mb-1 text-xs font-medium text-white/60">Date applied</div>
-                <input className={inputCls} type="date" value={appDate} onChange={(e) => setAppDate(e.target.value)} />
+                <input name="appDate" aria-label="Date applied" className={inputCls} type="date" value={appDate} onChange={(e) => setAppDate(e.target.value)} />
               </div>
               <div>
                 <div className="mb-1 text-xs font-medium text-white/60">Status</div>
-                <select
+                <select name="appStatus" aria-label="Status"
                   className={selectCls}
                   value={appStatus}
                   onChange={(e) => setAppStatus(e.target.value)}
@@ -146,7 +146,7 @@ export default function ApplicationsPage() {
 
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Linked contact (optional)</div>
-              <select
+              <select name="appContactId" aria-label="Linked contact (optional)"
                 className={selectCls}
                 value={appContactId}
                 onChange={(e) => setAppContactId(e.target.value)}
@@ -325,7 +325,7 @@ export default function ApplicationsPage() {
                               <div className="text-xs text-white/60 mb-3 font-data">
                                 {app.date_applied || "No date"}
                               </div>
-                              <select
+                              <select name="rowStatus" aria-label="Status"
                                 value={normalizeStatus(app.status)}
                                 onChange={(e) => updateApplicationStatus(app.id, e.target.value)}
                                 disabled={updatingStatusId === app.id}
