@@ -255,6 +255,7 @@ export type Database = {
           google_calendar_refresh_token: string | null
           google_calendar_token: string | null
           google_calendar_token_expiry: string | null
+          google_connected: boolean
           id: string
           linkedin_text: string | null
           linkedin_url: string | null
@@ -276,6 +277,7 @@ export type Database = {
           google_calendar_refresh_token?: string | null
           google_calendar_token?: string | null
           google_calendar_token_expiry?: string | null
+          google_connected?: boolean
           id: string
           linkedin_text?: string | null
           linkedin_url?: string | null
@@ -297,6 +299,7 @@ export type Database = {
           google_calendar_refresh_token?: string | null
           google_calendar_token?: string | null
           google_calendar_token_expiry?: string | null
+          google_connected?: boolean
           id?: string
           linkedin_text?: string | null
           linkedin_url?: string | null

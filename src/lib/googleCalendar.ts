@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { isDemoMode } from "@/demo/mode";
 import { supabase } from "./supabase";
+import { newOAuthState } from "./googleOAuthState";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 
@@ -17,9 +18,6 @@ const GCAL_SCOPE = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/gmail.send",
 ].join(" ");
-
-/** State value embedded in the OAuth redirect so App.tsx knows it's a GCal callback. */
-export const GCAL_OAUTH_STATE = "gcal_connect";
 
 /* ── OAuth URL builder ─────────────────────────────────────────────── */
 
@@ -48,7 +46,7 @@ export function buildGCalOAuthUrl(): string {
     scope: GCAL_SCOPE,
     access_type: "offline",   // request a refresh_token
     prompt: "consent",         // force consent screen so refresh_token is always returned
-    state: GCAL_OAUTH_STATE,
+    state: newOAuthState(), // random, one-use, checked on return
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;

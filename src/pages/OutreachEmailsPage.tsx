@@ -100,7 +100,7 @@ const SCHEDULABLE = new Set(["email"]);
  * -- drafted here, sent by you.
  */
 const canAutoSend = (profile: Profile | null, ch: string) =>
-  SCHEDULABLE.has(ch) && Boolean(profile?.google_calendar_refresh_token);
+  SCHEDULABLE.has(ch) && Boolean(profile?.google_connected);
 
 /* ── Deep link helpers ────────────────────────────────── */
 
@@ -301,7 +301,7 @@ export default function OutreachEmailsPage() {
         toast.success("Outreach scheduled!");
 
         // Capture values before resetForm() clears state
-        const gcalConnected = !!profile?.google_calendar_token;
+        const gcalConnected = !!profile?.google_connected;
         const capturedContactId = selectedContactId;
         const capturedSubject = subject;
         const capturedMessage = message.trim();
@@ -434,7 +434,7 @@ export default function OutreachEmailsPage() {
     // (texts, LinkedIn, email without Gmail) is ours alone, so open first: the clipboard
     // write and the sms:/mailto: hand-off must happen inside the click, before any await,
     // or the browser blocks them. Then record it as sent.
-    const cronOwnsIt = item.channel === "email" && Boolean(profile?.google_calendar_refresh_token);
+    const cronOwnsIt = item.channel === "email" && Boolean(profile?.google_connected);
     if (!cronOwnsIt) {
       open();
       await markStatus(item.id, "sent", "scheduled");

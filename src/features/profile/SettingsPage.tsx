@@ -196,7 +196,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
         <div className="lg:col-span-3">
           <Card
             title="Integrations"
-            subtitle="Connect external services to power features like automatic calendar scheduling."
+            subtitle="Connect Google to schedule outreach and send it from your Gmail."
           >
             <div className="flex items-center justify-between rounded-input bg-depth-0/30 p-4">
               <div className="flex items-center gap-3">
@@ -210,17 +210,17 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   </svg>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-white">Google Calendar</div>
+                  <div className="text-sm font-medium text-white">Google</div>
                   <div className="mt-0.5 text-xs text-white/40">
-                    {profile?.google_calendar_token
-                      ? "Connected — outreach events are added to your primary calendar automatically."
-                      : "Connect to automatically add scheduled outreach to your Google Calendar."}
+                    {profile?.google_connected
+                      ? "Connected. Outreach goes on your calendar, and scheduled email sends from your Gmail."
+                      : "Add scheduled outreach to your calendar and send it from your own Gmail."}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 shrink-0 ml-4">
-                {profile?.google_calendar_token ? (
+                {profile?.google_connected ? (
                   <>
                     <span className="flex items-center gap-1.5 text-xs text-green-400">
                       <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" />
@@ -244,9 +244,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               </div>
             </div>
 
-            {!profile?.google_calendar_token && (
+            {!profile?.google_connected && (
               <p className="mt-3 text-xs text-white/25">
-                You'll be redirected to Google to authorise access. Only calendar event creation is requested — Coffee? cannot read your existing events.
+                You'll go to Google to approve. Coffee can add calendar events and send the email you schedule. It can't read your inbox or calendar. Keep "Send email on your behalf" ticked, or email won't send.
               </p>
             )}
           </Card>

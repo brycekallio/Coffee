@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { useSession } from "@/app/session";
 import type { TablesUpdate } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
-import { GCAL_OAUTH_STATE } from "@/lib/googleCalendar";
+import { handleGoogleCallback } from "./googleCallback";
+import { resumeUploadValues } from "./resumeValues";
 import { errorMessage, resumeStoragePath } from "@/lib/utils";
 import type { Profile } from "@/types";
 import * as api from "./api";
@@ -47,23 +48,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     void fetchProfile();
   }, [fetchProfile]);
 
-  // Google redirects back to "/?code=…&state=gcal_connect" after the Calendar consent screen.
+  // Google redirects back to "/?code=...&state=..." after the consent screen.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    if (!code || params.get("state") !== GCAL_OAUTH_STATE) return;
+    const search = window.location.search;
+    if (!search.includes("code=") && !search.includes("state=")) return;
     // Clear the params at once so a refresh doesn't replay the exchange.
     window.history.replaceState({}, "", window.location.pathname);
-    supabase.functions
-      .invoke("exchange-google-token", { body: { code, redirect_uri: `${window.location.origin}/` } })
-      .then(({ error }) => {
-        if (error) {
-          toast.error("Google Calendar connection failed: " + error.message);
-        } else {
-          toast.success("Google Calendar connected!");
-          void fetchProfile();
-        }
-      });
+    void handleGoogleCallback(search, window.location.origin, (body) =>
+      supabase.functions.invoke("exchange-google-token", { body }),
+    ).then((out) => {
+      if (out.kind === "rejected") toast.error("That Google link didn't start here, so it was ignored. Try Connect again.");
+      else if (out.kind === "failed") toast.error("Google connection failed: " + out.message);
+      else if (out.kind === "connected") {
+        if (out.gmailSend) toast.success("Google connected.");
+        else
+          toast.warning(
+            'Calendar connected, but sending email is off. Reconnect and tick "Send email on your behalf".',
+            { duration: 10000 },
+          );
+        void fetchProfile();
+      }
+    });
   }, [fetchProfile]);
 
   const saveProfile = useCallback(
@@ -89,20 +94,19 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // resume_url stores the bare object path; the bucket is private, so readers sign
         // a fresh URL (openResume) rather than fetching it directly.
         const path = await api.uploadResumeFile(user.id, file);
-        const values: TablesUpdate<"profiles"> = { resume_url: path };
-
-        if (path.endsWith(".pdf")) {
-          try {
+        const { values, isPdf } = await resumeUploadValues(
+          path,
+          async () => {
             // pdf.js is ~120 KB gzipped; load it only when someone actually uploads.
             const { parsePdfToText } = await import("@/lib/pdfText");
-            values.resume_text = await parsePdfToText(file);
-          } catch (parseErr) {
+            return parsePdfToText(file);
+          },
+          (parseErr) => {
             console.error("[uploadResume] PDF parse failed", parseErr);
             toast.info("Resume uploaded, but text extraction failed. You can re-parse later.");
-          }
-        } else {
-          toast.info("Non-PDF resume uploaded. Text extraction is only available for PDF files.");
-        }
+          },
+        );
+        if (!isPdf) toast.info("Non-PDF resume uploaded. Text extraction is only available for PDF files.");
 
         setProfile(await api.updateProfile(user.id, values));
         toast.success("Resume uploaded.");
@@ -153,18 +157,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const disconnectCalendar = useCallback(async () => {
     try {
-      setProfile(
-        await api.updateProfile(user.id, {
-          google_calendar_token: null,
-          google_calendar_refresh_token: null,
-          google_calendar_token_expiry: null,
-        }),
-      );
-      toast.success("Google Calendar disconnected.");
+      // The function revokes the grant at Google, then clears the tokens.
+      const { error } = await supabase.functions.invoke("google-disconnect");
+      if (error) throw error;
+      await fetchProfile();
+      toast.success("Google disconnected.");
     } catch {
-      toast.error("Failed to disconnect Google Calendar.");
+      toast.error("Couldn't disconnect Google. Try again.");
     }
-  }, [user.id]);
+  }, [fetchProfile]);
 
   /** Durable and cross-device: the column, not localStorage, decides whether onboarding shows. */
   const completeOnboarding = useCallback(() => {
