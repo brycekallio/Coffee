@@ -19,19 +19,19 @@
 
 -- anon never needs profiles. Remove read/write entirely (table level and column level).
 revoke select, insert, update on public.profiles from anon;
-revoke select, insert, update (google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry, google_connected)
+revoke select, insert, update (google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry, google_connected, google_gmail_send)
   on public.profiles from anon;
 
 -- authenticated: drop the table-wide grants, then give back every column EXCEPT the tokens.
 revoke select, insert, update on public.profiles from authenticated;
-revoke select, insert, update (google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry, google_connected)
+revoke select, insert, update (google_calendar_token, google_calendar_refresh_token, google_calendar_token_expiry, google_connected, google_gmail_send)
   on public.profiles from authenticated;
 
 grant select (
   id, full_name, linkedin_text, resume_text, tone_prefs, created_at, updated_at, username,
   linkedin_url, avatar_url, resume_path, career_interests, phone, my_linkedin_url, resume_url,
   onboarding_completed_at,
-  google_connected            -- readable, so the UI can show "Connected"; never writable
+  google_connected, google_gmail_send            -- readable, so the UI can show "Connected"; never writable
 ) on public.profiles to authenticated;
 
 grant insert (

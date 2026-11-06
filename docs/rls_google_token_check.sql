@@ -41,6 +41,7 @@ create function pg_temp.try(sql text) returns boolean language plpgsql as $$
 begin execute sql; return true; exception when insufficient_privilege then return false; end $$;
 
 -- backfill worked (as superuser)
+insert into results select 'backfill: Alice send-capable (best guess)', (select google_gmail_send from public.profiles where id='00000000-0000-0000-0000-000000000001');
 insert into results select 'backfill: Alice connected, Bob not',
   (select google_connected from public.profiles where id='00000000-0000-0000-0000-000000000001')
   and not (select google_connected from public.profiles where id='00000000-0000-0000-0000-000000000002');
@@ -51,6 +52,7 @@ insert into results values ('authenticated select refresh token -> denied', not 
 insert into results values ('authenticated select expiry -> denied', not pg_temp.try('select google_calendar_token_expiry from public.profiles'));
 insert into results values ('authenticated select * -> denied', not pg_temp.try('select * from public.profiles'));
 insert into results values ('authenticated update token -> denied', not pg_temp.try($$update public.profiles set google_calendar_refresh_token='evil' where id=app_user_id()$$));
+insert into results values ('authenticated update google_gmail_send -> denied', not pg_temp.try($$update public.profiles set google_gmail_send=true where id=app_user_id()$$));
 insert into results values ('authenticated update google_connected -> denied', not pg_temp.try($$update public.profiles set google_connected=true where id=app_user_id()$$));
 insert into results values ('authenticated insert with token -> denied', not pg_temp.try($$insert into public.profiles(id, google_calendar_token) values (gen_random_uuid(),'x')$$));
 insert into results values ('authenticated select profile columns + google_connected -> ok', pg_temp.try('select id, full_name, resume_text, onboarding_completed_at, google_connected from public.profiles'));

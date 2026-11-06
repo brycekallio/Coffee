@@ -11,8 +11,20 @@
 alter table public.profiles
   add column if not exists google_connected boolean not null default false;
 
+-- Separate yes/no: did the user grant "send email"? Outreach auto-send reads this one.
+alter table public.profiles
+  add column if not exists google_gmail_send boolean not null default false;
+
 -- Existing connections: anyone with a saved refresh token is connected.
 update public.profiles
    set google_connected = true
  where google_calendar_refresh_token is not null
    and google_connected = false;
+
+-- BEST GUESS backfill: we never recorded which scopes were granted, so any saved refresh token
+-- is assumed to include gmail.send. A user who unticked "send email" will show as send-capable
+-- until they reconnect (their scheduled email then fails and is shown in "Not sent").
+update public.profiles
+   set google_gmail_send = true
+ where google_calendar_refresh_token is not null
+   and google_gmail_send = false;
