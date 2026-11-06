@@ -25,7 +25,7 @@ const GCAL_SCOPE = [
  * Builds the Google OAuth 2.0 authorisation URL.
  * Requires VITE_GOOGLE_CLIENT_ID to be set in .env.local
  */
-export function buildGCalOAuthUrl(userId: string): string {
+function buildGCalOAuthUrl(userId: string): string {
   // Public by design: an OAuth client ID identifies the app and is visible in
   // every authorisation URL. Committed with an env override for the same reason
   // as the Clerk key -- a missing build variable fails silently, and that has
