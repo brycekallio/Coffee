@@ -51,7 +51,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // Google redirects back to "/?code=...&state=..." after the consent screen.
   useEffect(() => {
     const search = window.location.search;
-    if (!search.includes("code=") && !search.includes("state=")) return;
+    // Ours only when Google's pair is present: code+state, or error+state (user pressed Cancel).
+    // Anything else (?invite_code=, a lone ?state=) belongs to someone else and is left alone.
+    const q = new URLSearchParams(search);
+    if (!q.has("state") || !(q.has("code") || q.has("error"))) return;
     // Clear the params at once so a refresh doesn't replay the exchange.
     window.history.replaceState({}, "", window.location.pathname);
     void handleGoogleCallback(search, window.location.origin, (body) =>
@@ -60,6 +63,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     ).then((out) => {
       if (out.kind === "rejected") toast.error("That Google link didn't start here, so it was ignored. Try Connect again.");
       else if (out.kind === "failed") toast.error("Google connection failed: " + out.message);
+      else if (out.kind === "notice") toast.info(out.message);
       else if (out.kind === "connected") {
         if (out.gmailSend && out.calendar) toast.success("Google connected.");
         else if (out.calendar)
