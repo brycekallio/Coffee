@@ -6,6 +6,7 @@ export type CallbackOutcome =
   | { kind: "ignored" }
   | { kind: "rejected" }
   | { kind: "failed"; message: string }
+  | { kind: "notice"; message: string } // Google sent the user back without a code (Cancel etc.); message is shown as-is
   | { kind: "connected"; gmailSend: boolean; calendar: boolean };
 
 /**
@@ -22,7 +23,13 @@ export async function handleGoogleCallback(
   const params = new URLSearchParams(search);
   const code = params.get("code");
   const state = params.get("state");
-  if (!code && !state) return { kind: "ignored" };
+  const googleError = params.get("error");
+  if (!code && !state && !googleError) return { kind: "ignored" };
+  if (googleError) {
+    // Google sends the user back with error=access_denied on Cancel. Our own state must still match.
+    if (!state || !consumeOAuthState(state, userId, store)) return { kind: "rejected" };
+    return { kind: "notice", message: googleError === "access_denied" ? "Google connection cancelled." : "Google didn't connect. Try again." };
+  }
   // A `code` from some other OAuth flow is not ours; only treat it as ours if it carries a state.
   if (!code || !state) return { kind: "rejected" };
   if (!consumeOAuthState(state, userId, store)) return { kind: "rejected" };
