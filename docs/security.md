@@ -96,3 +96,11 @@ opaque provider error.
 The OpenRouter request shape is built from the provider's documentation and has not been
 exercised against a live key — `OPENROUTER_API_KEY` is not yet set in Supabase secrets.
 Until it is, the free tier returns a 500 explaining that; the BYO path is untested too.
+
+## 2026-11-06 DB hardening (not yet applied live)
+
+`docs/migration_2026-11-06_db_hardening.sql` (two migrations: part 1, then part 2) closes audit items M1, L3, L4, L8 and adds the H4 backstop. `docs/rls_contact_owner_check.sql` proves it on a throwaway local Postgres (negative control: `-v rls_off=1` must FAIL).
+
+- **M1:** INSERT/UPDATE on `scheduled_outreach`, `applications`, `contact_meetings`, `meeting_notes` now require `contact_id` to be null or one of the caller's own contacts.
+- **H4 backstop:** `link_clerk_identity` / `create_clerk_account` refuse to claim an unclaimed account when the Clerk token carries `email_verified` and it is not true. When the claim is absent, behaviour is unchanged and `auth_claim_observations` counts the absence. Already-linked users are never affected. Strict mode (absent = refuse) is `docs/migration_LATER_email_verified_strict.sql`: do not apply until the claim is added to the Clerk token template and `claim_absent` stops growing.
+- **L3:** `resumes` bucket: 5 MB, PDF/DOC/DOCX. **L8:** `anon` loses EXECUTE on `app_user_id`, `link_clerk_identity`, `handle_new_user`, `touch_user_ai_settings`; the last gets `search_path = ''`. **L4:** `ai-settings` test/save capped at 20 per user per day (`AI_SETTINGS_DAILY_LIMIT` overrides) via `consume_ai_settings_attempt`; deploy the function only after part 2 is live, or test/save returns 503.
