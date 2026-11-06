@@ -7,7 +7,7 @@ import type { Profile } from "@/types";
 /** Columns must match the Profile type in src/types.ts. */
 /** Never list google_calendar_* token columns: the browser has no permission to read them. */
 export const PROFILE_COLUMNS =
-  "id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text, phone, career_interests, onboarding_completed_at, google_connected";
+  "id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text, phone, career_interests, onboarding_completed_at, google_connected, google_gmail_send";
 
 /**
  * The on_auth_user_created trigger inserts a blank row per user, so this is null only

@@ -24,6 +24,7 @@ export type Profile = Pick<
   | "career_interests"
   | "onboarding_completed_at"
   | "google_connected"
+  | "google_gmail_send"
 >;
 
 export type Application = Tables<"applications">;

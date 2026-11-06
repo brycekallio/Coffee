@@ -244,6 +244,12 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               </div>
             </div>
 
+            {profile?.google_connected && !profile.google_gmail_send && (
+              <p className="mt-3 text-xs text-amber-300/80">
+                Email sending is off. Disconnect, connect again, and tick "Send email on your behalf".
+              </p>
+            )}
+
             {!profile?.google_connected && (
               <p className="mt-3 text-xs text-white/25">
                 You'll go to Google to approve. Coffee can add calendar events and send the email you schedule. It can't read your inbox or calendar. Keep "Send email on your behalf" ticked, or email won't send.

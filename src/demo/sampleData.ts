@@ -143,6 +143,7 @@ export const profiles = [
     career_interests: "Data & analytics consulting, restructuring",
     onboarding_completed_at: iso(70),
     google_connected: false,
+    google_gmail_send: false,
   },
 ];
 
