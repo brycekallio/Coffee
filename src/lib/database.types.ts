@@ -326,7 +326,6 @@ export type Database = {
           sent_at: string | null
           status: string
           subject: string | null
-          tracking_token: string | null
         }
         Insert: {
           channel: string
@@ -341,7 +340,6 @@ export type Database = {
           sent_at?: string | null
           status?: string
           subject?: string | null
-          tracking_token?: string | null
         }
         Update: {
           channel?: string
@@ -356,7 +354,6 @@ export type Database = {
           sent_at?: string | null
           status?: string
           subject?: string | null
-          tracking_token?: string | null
         }
         Relationships: [
           {

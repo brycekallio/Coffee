@@ -104,7 +104,6 @@ export const scheduled_outreach = [
   status: status as string,
   sent_at: status === "scheduled" ? null : iso(daysAgo as number),
   failure_reason: null,
-  tracking_token: id(),
   opened_at: status === "opened" ? iso((daysAgo as number) - 1) : null,
   created_at: iso((daysAgo as number) + 2),
 }));
