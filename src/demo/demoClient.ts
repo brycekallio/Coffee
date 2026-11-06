@@ -126,6 +126,7 @@ const READ_ONLY_FUNCTIONS = new Set([
   "ai-settings:test",
   "ai-settings:remove",
   "exchange-google-token",
+  "google-disconnect",
   "create-calendar-event",
   "process-meeting-notes",
 ]);

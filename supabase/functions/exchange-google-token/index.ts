@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { exchangeAndStore } from "./exchange.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Parse body ───────────────────────────────────────────────────────────
-    const { code, redirect_uri } = await req.json() as { code: string; redirect_uri: string };
+    let parsed: { code?: unknown; redirect_uri?: unknown } | null = null;
+    try {
+      parsed = await req.json();
+    } catch {
+      parsed = null;
+    }
+    const code = typeof parsed?.code === "string" ? parsed.code : "";
+    const redirect_uri = typeof parsed?.redirect_uri === "string" ? parsed.redirect_uri : "";
     if (!code || !redirect_uri) {
       return new Response(JSON.stringify({ error: "code and redirect_uri are required" }), {
         status: 400,
@@ -50,64 +58,34 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ── Exchange code for tokens with Google ─────────────────────────────────
-    const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
-    const googleClientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
-
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: googleClientId,
-        client_secret: googleClientSecret,
-        redirect_uri,
-        grant_type: "authorization_code",
-      }),
-    });
-
-    const tokenData = await tokenRes.json() as {
-      access_token?: string;
-      refresh_token?: string;
-      expires_in?: number;
-      error?: string;
-    };
-
-    if (!tokenRes.ok || !tokenData.access_token) {
-      return new Response(
-        JSON.stringify({ error: tokenData.error ?? "Google token exchange failed" }),
-        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ── Store tokens in profiles ─────────────────────────────────────────────
-    const expiry = tokenData.expires_in
-      ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-      : null;
-
+    // ── Exchange code for tokens with Google, store them ─────────────────────
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    const { error: updateError } = await serviceClient
-      .from("profiles")
-      .update({
-        google_calendar_token: tokenData.access_token,
-        google_calendar_refresh_token: tokenData.refresh_token ?? null,
-        google_calendar_token_expiry: expiry,
-      })
-      .eq("id", appUserId);
-
-    if (updateError) {
-      return new Response(JSON.stringify({ error: updateError.message }), {
-        status: 500,
-        headers: { ...CORS, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
+    const out = await exchangeAndStore(
+      {
+        code,
+        redirectUri: redirect_uri,
+        userId: appUserId,
+        clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
+        clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
+      },
+      {
+        fetch,
+        service: serviceClient,
+        readFlags: async (id) => {
+          const { data, error } = await serviceClient
+            .from("profiles").select("google_gmail_send, google_connected").eq("id", id).single();
+          return error || !data ? null : data;
+        },
+      },
+    );
+    return new Response(JSON.stringify(out.body), {
+      status: out.status,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: msg }), {
+    // The message could quote a token (a failing row, a Google body): log the kind only.
+    console.error("exchange-google-token failed", err instanceof Error ? err.name : typeof err);
+    return new Response(JSON.stringify({ error: "Google connection failed. Try again." }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });

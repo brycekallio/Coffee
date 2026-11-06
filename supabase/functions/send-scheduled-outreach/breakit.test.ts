@@ -70,14 +70,18 @@ const row = (over: Row): Row => ({
 const world = (outreach: Row[]): Tables => ({
   scheduled_outreach: outreach,
   profiles: [
-    { id: "alice", google_calendar_refresh_token: "rt-alice" },
-    { id: "bob", google_calendar_refresh_token: "rt-bob" },
-    { id: "nogmail", google_calendar_refresh_token: null },
+    { id: "alice", google_calendar_refresh_token: "rt-alice", google_gmail_send: true },
+    { id: "bob", google_calendar_refresh_token: "rt-bob", google_gmail_send: true },
+    { id: "nogmail", google_calendar_refresh_token: null, google_gmail_send: false },
+    // Calendar-only connect: a refresh token, but no permission to send. The client opens
+    // mailto for these rows, so the cron must leave them alone or the email goes twice.
+    { id: "calonly", google_calendar_refresh_token: "rt-cal", google_gmail_send: false },
   ],
   contacts: [
     { id: "c-alice", owner_id: "alice", email: "priya@example.com" },
     { id: "c-bob", owner_id: "bob", email: "bobs-friend@example.com" },
     { id: "c-nogmail", owner_id: "nogmail", email: "x@example.com" },
+    { id: "c-calonly", owner_id: "calonly", email: "y@example.com" },
   ],
 });
 
@@ -120,6 +124,14 @@ describe("break-it (a): other users' contacts and tokens", () => {
     await processDue(fakeDb(t), { now: NOW, deliver });
     expect(deliver).toHaveBeenCalledTimes(1);
     expect(get(t, "n").status).toBe("scheduled");
+  });
+
+  it("A3b a Calendar-only owner (refresh token, no gmail.send) is never auto-sent: the client sends it by hand", async () => {
+    const t = world([row({ id: "c", owner_id: "calonly", contact_id: "c-calonly" })]);
+    const deliver = okDeliver();
+    await processDue(fakeDb(t), { now: NOW, deliver });
+    expect(deliver).not.toHaveBeenCalled();
+    expect(get(t, "c").status).toBe("scheduled");
   });
 
   // SUCCEEDED (Low). The contact's email goes into the To: header unchecked (index.ts

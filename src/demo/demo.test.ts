@@ -196,6 +196,7 @@ describe("demo writes are refused", () => {
       ["ai-settings", { action: "save", api_key: "sk-secret" }],
       ["ai-settings", { action: "remove" }],
       ["exchange-google-token", { code: "abc" }],
+      ["google-disconnect", {}],
       ["create-calendar-event", {}],
       ["process-meeting-notes", {}],
     ] as const) {

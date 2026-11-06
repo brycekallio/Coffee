@@ -23,9 +23,8 @@ export type Profile = Pick<
   | "phone"
   | "career_interests"
   | "onboarding_completed_at"
-  | "google_calendar_token"
-  | "google_calendar_refresh_token"
-  | "google_calendar_token_expiry"
+  | "google_connected"
+  | "google_gmail_send"
 >;
 
 export type Application = Tables<"applications">;

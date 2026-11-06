@@ -39,7 +39,9 @@ create table if not exists public.profiles (
   career_interests text,
   google_calendar_token text,
   google_calendar_refresh_token text,
-  google_calendar_token_expiry text
+  google_calendar_token_expiry text,
+  google_connected boolean not null default false,
+  google_gmail_send boolean not null default false
 );
 
 -- Idempotent column additions (safe to re-run on existing databases)
@@ -48,13 +50,31 @@ alter table public.profiles
   add column if not exists career_interests               text,
   add column if not exists google_calendar_token          text,
   add column if not exists google_calendar_refresh_token  text,
-  add column if not exists google_calendar_token_expiry   text;
+  add column if not exists google_calendar_token_expiry   text,
+  add column if not exists google_connected               boolean not null default false,
+  add column if not exists google_gmail_send              boolean not null default false;
 
 alter table public.profiles enable row level security;
 
 create policy "profiles_select_own" on public.profiles for select using (auth.uid() = id);
 create policy "profiles_insert_own" on public.profiles for insert with check (auth.uid() = id);
 create policy "profiles_update_own" on public.profiles for update using (auth.uid() = id);
+
+-- Token hardening (docs/migration_2026-11-06_google_token_revoke.sql, kept in step with it):
+-- the browser roles never touch the google_calendar_* token columns, and the two google_*
+-- flags are read-only to them (only Edge Functions write those). Table-wide grants must go
+-- first, or a column-level revoke is a silent no-op. Columns added later are denied until
+-- granted. This file lists only the columns it creates; if a rebuild also has the live-only
+-- columns (linkedin_text, tone_prefs, username...), grant those as the migration does.
+revoke select, insert, update on public.profiles from anon;
+revoke select, insert, update on public.profiles from authenticated;
+grant select (id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text,
+  onboarding_completed_at, phone, career_interests, google_connected, google_gmail_send)
+  on public.profiles to authenticated;
+grant insert (id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text,
+  onboarding_completed_at, phone, career_interests) on public.profiles to authenticated;
+grant update (id, full_name, my_linkedin_url, resume_url, avatar_url, resume_text,
+  onboarding_completed_at, phone, career_interests) on public.profiles to authenticated;
 
 -- Auto-provisions a blank profiles row the moment a new auth user is created, so a row
 -- always exists even if the client never gets to run its own insert. IMPORTANT: this means
