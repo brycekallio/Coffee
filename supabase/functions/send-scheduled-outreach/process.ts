@@ -2,9 +2,9 @@
 // tested against a fake database. index.ts wires in the real Gmail delivery.
 
 /** How far past its time a message may still go out. */
-export const MAX_LATENESS_MINUTES = 120;
+const MAX_LATENESS_MINUTES = 120;
 /** A send that has been going longer than this was abandoned (the function died after claiming it). */
-export const STUCK_SENDING_MINUTES = 15;
+const STUCK_SENDING_MINUTES = 15;
 /** Rows per tick, and the page size / page cap of the candidate scan. */
 const BATCH = 50;
 const PAGE = 100;
