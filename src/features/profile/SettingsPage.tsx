@@ -17,7 +17,7 @@ interface SettingsPageProps {
 
 /** Rendered only once the profile has loaded, so the drafts below seed from real values. */
 export default function SettingsPage({ onContactsImported }: SettingsPageProps) {
-  const { email: accountEmail } = useSession();
+  const { email: accountEmail, id: userId } = useSession();
   const accountProvider = "Clerk";
   const {
     profile,
@@ -28,7 +28,10 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
     reparseResume,
     disconnectCalendar: onCalendarDisconnect,
   } = useProfile();
-  const onCalendarConnect = initiateGCalOAuth;
+  const onCalendarConnect = () => initiateGCalOAuth(userId);
+  // google_connected = Calendar linked; google_gmail_send = can send. Either one means a Google
+  // grant exists, so the user must always be able to see it and disconnect it.
+  const googleLinked = Boolean(profile?.google_connected || profile?.google_gmail_send);
 
   const [displayName, setDisplayName] = useState(profile?.full_name ?? "");
   const [myLinkedInUrl, setMyLinkedInUrl] = useState(profile?.my_linkedin_url ?? "");
@@ -212,7 +215,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 <div>
                   <div className="text-sm font-medium text-white">Google</div>
                   <div className="mt-0.5 text-xs text-white/40">
-                    {profile?.google_connected
+                    {googleLinked
                       ? "Connected. Outreach goes on your calendar, and scheduled email sends from your Gmail."
                       : "Add scheduled outreach to your calendar and send it from your own Gmail."}
                   </div>
@@ -220,7 +223,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               </div>
 
               <div className="flex items-center gap-3 shrink-0 ml-4">
-                {profile?.google_connected ? (
+                {googleLinked ? (
                   <>
                     <span className="flex items-center gap-1.5 text-xs text-green-400">
                       <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" />
@@ -250,7 +253,13 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               </p>
             )}
 
-            {!profile?.google_connected && (
+            {profile?.google_gmail_send && !profile.google_connected && (
+              <p className="mt-3 text-xs text-amber-300/80">
+                Calendar is off. Disconnect, connect again, and keep every box ticked.
+              </p>
+            )}
+
+            {!googleLinked && (
               <p className="mt-3 text-xs text-white/25">
                 You'll go to Google to approve. Coffee can add calendar events and send the email you schedule. It can't read your inbox or calendar. Keep "Send email on your behalf" ticked, or email won't send.
               </p>

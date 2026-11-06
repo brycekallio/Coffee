@@ -25,7 +25,7 @@ const GCAL_SCOPE = [
  * Builds the Google OAuth 2.0 authorisation URL.
  * Requires VITE_GOOGLE_CLIENT_ID to be set in .env.local
  */
-export function buildGCalOAuthUrl(): string {
+export function buildGCalOAuthUrl(userId: string): string {
   // Public by design: an OAuth client ID identifies the app and is visible in
   // every authorisation URL. Committed with an env override for the same reason
   // as the Clerk key -- a missing build variable fails silently, and that has
@@ -46,20 +46,20 @@ export function buildGCalOAuthUrl(): string {
     scope: GCAL_SCOPE,
     access_type: "offline",   // request a refresh_token
     prompt: "consent",         // force consent screen so refresh_token is always returned
-    state: newOAuthState(), // random, one-use, checked on return
+    state: newOAuthState(userId), // random, one-use, tied to this user, checked on return
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
 /** Kicks off the Google OAuth flow by redirecting the current tab. */
-export function initiateGCalOAuth(): void {
+export function initiateGCalOAuth(userId: string): void {
   // The demo never sends anyone to Google, and a consent there would redirect back to the real app.
   if (isDemoMode) {
     toast.info("Google Calendar isn't available in the demo.");
     return;
   }
-  window.location.href = buildGCalOAuthUrl();
+  window.location.href = buildGCalOAuthUrl(userId);
 }
 
 /* ── Calendar event creation ───────────────────────────────────────── */

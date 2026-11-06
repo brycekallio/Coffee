@@ -1,5 +1,6 @@
 // Pure core of exchange-google-token, with fetch and the database passed in so it can be tested.
 export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 export interface ProfilesWriter {
   from(table: "profiles"): {
@@ -17,12 +18,24 @@ export interface ExchangeInput {
 
 export interface ExchangeOutput {
   status: number;
-  body: { success: true; gmail_send: boolean } | { error: string };
+  body: { success: true; gmail_send: boolean; calendar: boolean } | { error: string };
 }
+
+const granted = (scope: string | undefined, wanted: string) => (scope ?? "").split(/\s+/).includes(wanted);
 
 /** True when Google says the user granted permission to send mail. */
 export function grantedGmailSend(scope: string | undefined): boolean {
-  return (scope ?? "").split(/\s+/).includes(GMAIL_SEND_SCOPE);
+  return granted(scope, GMAIL_SEND_SCOPE);
+}
+
+/** True when Google says the user granted Calendar events. */
+export function grantedCalendar(scope: string | undefined): boolean {
+  return granted(scope, CALENDAR_SCOPE);
+}
+
+/** Google's `error` is a short code (invalid_grant…). Pass on only that shape, never free text. */
+function googleErrorCode(e: unknown): string {
+  return typeof e === "string" && /^[a-z_]{1,40}$/.test(e) ? e : "Google token exchange failed";
 }
 
 export async function exchangeAndStore(
@@ -41,30 +54,37 @@ export async function exchangeAndStore(
       grant_type: "authorization_code",
     }),
   });
-  const tokenData = (await tokenRes.json()) as {
-    access_token?: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string;
-    error?: string;
-  };
+  let tokenData: { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; error?: unknown };
+  try {
+    tokenData = await tokenRes.json();
+  } catch {
+    // An HTML error page: its text may be anything, so it is never echoed.
+    return { status: 502, body: { error: "Google token exchange failed" } };
+  }
   if (!tokenRes.ok || !tokenData.access_token) {
-    return { status: 400, body: { error: tokenData.error ?? "Google token exchange failed" } };
+    return { status: 400, body: { error: googleErrorCode(tokenData.error) } };
   }
 
   const values: Record<string, unknown> = {
     google_calendar_token: tokenData.access_token,
     google_calendar_token_expiry: tokenData.expires_in ? new Date(now() + tokenData.expires_in * 1000).toISOString() : null,
   };
-  // Google only returns a refresh token on a fresh consent. Never overwrite a good one with nothing.
+  // google_connected = Calendar linked; google_gmail_send = may send. Each mirrors its scope.
   const gmailSend = grantedGmailSend(tokenData.scope);
+  const calendar = grantedCalendar(tokenData.scope);
   if (tokenData.refresh_token) {
+    // Google only returns a refresh token on a fresh consent; the flags describe that grant.
     values.google_calendar_refresh_token = tokenData.refresh_token;
-    // Outreach auto-sends through Gmail only when send was really granted.
     values.google_gmail_send = gmailSend;
-    values.google_connected = gmailSend;
+    values.google_connected = calendar;
+  } else {
+    // No new refresh token: the stored one stays. A scope missing now turns its flag off
+    // (fail closed), but nothing is turned on, since the old refresh token may not carry it.
+    if (!gmailSend) values.google_gmail_send = false;
+    if (!calendar) values.google_connected = false;
   }
   const { error } = await deps.service.from("profiles").update(values).eq("id", input.userId);
-  if (error) return { status: 500, body: { error: error.message } };
-  return { status: 200, body: { success: true, gmail_send: gmailSend } };
+  // Postgres errors can quote the failing row, tokens included: never pass them on.
+  if (error) return { status: 500, body: { error: "Couldn't save the Google connection. Try again." } };
+  return { status: 200, body: { success: true, gmail_send: gmailSend, calendar } };
 }

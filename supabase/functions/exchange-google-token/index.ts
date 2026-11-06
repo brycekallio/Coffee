@@ -43,7 +43,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Parse body ───────────────────────────────────────────────────────────
-    const { code, redirect_uri } = await req.json() as { code: string; redirect_uri: string };
+    let parsed: { code?: unknown; redirect_uri?: unknown } | null = null;
+    try {
+      parsed = await req.json();
+    } catch {
+      parsed = null;
+    }
+    const code = typeof parsed?.code === "string" ? parsed.code : "";
+    const redirect_uri = typeof parsed?.redirect_uri === "string" ? parsed.redirect_uri : "";
     if (!code || !redirect_uri) {
       return new Response(JSON.stringify({ error: "code and redirect_uri are required" }), {
         status: 400,
@@ -68,8 +75,9 @@ Deno.serve(async (req: Request) => {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: msg }), {
+    // The message could quote a token (a failing row, a Google body): log the kind only.
+    console.error("exchange-google-token failed", err instanceof Error ? err.name : typeof err);
+    return new Response(JSON.stringify({ error: "Google connection failed. Try again." }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });

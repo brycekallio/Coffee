@@ -56,20 +56,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     window.history.replaceState({}, "", window.location.pathname);
     void handleGoogleCallback(search, window.location.origin, (body) =>
       supabase.functions.invoke("exchange-google-token", { body }),
+      user.id,
     ).then((out) => {
       if (out.kind === "rejected") toast.error("That Google link didn't start here, so it was ignored. Try Connect again.");
       else if (out.kind === "failed") toast.error("Google connection failed: " + out.message);
       else if (out.kind === "connected") {
-        if (out.gmailSend) toast.success("Google connected.");
-        else
+        if (out.gmailSend && out.calendar) toast.success("Google connected.");
+        else if (out.calendar)
           toast.warning(
             'Calendar connected, but sending email is off. Reconnect and tick "Send email on your behalf".',
             { duration: 10000 },
           );
+        else if (out.gmailSend)
+          toast.warning("Email sending connected, but Calendar is off. Reconnect and keep every box ticked.", {
+            duration: 10000,
+          });
+        else toast.warning("Google connected, but nothing was allowed. Reconnect and keep every box ticked.", { duration: 10000 });
         void fetchProfile();
       }
     });
-  }, [fetchProfile]);
+  }, [fetchProfile, user.id]);
 
   const saveProfile = useCallback(
     async (values: TablesUpdate<"profiles">) => {
