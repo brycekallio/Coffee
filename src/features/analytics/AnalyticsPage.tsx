@@ -1,5 +1,6 @@
 import { countByStatus } from "@/features/applications/statuses";
 import { useEffect, useMemo, useState } from "react";
+import { buildContactsSeries, topCompanies } from "./series";
 import Card from "@/components/ui/Card";
 import type { ScheduledOutreach } from "@/types";
 import { useContacts } from "@/features/contacts/contactsContext";
@@ -53,40 +54,11 @@ export default function AnalyticsPage() {
     return Object.entries(counts).map(([channel, count]) => ({ channel, count }));
   }, [scheduledOutreach]);
 
-  // Data: Contacts added over time
-  const contactsOverTime = useMemo(() => {
-    const byDate: Record<string, number> = {};
-    contacts.forEach((c) => {
-      if (!c.created_at) return; // nullable in the schema
-      const date = c.created_at.split("T")[0]; // YYYY-MM-DD
-      byDate[date] = (byDate[date] || 0) + 1;
-    });
-
-    return Object.entries(byDate)
-      .sort()
-      .reduce(
-        (acc, [date, count]) => {
-          const prev = acc[acc.length - 1];
-          const cumulative = (prev?.cumulative || 0) + count;
-          acc.push({ date, added: count, cumulative });
-          return acc;
-        },
-        [] as Array<{ date: string; added: number; cumulative: number }>
-      )
-      .slice(-30); // Last 30 days only
-  }, [contacts]);
+  // Data: Contacts added over time (last 30 local days, cumulative)
+  const contactsOverTime = useMemo(() => buildContactsSeries(contacts), [contacts]);
 
   // Data: Top companies applied to
-  const topCompanies = useMemo(() => {
-    const counts: Record<string, number> = {};
-    applications.forEach((app) => {
-      counts[app.company] = (counts[app.company] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([company, count]) => ({ company, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  }, [applications]);
+  const topCompanyRows = useMemo(() => topCompanies(applications), [applications]);
 
   // Colors for status bar chart
 
@@ -212,11 +184,11 @@ export default function AnalyticsPage() {
       {/* Top Companies Applied To */}
       <Card
         title="Companies applied to"
-        subtitle={`Tracking ${topCompanies.length} top targets`}
+        subtitle={`Tracking ${topCompanyRows.length} top targets`}
       >
         <div className="mt-4 space-y-2">
-          {topCompanies.length > 0 ? (
-            topCompanies.map((item, idx) => (
+          {topCompanyRows.length > 0 ? (
+            topCompanyRows.map((item, idx) => (
               <div key={item.company} className="flex items-center gap-3 rounded-input bg-depth-1/40 px-4 py-2.5">
                 <div className="flex h-6 w-6 items-center justify-center rounded-badge bg-glow/15 text-xs font-bold text-glow">
                   {idx + 1}
