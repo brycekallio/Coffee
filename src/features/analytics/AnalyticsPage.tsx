@@ -22,6 +22,14 @@ import {
 const CHART_HUE = "#00E5FF";
 
 export default function AnalyticsPage() {
+  // On phones six status labels don't fit flat, so they tilt and every one is kept.
+  const [narrow, setNarrow] = useState(() => window.matchMedia("(max-width: 639px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const on = () => setNarrow(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const { contacts } = useContacts();
   const { applications } = useApplications();
   const [scheduledOutreach, setScheduledOutreach] = useState<ScheduledOutreach[]>([]);
@@ -96,6 +104,10 @@ export default function AnalyticsPage() {
               <XAxis
                 dataKey="status"
                 stroke="rgba(255,255,255,0.6)" tickLine={false}
+                interval={0}
+                angle={narrow ? -35 : 0}
+                textAnchor={narrow ? "end" : "middle"}
+                height={narrow ? 56 : 30}
                 style={{ fontSize: "12px" }}
               />
               <YAxis stroke="rgba(255,255,255,0.6)" tickLine={false} axisLine={false} allowDecimals={false} style={{ fontSize: "12px" }} />
