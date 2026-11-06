@@ -82,8 +82,10 @@ export function isEmail(v: unknown) {
   return cleanEmail(v) !== "";
 }
 
+// Column guessing needs a US phone shape: cleanPhone alone accepts any 7+ digits, so ISO dates and IDs looked like phones.
 export function isPhone(v: unknown) {
-  return cleanPhone(v) !== "";
+  const s = String(v ?? "").trim();
+  return /(\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}/.test(s) && cleanPhone(s) !== "";
 }
 
 export function isLinkedInUrl(v: unknown) {
