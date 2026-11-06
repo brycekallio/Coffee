@@ -75,6 +75,9 @@ export async function processDue(
     const { data, error } = await db
       .from("profiles")
       .select("id, google_calendar_refresh_token")
+      // google_gmail_send = the user granted gmail.send. The client reads the same flag to
+      // decide "the cron sends this" vs "open mailto", so both sides must agree on it.
+      .eq("google_gmail_send", true)
       .not("google_calendar_refresh_token", "is", null);
     if (error) throw new Error(error.message);
     for (const p of (data ?? []) as { id: string; google_calendar_refresh_token: string | null }[]) {

@@ -63,9 +63,9 @@ const row = (over: Row): Row => ({
 const world = (outreach: Row[]): Tables => ({
   scheduled_outreach: outreach,
   profiles: [
-    { id: "gmail-user", google_calendar_refresh_token: "rt" },
-    { id: "no-gmail-user", google_calendar_refresh_token: null },
-    { id: "other-user", google_calendar_refresh_token: "rt2" },
+    { id: "gmail-user", google_calendar_refresh_token: "rt", google_gmail_send: true },
+    { id: "no-gmail-user", google_calendar_refresh_token: null, google_gmail_send: false },
+    { id: "other-user", google_calendar_refresh_token: "rt2", google_gmail_send: true },
   ],
   contacts: [
     { id: "c1", owner_id: "gmail-user", email: "priya@example.com" },
