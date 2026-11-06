@@ -170,7 +170,7 @@ export default function AiEngineSettings({
             ) : (
               <button
                 onClick={() => setExpanded((v) => !v)}
-                className="rounded-button bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
+                className="min-h-10 rounded-button bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
               >
                 {expanded ? "Never mind" : "Use my own key"}
               </button>
@@ -229,10 +229,10 @@ export default function AiEngineSettings({
 
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/60">
+                <label htmlFor="ai-provider" className="mb-1 block text-xs font-medium text-white/60">
                   Provider
                 </label>
-                <select
+                <select id="ai-provider" name="provider"
                   className={selectCls}
                   value={provider}
                   onChange={(e) => switchProvider(e.target.value as AiProvider)}
@@ -246,10 +246,10 @@ export default function AiEngineSettings({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/60">
+                <label htmlFor="ai-model-suggested" className="mb-1 block text-xs font-medium text-white/60">
                   Model
                 </label>
-                <select
+                <select id="ai-model-suggested" name="modelSuggested"
                   className={selectCls}
                   value={
                     SUGGESTED_MODELS[provider].some((m) => m.id === model)
@@ -271,10 +271,10 @@ export default function AiEngineSettings({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-white/60">
+              <label htmlFor="ai-model-id" className="mb-1 block text-xs font-medium text-white/60">
                 Model ID
               </label>
-              <input
+              <input id="ai-model-id" name="model"
                 className={`${inputCls} font-data`}
                 value={model}
                 placeholder={info.placeholder}
@@ -283,10 +283,10 @@ export default function AiEngineSettings({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-white/60">
+              <label htmlFor="ai-api-key" className="mb-1 block text-xs font-medium text-white/60">
                 API key
               </label>
-              <input
+              <input id="ai-api-key" name="apiKey"
                 className={`${inputCls} font-data`}
                 type="password"
                 autoComplete="off"

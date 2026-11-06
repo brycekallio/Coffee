@@ -109,7 +109,7 @@ export default function LinkedInImportModal({ onClose }: { onClose: () => void }
               <li>Tick <span className="text-white">Connections</span> and request the archive. LinkedIn emails a zip within minutes.</li>
               <li>Unzip it and choose <span className="font-data text-white">Connections.csv</span> below.</li>
             </ol>
-            <input
+            <input name="chooseConnectionsCsv"
               type="file"
               accept=".csv,text/csv"
               aria-label="Choose Connections.csv"
@@ -166,7 +166,7 @@ export default function LinkedInImportModal({ onClose }: { onClose: () => void }
                   return (
                     <div key={p.id} className={`flex items-center gap-3 px-4 py-2.5 ${picked ? "bg-white/[0.05]" : ""}`}>
                       {p.duplicate ? (
-                        <input type="checkbox" className="bulk-check opacity-30" disabled aria-label={`${name} is already imported`} />
+                        <input name="alreadyImported" type="checkbox" className="bulk-check opacity-30" disabled aria-label={`${name} is already imported`} />
                       ) : (
                         <Checkbox state={picked ? "all" : "none"} label={`Select ${name}`} onToggle={(shift) => sel.onToggle(p.id, shift)} />
                       )}

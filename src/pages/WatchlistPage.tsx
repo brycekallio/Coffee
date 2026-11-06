@@ -237,7 +237,7 @@ export default function WatchlistPage() {
           <div className="grid gap-3">
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Person name</div>
-              <input
+              <input name="personName" aria-label="Person name"
                 className={inputCls}
                 placeholder="e.g. Jane Smith"
                 value={personName}
@@ -247,7 +247,7 @@ export default function WatchlistPage() {
 
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Company</div>
-              <input
+              <input name="company" aria-label="Company"
                 className={inputCls}
                 placeholder="e.g. Evercore"
                 value={company}
@@ -257,7 +257,7 @@ export default function WatchlistPage() {
 
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Role / title (optional)</div>
-              <input
+              <input name="role" aria-label="Role / title (optional)"
                 className={inputCls}
                 placeholder="e.g. Engineering Manager"
                 value={role}
@@ -268,7 +268,7 @@ export default function WatchlistPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="mb-1 text-xs font-medium text-white/60">Status</div>
-                <select
+                <select name="status" aria-label="Status"
                   className={selectCls}
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
@@ -282,7 +282,7 @@ export default function WatchlistPage() {
               </div>
               <div>
                 <div className="mb-1 text-xs font-medium text-white/60">Next action date</div>
-                <input
+                <input name="nextActionDate" aria-label="Next action date"
                   className={inputCls}
                   type="date"
                   value={nextActionDate}
@@ -293,7 +293,7 @@ export default function WatchlistPage() {
 
             <div>
               <div className="mb-1 text-xs font-medium text-white/60">Notes (optional)</div>
-              <textarea
+              <textarea name="notes" aria-label="Notes (optional)"
                 className={inputCls + " min-h-[72px] resize-y"}
                 placeholder="Any context, talking points, etc."
                 value={notes}
@@ -330,7 +330,7 @@ export default function WatchlistPage() {
           right={
             <div className="flex items-center gap-2">
               {knownTags.length > 0 ? (
-                <select
+                <select name="activeTag"
                   className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 outline-none"
                   aria-label="Filter by tag"
                   value={activeTag}
