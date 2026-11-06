@@ -13,7 +13,8 @@ import { DEMO_READ_ONLY_MESSAGE, isDemoMode } from "../demo/mode";
 import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 import { useContacts } from "@/features/contacts/contactsContext";
-import { buildMailto, failureLabel, updateIfStatus } from "@/features/outreach/outreachApi";
+import { getOutreachStatus, updateIfStatus } from "@/features/outreach/api";
+import { buildMailto, failureLabel, movedOnMessage } from "@/features/outreach/format";
 
 /** "Oct 26, 3:38 PM" — no seconds, no year unless it isn't this year. */
 function formatWhen(iso: string): string {
@@ -284,10 +285,11 @@ export default function OutreachEmailsPage() {
       }
       if (changed) {
         toast.success("Outreach updated!");
+        resetForm();
       } else {
-        toast.error("This was already sent");
+        // Nothing matched: keep the form open so the user's edits are not thrown away.
+        toast.error(await movedOnText(editingId));
       }
-      resetForm();
       await loadItems();
     } else {
       const { error } = await supabase
@@ -336,6 +338,15 @@ export default function OutreachEmailsPage() {
    * Moves a row on from the status the page last saw. Returns false (after telling the
    * user and reloading) if the row had already moved, e.g. the cron sent it meanwhile.
    */
+  /** Why a guarded write matched nothing, from the row's current status. */
+  const movedOnText = async (id: string) => {
+    try {
+      return movedOnMessage(await getOutreachStatus(id));
+    } catch {
+      return "This changed. Refreshed";
+    }
+  };
+
   const markStatus = async (
     id: string,
     status: "sent" | "skipped" | "opened" | "scheduled",
@@ -349,7 +360,7 @@ export default function OutreachEmailsPage() {
     }
     try {
       const changed = await updateIfStatus(id, update, from);
-      if (!changed) toast.error(status === "scheduled" ? "This changed. Refreshed" : "This was already sent");
+      if (!changed) toast.error(await movedOnText(id));
       await loadItems();
       return changed;
     } catch (e) {
@@ -416,11 +427,25 @@ export default function OutreachEmailsPage() {
 
   const handleSendItem = async (item: ScheduledOutreach) => {
     const contact = contacts.find((c) => c.id === item.contact_id) ?? null;
-    // Claim the row first. If the cron got there first this fails and nothing opens,
-    // so the same email is never both drafted here and sent from Gmail.
-    if (isDemoMode) return openOutreach(item.channel, contact, item.subject ?? "", item.message);
+    const open = () => openOutreach(item.channel, contact, item.subject ?? "", item.message);
+    if (isDemoMode) return open();
+
+    // The cron only touches email rows of owners with Gmail connected. Everything else
+    // (texts, LinkedIn, email without Gmail) is ours alone, so open first: the clipboard
+    // write and the sms:/mailto: hand-off must happen inside the click, before any await,
+    // or the browser blocks them. Then record it as sent.
+    const cronOwnsIt = item.channel === "email" && Boolean(profile?.google_calendar_refresh_token);
+    if (!cronOwnsIt) {
+      open();
+      await markStatus(item.id, "sent", "scheduled");
+      return;
+    }
+
+    // Gmail-connected email: claim the row first. If the cron got there first this fails and
+    // nothing opens, so the same email is never both drafted here and sent from Gmail. The
+    // mailto hand-off after an await (window.open _self) is accepted for email on desktop.
     if (!(await markStatus(item.id, "sent", "scheduled"))) return;
-    openOutreach(item.channel, contact, item.subject ?? "", item.message);
+    open();
   };
 
   const loadWatchlistTargets = useCallback(async () => {

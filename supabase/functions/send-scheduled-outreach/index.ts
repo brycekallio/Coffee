@@ -10,7 +10,7 @@
 // folder, which is also where they will look for it later.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { type Deliver, processDue } from "./process.ts";
+import { type Deliver, gmailRefusalReason, processDue } from "./process.ts";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
@@ -81,8 +81,9 @@ const deliver: Deliver = async (refreshToken, to, subject, body) => {
 
   // Google states the reason plainly (a disabled API, a missing scope, a revoked grant).
   // It goes to the function logs; the row carries only the short version.
-  console.error("Gmail refused the message", send.status, (await send.text()).slice(0, 200));
-  return { ok: false, reason: `Not sent: Gmail refused it (${send.status})` };
+  const text = await send.text();
+  console.error("Gmail refused the message", send.status, text.slice(0, 200));
+  return { ok: false, reason: gmailRefusalReason(send.status, text) };
 };
 
 Deno.serve(async (req) => {
