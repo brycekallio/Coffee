@@ -25,3 +25,16 @@ export function movedOnMessage(status: string | null): string {
   if (status === null) return "This was deleted";
   return "This changed. Refreshed";
 }
+
+/** "Oct 26, 3:38 PM" — no seconds, no year unless it isn't this year. */
+export function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}

@@ -3,8 +3,7 @@ import { supabase } from "../lib/supabase";
 import { currentUserId } from "../lib/appSession";
 import { createCalendarEvent } from "../lib/googleCalendar";
 import type { TablesUpdate } from "@/lib/database.types";
-import type { Contact, Profile, ScheduledOutreach, WatchlistTarget } from "../types";
-import { inputCls, selectCls } from "@/components/ui/styles";
+import type { Contact, ScheduledOutreach, WatchlistTarget } from "../types";
 import { useProfile } from "@/features/profile/profileContext";
 import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
@@ -14,20 +13,10 @@ import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 import { useContacts } from "@/features/contacts/contactsContext";
 import { getOutreachStatus, updateIfStatus } from "@/features/outreach/api";
-import { buildMailto, failureLabel, movedOnMessage } from "@/features/outreach/format";
-
-/** "Oct 26, 3:38 PM" — no seconds, no year unless it isn't this year. */
-function formatWhen(iso: string): string {
-  const d = new Date(iso);
-  const sameYear = d.getFullYear() === new Date().getFullYear();
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    ...(sameYear ? {} : { year: "numeric" }),
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+import { buildMailto, movedOnMessage } from "@/features/outreach/format";
+import ScheduleForm from "@/features/outreach/ScheduleForm";
+import NotSentCard from "@/features/outreach/NotSentCard";
+import { UpcomingCard, HistoryCard } from "@/features/outreach/OutreachList";
 
 /* ── Templates ────────────────────────────────────────── */
 
@@ -72,35 +61,6 @@ const TEMPLATES: {
   },
 ];
 
-/**
- * Only email can be scheduled, and the distinction is not a product choice --
- * iMessage has no API. Messages' automation dictionary exposes exactly one verb,
- * `send`, with no scheduling of any kind, so nothing can queue an iMessage for
- * later on your behalf. Apple's own Send Later is UI-only.
- *
- * So email schedules server-side and goes out whether or not your Mac is awake;
- * iMessage hands you the text and lets Apple hold the queue if you want it held.
- */
-const CHANNELS = [
-  { value: "email", label: "Email", description: "Schedules and sends on its own" },
-  { value: "sms", label: "iMessage", description: "Copy and send from Messages" },
-] as const;
-
-const SCHEDULABLE = new Set(["email"]);
-
-// LinkedIn was removed: it has no messaging API, so it could never be more than
-// "copy to clipboard and open a tab", and unlike email and iMessage it cannot be
-// scheduled or sent unattended. A channel that silently means "do it yourself"
-// does not belong beside channels that actually send.
-
-/**
- * Connecting Google is the opt-in, rather than a separate tier flag: the only
- * thing that makes unattended sending possible is a stored refresh token, so the
- * connection itself is the honest gate. Without it, email behaves like iMessage
- * -- drafted here, sent by you.
- */
-const canAutoSend = (profile: Profile | null, ch: string) =>
-  SCHEDULABLE.has(ch) && Boolean(profile?.google_gmail_send);
 
 /* ── Deep link helpers ────────────────────────────────── */
 
@@ -569,26 +529,6 @@ export default function OutreachEmailsPage() {
     (i) => i.status === "sent" || i.status === "skipped" || i.status === "opened",
   );
 
-  /* ── Channel icon SVGs ──────────────────────────────── */
-
-  const channelIcon = (ch: string) => {
-    if (ch === "email") return (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    );
-    if (ch === "sms") return (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    );
-    return (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-      </svg>
-    );
-  };
-
   /* ── render ─────────────────────────────────────────── */
 
   return (
@@ -596,218 +536,7 @@ export default function OutreachEmailsPage() {
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Compose — 1/3. On a phone the due queue (the job) comes first. */}
       <div className="order-last space-y-6 lg:order-none lg:col-span-1">
-        <Card
-          title={editingId ? "Edit Outreach" : "Compose"}
-          subtitle="Draft and schedule outreach messages."
-        >
-          <div className="grid gap-3">
-            {/* Contact */}
-            <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Contact</div>
-              <select
-                className={selectCls}
-                value={selectedContactId}
-                onChange={(e) => setSelectedContactId(e.target.value)}
-              >
-                <option value="">Select a contact...</option>
-                {contacts.length > 0 && (
-                  <optgroup label="Network">
-                    {contacts.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {contactDisplayName(c)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {watchlistTargets.length > 0 && (
-                  <optgroup label="Watchlist">
-                    {watchlistTargets.map((t) => (
-                      <option key={`w:${t.id}`} value={`w:${t.id}`}>
-                        {t.person_name}{t.company ? ` \u2014 ${t.company}` : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-
-            {/* Channel - Auto-send */}
-            <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Auto-Send Channels</div>
-              <div className="flex gap-2">
-                {CHANNELS.map((ch) => {
-                  const disabledReason = channelDisabledReason(ch.value);
-                  const isDisabled = !!disabledReason;
-                  return (
-                    <div key={ch.value} className="relative flex-1 group">
-                      <button
-                        onClick={() => !isDisabled && setChannel(ch.value)}
-                        disabled={isDisabled}
-                        title={disabledReason ?? undefined}
-                        className={`w-full rounded-input border px-3 py-2 text-sm font-medium transition ${
-                          isDisabled
-                            ? "border-white/[0.03] bg-white/[0.01] text-white/20 cursor-not-allowed opacity-50"
-                            : channel === ch.value
-                              ? "border-glow/30 bg-glow/[0.08] text-glow cursor-pointer"
-                              : "border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.05] cursor-pointer"
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">{channelIcon(ch.value)} {ch.label}</div>
-                        <div className={`mt-0.5 text-[11px] font-normal ${isDisabled ? "text-white/15" : "text-white/25"}`}>
-                          {isDisabled ? disabledReason : ch.description}
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Subject (email only) */}
-            {channel === "email" && (
-              <div>
-                <div className="mb-1 text-xs font-medium text-white/35">Subject</div>
-                <input
-                  className={inputCls}
-                  placeholder="Email subject line"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
-              </div>
-            )}
-
-            {/* Message */}
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs font-medium text-white/35">Message</span>
-                {isPowerTier ? (
-                  <button
-                    onClick={handlePersonalize}
-                    disabled={personalizing || !message.trim()}
-                    className="flex items-center gap-1.5 rounded-button bg-glow/[0.08] px-2.5 py-1 text-xs font-medium text-glow transition-colors hover:bg-glow/15 disabled:opacity-40 cursor-pointer"
-                  >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-                    </svg>
-                    {personalizing ? "Personalizing..." : "AI Personalize"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() =>
-                      toast.info(
-                        "AI Personalize needs your own API key. Add one under Settings → AI engine."
-                      )
-                    }
-                    className="flex items-center gap-1.5 rounded-button bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-white/35 transition-colors hover:bg-white/[0.08] cursor-pointer"
-                  >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                    </svg>
-                    AI Personalize
-                  </button>
-                )}
-              </div>
-              <textarea
-                className={inputCls + " min-h-[140px] resize-y"}
-                placeholder="Write your message here..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </div>
-
-            {/* Schedule date/time — only when Gmail can actually deliver it */}
-            {canAutoSend(profile, channel) && (
-              <div>
-                <div className="mb-1 text-xs font-medium text-white/35">Schedule for</div>
-                <input
-                  className={inputCls}
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </div>
-            )}
-
-
-            {channel === "email" && !canAutoSend(profile, channel) && (
-              <div className="rounded-input bg-glow/[0.04] px-3 py-2.5 text-xs leading-relaxed text-white/45">
-                Connect Google in Settings to schedule email. Once connected, Coffee
-                sends from your own Gmail at the time you pick — your computer does
-                not need to be on, and it lands in your Sent folder. Until then,
-                Coffee drafts the message and you send it.
-              </div>
-            )}
-
-            {channel === "sms" && (
-              <div className="rounded-input bg-glow/[0.04] px-3 py-2 text-xs leading-relaxed text-white/45">
-                iMessage can't be sent for you — Apple provides no way for an app to
-                queue one. Coffee copies the message and opens the chat; in Messages,
-                hold the send arrow to use Send Later and Apple delivers it, even with
-                your Mac closed.
-              </div>
-            )}
-
-            {/* Disclosure callout */}
-            {canAutoSend(profile, channel) && (
-              <div className="rounded-input bg-depth-1/60 px-3 py-2.5">
-                <button
-                  onClick={toggleInfoCollapsed}
-                  className="flex w-full items-center justify-between gap-2 cursor-pointer"
-                >
-                  <span className="text-xs font-medium text-glow">How auto-send works</span>
-                  <svg
-                    className={`h-3.5 w-3.5 text-white/40 transition-transform duration-200 ${infoCollapsed ? "" : "rotate-180"}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {!infoCollapsed && (
-                  <p className="mt-2 text-xs leading-relaxed text-white/50">
-                    Scheduled email sends from your own Gmail account, so it lands in your Sent folder and goes out whether or not your computer is on. Coffee never sees your password — you grant access through Google and can revoke it at any time.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="mt-2 flex gap-2">
-              {canAutoSend(profile, channel) ? (
-                <>
-                  <button
-                    onClick={handleScheduleClick}
-                    disabled={saving}
-                    className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow disabled:opacity-50 cursor-pointer"
-                  >
-                    {saving ? "Saving..." : editingId ? "Update" : "Schedule"}
-                  </button>
-                  <button
-                    onClick={handleSendNow}
-                    className="rounded-button bg-glow/[0.08] px-3 py-2 text-sm font-medium text-glow transition-colors hover:bg-glow/15 cursor-pointer"
-                  >
-                    Send Now
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleSendNow}
-                  className="flex-1 rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow cursor-pointer"
-                >
-                  {channel === "email" ? "Open in Mail" : "Copy and open Messages"}
-                </button>
-              )}
-              <button
-                onClick={resetForm}
-                className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        </Card>
+        <ScheduleForm profile={profile} contacts={contacts} watchlistTargets={watchlistTargets} editingId={editingId} saving={saving} selectedContactId={selectedContactId} setSelectedContactId={setSelectedContactId} contactDisplayName={contactDisplayName} channelDisabledReason={channelDisabledReason} channel={channel} setChannel={setChannel} subject={subject} setSubject={setSubject} message={message} setMessage={setMessage} scheduledAt={scheduledAt} setScheduledAt={setScheduledAt} isPowerTier={isPowerTier} personalizing={personalizing} handlePersonalize={handlePersonalize} infoCollapsed={infoCollapsed} toggleInfoCollapsed={toggleInfoCollapsed} handleScheduleClick={handleScheduleClick} handleSendNow={handleSendNow} resetForm={resetForm} />
 
         {/* Templates */}
         <Card
@@ -841,212 +570,16 @@ export default function OutreachEmailsPage() {
 
       {/* Scheduled — 2/3 */}
       <div className="lg:col-span-2 space-y-6">
-        <Card
-          title="Upcoming"
-          subtitle={loading ? "Loading..." : `${scheduledItems.length} scheduled`}
-          right={
-            <button
-              onClick={loadItems}
-              className="rounded-button bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
-            >
-              Refresh
-            </button>
-          }
-        >
-          {loading ? (
-            <div className="py-8 text-center text-sm text-white/40">Loading outreach...</div>
-          ) : scheduledItems.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-sm text-white/50">No scheduled outreach yet.</p>
-              <p className="mt-1 text-xs text-white/25">
-                The follow-up is where the magic happens.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {scheduledItems.map((item) => {
-                const due = isDue(item);
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`rounded-section p-4 transition ${
-                      due
-                        ? "bg-white/[0.05]"
-                        : "bg-depth-0/30"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-white truncate">
-                            {contactNameById(item.contact_id)}
-                          </span>
-                          <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/40">
-                            {item.channel === "sms" ? "SMS" : item.channel.charAt(0).toUpperCase() + item.channel.slice(1)}
-                          </span>
-                          {due && (
-                            <span className="inline-block rounded-badge bg-glow/[0.1] px-2 py-0.5 text-xs font-medium text-glow breathe">
-                              Due Now
-                            </span>
-                          )}
-                        </div>
-                        {item.subject && (
-                          <div className="mt-1 text-sm text-white/50 truncate">
-                            {item.subject}
-                          </div>
-                        )}
-                        <div className="mt-1 text-xs text-white/25 line-clamp-2">
-                          {item.message}
-                        </div>
-                        <div className="mt-2 font-data text-xs text-white/25">
-                          {formatWhen(item.scheduled_at)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => handleSendItem(item)}
-                        className={`rounded-button px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
-                          due
-                            ? "bg-white/[0.08] text-white hover:bg-white/[0.12]"
-                            : "bg-glow/[0.08] text-glow hover:bg-glow/15"
-                        }`}
-                      >
-                        Send
-                      </button>
-                      <button
-                        onClick={() => markStatus(item.id, "skipped", "scheduled")}
-                        className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.08] cursor-pointer"
-                      >
-                        Skip
-                      </button>
-                      <button
-                        onClick={() => startEdit(item)}
-                        className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.08] cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="rounded-button px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+        <UpcomingCard loading={loading} scheduledItems={scheduledItems} isDue={isDue} contactNameById={contactNameById} loadItems={loadItems} handleSendItem={handleSendItem} markStatus={markStatus} startEdit={startEdit} deleteItem={deleteItem} />
 
         {/* Not sent */}
         {failedItems.length > 0 && (
-          <Card title="Not sent" subtitle={`${failedItems.length} need a look`}>
-            <div className="grid gap-2">
-              {failedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-input bg-depth-0/20 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white/70 truncate">
-                        {contactNameById(item.contact_id)}
-                      </span>
-                      <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/30">
-                        Email
-                      </span>
-                    </div>
-                    {item.subject && (
-                      <div className="mt-0.5 text-sm text-white/40 truncate">{item.subject}</div>
-                    )}
-                    <div className="mt-1 text-xs font-medium text-danger">{failureLabel(item)}</div>
-                    <div className="mt-0.5 font-data text-xs text-white/20">
-                      {formatWhen(item.scheduled_at)}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
-                    <button
-                      onClick={() => markStatus(item.id, "scheduled", ["failed", "missed"])}
-                      className="text-xs font-medium text-glow/80 transition-colors hover:text-glow cursor-pointer"
-                    >
-                      Retry
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <NotSentCard failedItems={failedItems} contactNameById={contactNameById} markStatus={markStatus} deleteItem={deleteItem} />
         )}
 
         {/* History */}
         {completedItems.length > 0 && (
-          <Card
-            title="History"
-            subtitle={`${completedItems.length} completed`}
-          >
-            <div className="grid gap-2">
-              {completedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-input bg-depth-0/20 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white/50 truncate">
-                        {contactNameById(item.contact_id)}
-                      </span>
-                      <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/30">
-                        {item.channel === "sms" ? "SMS" : item.channel.charAt(0).toUpperCase() + item.channel.slice(1)}
-                      </span>
-                      <span className={`inline-block rounded-badge px-2 py-0.5 text-xs font-medium ${
-                        item.status === "opened"
-                          ? "bg-emerald-500/[0.12] text-emerald-400"
-                          : item.status === "sent"
-                          ? "bg-glow/[0.08] text-glow/60"
-                          : "bg-white/[0.04] text-white/30"
-                      }`}>
-                        {item.status === "opened" ? "Opened" : item.status === "sent" ? "Sent" : "Skipped"}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 font-data text-xs text-white/20">
-                      {formatWhen(item.scheduled_at)}
-                      {item.status === "opened" && item.opened_at && (
-                        <span className="ml-2 text-emerald-400/40">
-                          · opened {new Date(item.opened_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
-                    {item.status === "sent" && item.channel === "email" && (
-                      <button
-                        onClick={() => markStatus(item.id, "opened", "sent")}
-                        className="text-xs font-medium text-emerald-400/50 transition-colors hover:text-emerald-400 cursor-pointer whitespace-nowrap"
-                      >
-                        Mark Opened
-                      </button>
-                    )}
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <HistoryCard completedItems={completedItems} contactNameById={contactNameById} markStatus={markStatus} deleteItem={deleteItem} />
         )}
       </div>
     </div>
