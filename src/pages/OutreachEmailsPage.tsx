@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { currentUserId } from "../lib/appSession";
 import { createCalendarEvent } from "../lib/googleCalendar";
+import type { TablesUpdate } from "@/lib/database.types";
 import type { Contact, Profile, ScheduledOutreach, WatchlistTarget } from "../types";
 import { inputCls, selectCls } from "@/components/ui/styles";
 import { useProfile } from "@/features/profile/profileContext";
@@ -12,6 +13,8 @@ import { DEMO_READ_ONLY_MESSAGE, isDemoMode } from "../demo/mode";
 import { fetchLinkedInPreview, personalizeOutreach } from "../lib/resumeUtils";
 import { fetchAiStatus, PowerTierRequiredError } from "../features/ai/client";
 import { useContacts } from "@/features/contacts/contactsContext";
+import { getOutreachStatus, updateIfStatus } from "@/features/outreach/api";
+import { buildMailto, failureLabel, movedOnMessage } from "@/features/outreach/format";
 
 /** "Oct 26, 3:38 PM" — no seconds, no year unless it isn't this year. */
 function formatWhen(iso: string): string {
@@ -25,10 +28,6 @@ function formatWhen(iso: string): string {
     minute: "2-digit",
   });
 }
-
-/* ── Email open tracking ──────────────────────────────── */
-
-const TRACKER_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/email-open-tracker`;
 
 /* ── Templates ────────────────────────────────────────── */
 
@@ -118,8 +117,7 @@ function openOutreach(
     return;
   }
   if (channel === "email") {
-    const mailto = `mailto:${contact?.email ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-    window.open(mailto, "_self");
+    window.open(buildMailto(contact?.email ?? "", subject, message), "_self");
   } else if (channel === "sms") {
     // Clipboard as well as the deep link: the sms: scheme drops long bodies and
     // newlines on some clients, and a half-pasted message is worse than none.
@@ -272,25 +270,31 @@ export default function OutreachEmailsPage() {
       subject: channel === "email" ? subject.trim() || null : null,
       message: message.trim(),
       scheduled_at: new Date(scheduledAt).toISOString(),
-      status: "scheduled",
     };
 
     if (editingId) {
-      const { error } = await supabase
-        .from("scheduled_outreach")
-        .update(payload)
-        .eq("id", editingId);
-      if (error) {
-        toast.error("Failed to update: " + error.message);
-      } else {
+      // Only while it is still waiting. If the cron already sent it, saving the edit
+      // would put it back to 'scheduled' and the recipient would get it twice.
+      let changed = false;
+      try {
+        changed = await updateIfStatus(editingId, payload, "scheduled");
+      } catch (e) {
+        toast.error("Failed to update: " + (e instanceof Error ? e.message : String(e)));
+        setSaving(false);
+        return;
+      }
+      if (changed) {
         toast.success("Outreach updated!");
         resetForm();
-        await loadItems();
+      } else {
+        // Nothing matched: keep the form open so the user's edits are not thrown away.
+        toast.error(await movedOnText(editingId));
       }
+      await loadItems();
     } else {
       const { error } = await supabase
         .from("scheduled_outreach")
-        .insert(payload);
+        .insert({ ...payload, status: "scheduled" });
       if (error) {
         toast.error("Failed to schedule: " + error.message);
       } else {
@@ -330,17 +334,38 @@ export default function OutreachEmailsPage() {
     setSaving(false);
   };
 
-  const markStatus = async (id: string, status: "sent" | "skipped" | "opened") => {
-    const update: Record<string, unknown> = { status };
+  /**
+   * Moves a row on from the status the page last saw. Returns false (after telling the
+   * user and reloading) if the row had already moved, e.g. the cron sent it meanwhile.
+   */
+  /** Why a guarded write matched nothing, from the row's current status. */
+  const movedOnText = async (id: string) => {
+    try {
+      return movedOnMessage(await getOutreachStatus(id));
+    } catch {
+      return "This changed. Refreshed";
+    }
+  };
+
+  const markStatus = async (
+    id: string,
+    status: "sent" | "skipped" | "opened" | "scheduled",
+    from: string | string[],
+  ): Promise<boolean> => {
+    const update: TablesUpdate<"scheduled_outreach"> = { status };
     if (status === "opened") update.opened_at = new Date().toISOString();
-    const { error } = await supabase
-      .from("scheduled_outreach")
-      .update(update)
-      .eq("id", id);
-    if (error) {
-      toast.error("Failed to update status: " + error.message);
-    } else {
+    if (status === "scheduled") {
+      update.failure_reason = null;
+      update.scheduled_at = new Date().toISOString();
+    }
+    try {
+      const changed = await updateIfStatus(id, update, from);
+      if (!changed) toast.error(await movedOnText(id));
       await loadItems();
+      return changed;
+    } catch (e) {
+      toast.error("Failed to update status: " + (e instanceof Error ? e.message : String(e)));
+      return false;
     }
   };
 
@@ -402,16 +427,25 @@ export default function OutreachEmailsPage() {
 
   const handleSendItem = async (item: ScheduledOutreach) => {
     const contact = contacts.find((c) => c.id === item.contact_id) ?? null;
-    // For email: append a tracking pixel so opens auto-update when HTML email is viewed.
-    // Note: mailto: bodies are plain-text — the pixel only fires in HTML-capable clients
-    // (e.g. direct SMTP/future Coffee native send). Manual "Mark Opened" is always available.
-    let messageToSend = item.message;
-    if (item.channel === "email" && item.tracking_token) {
-      const pixelUrl = `${TRACKER_BASE}?t=${item.tracking_token}`;
-      messageToSend += `\n\n<img src="${pixelUrl}" width="1" height="1" style="display:none" alt="" />`;
+    const open = () => openOutreach(item.channel, contact, item.subject ?? "", item.message);
+    if (isDemoMode) return open();
+
+    // The cron only touches email rows of owners with Gmail connected. Everything else
+    // (texts, LinkedIn, email without Gmail) is ours alone, so open first: the clipboard
+    // write and the sms:/mailto: hand-off must happen inside the click, before any await,
+    // or the browser blocks them. Then record it as sent.
+    const cronOwnsIt = item.channel === "email" && Boolean(profile?.google_calendar_refresh_token);
+    if (!cronOwnsIt) {
+      open();
+      await markStatus(item.id, "sent", "scheduled");
+      return;
     }
-    openOutreach(item.channel, contact, item.subject ?? "", messageToSend);
-    await markStatus(item.id, "sent");
+
+    // Gmail-connected email: claim the row first. If the cron got there first this fails and
+    // nothing opens, so the same email is never both drafted here and sent from Gmail. The
+    // mailto hand-off after an await (window.open _self) is accepted for email on desktop.
+    if (!(await markStatus(item.id, "sent", "scheduled"))) return;
+    open();
   };
 
   const loadWatchlistTargets = useCallback(async () => {
@@ -529,6 +563,8 @@ export default function OutreachEmailsPage() {
   /* ── derived ────────────────────────────────────────── */
 
   const scheduledItems = items.filter((i) => i.status === "scheduled");
+  // Rows the cron could not send. They used to vanish from the page entirely.
+  const failedItems = items.filter((i) => i.status === "failed" || i.status === "missed");
   const completedItems = items.filter(
     (i) => i.status === "sent" || i.status === "skipped" || i.status === "opened",
   );
@@ -881,7 +917,7 @@ export default function OutreachEmailsPage() {
                         Send
                       </button>
                       <button
-                        onClick={() => markStatus(item.id, "skipped")}
+                        onClick={() => markStatus(item.id, "skipped", "scheduled")}
                         className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.08] cursor-pointer"
                       >
                         Skip
@@ -905,6 +941,52 @@ export default function OutreachEmailsPage() {
             </div>
           )}
         </Card>
+
+        {/* Not sent */}
+        {failedItems.length > 0 && (
+          <Card title="Not sent" subtitle={`${failedItems.length} need a look`}>
+            <div className="grid gap-2">
+              {failedItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-input bg-depth-0/20 px-4 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white/70 truncate">
+                        {contactNameById(item.contact_id)}
+                      </span>
+                      <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/30">
+                        Email
+                      </span>
+                    </div>
+                    {item.subject && (
+                      <div className="mt-0.5 text-sm text-white/40 truncate">{item.subject}</div>
+                    )}
+                    <div className="mt-1 text-xs font-medium text-danger">{failureLabel(item)}</div>
+                    <div className="mt-0.5 font-data text-xs text-white/20">
+                      {formatWhen(item.scheduled_at)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
+                    <button
+                      onClick={() => markStatus(item.id, "scheduled", ["failed", "missed"])}
+                      className="text-xs font-medium text-glow/80 transition-colors hover:text-glow cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={() => deleteItem(item.id)}
+                      className="text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* History */}
         {completedItems.length > 0 && (
@@ -948,7 +1030,7 @@ export default function OutreachEmailsPage() {
                   <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
                     {item.status === "sent" && item.channel === "email" && (
                       <button
-                        onClick={() => markStatus(item.id, "opened")}
+                        onClick={() => markStatus(item.id, "opened", "sent")}
                         className="text-xs font-medium text-emerald-400/50 transition-colors hover:text-emerald-400 cursor-pointer whitespace-nowrap"
                       >
                         Mark Opened
