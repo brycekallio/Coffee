@@ -39,11 +39,19 @@ export async function updateProfile(userId: string, values: TablesUpdate<"profil
   return data;
 }
 
+const RESUME_MIME: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
 /** Uploads to the private `resumes` bucket and returns the bare object path. */
 export async function uploadResumeFile(userId: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
   const path = `${userId}/resume.${ext}`;
-  const { error } = await supabase.storage.from("resumes").upload(path, file, { upsert: true });
+  // The bucket only accepts PDF/Word mime types; some browsers report "" for .doc/.docx.
+  const contentType = file.type || RESUME_MIME[ext] || "application/pdf";
+  const { error } = await supabase.storage.from("resumes").upload(path, file, { upsert: true, contentType });
   if (error) throw error;
   return path;
 }
