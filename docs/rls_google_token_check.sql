@@ -41,7 +41,7 @@ create function pg_temp.try(sql text) returns boolean language plpgsql as $$
 begin execute sql; return true; exception when insufficient_privilege then return false; end $$;
 
 -- backfill worked (as superuser)
-insert into results select 'backfill: Alice send-capable (best guess)', (select google_gmail_send from public.profiles where id='00000000-0000-0000-0000-000000000001');
+insert into results select 'backfill: Alice NOT send-capable (no gmail.send backfill)', (select not google_gmail_send from public.profiles where id='00000000-0000-0000-0000-000000000001');
 insert into results select 'backfill: Alice connected, Bob not',
   (select google_connected from public.profiles where id='00000000-0000-0000-0000-000000000001')
   and not (select google_connected from public.profiles where id='00000000-0000-0000-0000-000000000002');

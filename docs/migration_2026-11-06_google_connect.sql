@@ -23,13 +23,7 @@ update public.profiles
  where google_calendar_refresh_token is not null
    and google_connected = false;
 
--- BEST GUESS backfill: we never recorded which scopes were granted, so any saved refresh token
--- is assumed to include gmail.send. A user who unticked "send email" will show as send-capable
--- until they reconnect (their scheduled email then fails and is shown in "Not sent").
--- Known wrong for one group: gmail.send was only added to the requested scopes on 2026-10-08
--- (commit 1bcf6d1), so anyone who connected before then and never reconnected lacks it. We have
--- no connection date to tell them apart. Set to true anyway so working senders keep working.
-update public.profiles
-   set google_gmail_send = true
- where google_calendar_refresh_token is not null
-   and google_gmail_send = false;
+-- NO gmail.send backfill (owner decision, 2026-11-06): we never recorded which scopes were
+-- granted, and gmail.send was only requested from 2026-10-08 (commit 1bcf6d1), so a saved refresh
+-- token does not prove send permission. Everyone starts at google_gmail_send = false; the UI asks
+-- them to reconnect Google to turn sending on. Wrong-but-safe: no send is attempted without proof.
