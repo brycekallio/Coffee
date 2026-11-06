@@ -5,7 +5,7 @@
 export const MAX_LATENESS_MINUTES = 120;
 /** A send that has been going longer than this was abandoned (the function died after claiming it). */
 export const STUCK_SENDING_MINUTES = 15;
-/** Rows per tick, and how far we page past rows that belong to people without Gmail. */
+/** Rows per tick, and the page size / page cap of the candidate scan. */
 const BATCH = 50;
 const PAGE = 100;
 const MAX_PAGES = 10;
@@ -65,34 +65,35 @@ export async function processDue(
   if (sweepErr) throw new Error(sweepErr.message);
 
   // Only people with Gmail connected get automatic sending. Everyone else's email rows
-  // stay 'scheduled': for them Outreach is a reminder list and they send by hand.
-  // Tokens are fetched lazily, only for owners of candidate rows.
-  const tokens = new Map<string, string | null>();
-  const loadTokens = async (ownerIds: string[]) => {
-    const need = [...new Set(ownerIds)].filter((id) => !tokens.has(id));
-    if (!need.length) return;
+  // stay 'scheduled': for them Outreach is a reminder list and they send by hand. Those
+  // rows pile up forever, so they must never be part of the candidate scan: we ask the
+  // database for the Gmail owners first and filter the scan to them (server-side), so
+  // the number of reminder rows can't push real due rows out of the paged window.
+  // (Owners are one row per user with Gmail connected; the list stays small.)
+  const tokens = new Map<string, string>();
+  {
     const { data, error } = await db
       .from("profiles")
       .select("id, google_calendar_refresh_token")
-      .in("id", need);
+      .not("google_calendar_refresh_token", "is", null);
     if (error) throw new Error(error.message);
-    for (const id of need) tokens.set(id, null);
     for (const p of (data ?? []) as { id: string; google_calendar_refresh_token: string | null }[]) {
       if (p.google_calendar_refresh_token) tokens.set(p.id, p.google_calendar_refresh_token);
     }
-  };
+  }
+  const gmailOwners = [...tokens.keys()];
 
-  /** Pages through candidate rows (oldest first) until BATCH belong to Gmail owners. */
+  /** Pages through candidate rows (oldest first), already limited to Gmail owners, until BATCH are found. */
   const pick = async <T extends { owner_id: string }>(
     page: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
   ): Promise<T[]> => {
     const out: T[] = [];
+    if (!gmailOwners.length) return out;
     for (let i = 0; i < MAX_PAGES && out.length < BATCH; i++) {
       const { data, error } = await page(i * PAGE, (i + 1) * PAGE - 1);
       if (error) throw new Error(error.message);
       const rows = data ?? [];
-      await loadTokens(rows.map((r) => r.owner_id));
-      for (const r of rows) if (tokens.get(r.owner_id) && out.length < BATCH) out.push(r);
+      for (const r of rows) if (tokens.has(r.owner_id) && out.length < BATCH) out.push(r);
       if (rows.length < PAGE) break;
     }
     return out;
@@ -106,6 +107,7 @@ export async function processDue(
       .select("id, owner_id")
       .eq("status", "scheduled")
       .eq("channel", "email")
+      .in("owner_id", gmailOwners)
       .lt("scheduled_at", floor)
       .order("scheduled_at", { ascending: true })
       .range(a, z));
@@ -125,6 +127,7 @@ export async function processDue(
       .select("id, owner_id, contact_id, subject, message")
       .eq("status", "scheduled")
       .eq("channel", "email")
+      .in("owner_id", gmailOwners)
       .lte("scheduled_at", now.toISOString())
       .gte("scheduled_at", floor)
       .order("scheduled_at", { ascending: true })

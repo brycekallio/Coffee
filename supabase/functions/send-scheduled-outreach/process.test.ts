@@ -207,13 +207,23 @@ describe("processDue", () => {
     expect(res).toMatchObject({ sent: 1, failed: 1 });
   });
 
-  it("only looks up tokens for the owners of candidate rows, not every Gmail owner", async () => {
+  it("scans only Gmail owners' rows: the candidate query is filtered server-side, no-Gmail owners never appear", async () => {
     const t = world([row({}), row({ id: "m", owner_id: "no-gmail-user" })]);
     const calls: InCall[] = [];
     await processDue(fakeDb(t, () => undefined, calls), { now: NOW, deliver: okDeliver() });
-    const asked = calls.filter((c) => c.table === "profiles").flatMap((c) => c.values);
-    expect(asked.sort()).toEqual(["gmail-user", "no-gmail-user"]);
-    expect(asked).not.toContain("other-user");
+    const owners = calls.filter((c) => c.table === "scheduled_outreach" && c.col === "owner_id");
+    expect(owners.length).toBeGreaterThan(0);
+    for (const c of owners) expect(c.values.sort()).toEqual(["gmail-user", "other-user"]);
+    expect(get(t, "m").status).toBe("scheduled");
+  });
+
+  it("with no Gmail owners at all, it scans nothing", async () => {
+    const t = world([row({ owner_id: "no-gmail-user" })]);
+    t.profiles = t.profiles.map((p) => ({ ...p, google_calendar_refresh_token: null }));
+    const calls: InCall[] = [];
+    const res = await processDue(fakeDb(t, () => undefined, calls), { now: NOW, deliver: okDeliver() });
+    expect(res).toMatchObject({ sent: 0, missed: 0 });
+    expect(calls.filter((c) => c.table === "scheduled_outreach" && c.col === "owner_id")).toEqual([]);
   });
 });
 

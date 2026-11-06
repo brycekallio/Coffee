@@ -299,12 +299,12 @@ describe("break-it (c): one bad row or owner stops everyone", () => {
     expect(get(t, "mine").status).toBe("sent");
   });
 
-  // SUCCEEDED (Low). No-Gmail owners' email rows are never moved off 'scheduled', so they
+  // FIXED 2026-11-06 (scan is filtered to Gmail owners). Was: No-Gmail owners' email rows are never moved off 'scheduled', so they
   // pile up forever. `pick` pages at most 10 x 100 rows oldest-first; once 1000+ stale
   // manual reminders are older than a Gmail user's late row, that row is never reached and
   // stays "Due now" on their page indefinitely (it is never sent either, so no harm to the
   // recipient). Fix: filter by Gmail owners in SQL, or exclude no-token owners' ids.
-  it.fails("C5 1000+ stale no-Gmail rows do not stop a Gmail user's late row being marked missed", async () => {
+  it("C5 1000+ stale no-Gmail rows do not stop a Gmail user's late row being marked missed", async () => {
     const manual = Array.from({ length: 1001 }, (_, i) =>
       row({ id: `m${i}`, owner_id: "nogmail", contact_id: "c-nogmail", scheduled_at: ago(10_000 + i) }));
     const t = world([...manual, row({ id: "late", scheduled_at: ago(200) })]);
@@ -312,10 +312,10 @@ describe("break-it (c): one bad row or owner stops everyone", () => {
     expect(get(t, "late").status).toBe("missed");
   });
 
-  // SUCCEEDED (Low). Same paging cap on the due window: 1000+ no-Gmail rows scheduled in the
+  // FIXED 2026-11-06. Was: same paging cap on the due window: 1000+ no-Gmail rows scheduled in the
   // last 2 hours ahead of a Gmail user's row starve it until it falls out of the window and
   // is marked missed. Needs one person to bulk-schedule 1000 reminders, so unlikely at 12 users.
-  it.fails("C6 1000+ no-Gmail rows due in the window do not starve a Gmail user's due row", async () => {
+  it("C6 1000+ no-Gmail rows due in the window do not starve a Gmail user's due row", async () => {
     const manual = Array.from({ length: 1001 }, (_, i) =>
       row({ id: `m${i}`, owner_id: "nogmail", contact_id: "c-nogmail", scheduled_at: ago(100 - i / 100) }));
     const t = world([...manual, row({ id: "mine", scheduled_at: ago(1) })]);
