@@ -142,9 +142,7 @@ export const profiles = [
     phone: "(303) 555-0142",
     career_interests: "Data & analytics consulting, restructuring",
     onboarding_completed_at: iso(70),
-    google_calendar_token: null,
-    google_calendar_refresh_token: null,
-    google_calendar_token_expiry: null,
+    google_connected: false,
   },
 ];
 
