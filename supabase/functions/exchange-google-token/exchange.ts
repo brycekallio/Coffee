@@ -40,7 +40,14 @@ function googleErrorCode(e: unknown): string {
 
 export async function exchangeAndStore(
   input: ExchangeInput,
-  deps: { fetch: typeof fetch; service: ProfilesWriter; now?: () => number },
+  deps: {
+    fetch: typeof fetch;
+    service: ProfilesWriter;
+    now?: () => number;
+    // Reads the saved flags back. Needed when Google sends no new refresh token: the stored
+    // flags then stay as they were, and only the database knows them.
+    readFlags?: (userId: string) => Promise<{ google_gmail_send: boolean; google_connected: boolean } | null>;
+  },
 ): Promise<ExchangeOutput> {
   const now = deps.now ?? Date.now;
   const tokenRes = await deps.fetch("https://oauth2.googleapis.com/token", {
@@ -87,6 +94,15 @@ export async function exchangeAndStore(
   // Postgres errors can quote the failing row, tokens included: never pass them on.
   if (error) return { status: 500, body: { error: "Couldn't save the Google connection. Try again." } };
   // Report what was persisted: a scope Google granted is not "on" unless a flag was saved for it.
+  if (!tokenData.refresh_token && deps.readFlags) {
+    const stored = await deps.readFlags(input.userId).catch(() => null);
+    if (stored) {
+      return {
+        status: 200,
+        body: { success: true, gmail_send: stored.google_gmail_send === true, calendar: stored.google_connected === true },
+      };
+    }
+  }
   return {
     status: 200,
     body: { success: true, gmail_send: values.google_gmail_send === true, calendar: values.google_connected === true },

@@ -13,6 +13,25 @@ describe("reconnect edge cases", () => {
     expect(saved.google_connected).toBeUndefined();
     expect(out.body).toEqual({ success: true, gmail_send: false, calendar: false });
   });
+  it("no refresh_token: reports the stored flags read back from the database (Codex 2026-11-06)", async () => {
+    const persisted = { google_connected: true, google_gmail_send: true };
+    const service = { from: () => ({ update: (v: Record<string, unknown>) => ({ eq: async () => { Object.assign(persisted, v); return { error: null }; } }) }) };
+    const fetch = (async () => new Response(JSON.stringify({ access_token: "a", expires_in: 3600,
+      scope: "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events" }))) as typeof globalThis.fetch;
+    const out = await exchangeAndStore({ code: "c", redirectUri: "r", userId: "u", clientId: "i", clientSecret: "s" },
+      { fetch, service: service as never, readFlags: async () => ({ ...persisted }) });
+    expect(persisted).toMatchObject({ google_connected: true, google_gmail_send: true });
+    expect(out.body).toEqual({ success: true, gmail_send: true, calendar: true });
+  });
+  it("no refresh_token and Google dropped gmail.send: stored flag turned off and reported off", async () => {
+    const persisted = { google_connected: true, google_gmail_send: true };
+    const service = { from: () => ({ update: (v: Record<string, unknown>) => ({ eq: async () => { Object.assign(persisted, v); return { error: null }; } }) }) };
+    const fetch = (async () => new Response(JSON.stringify({ access_token: "a", expires_in: 3600,
+      scope: "https://www.googleapis.com/auth/calendar.events" }))) as typeof globalThis.fetch;
+    const out = await exchangeAndStore({ code: "c", redirectUri: "r", userId: "u", clientId: "i", clientSecret: "s" },
+      { fetch, service: service as never, readFlags: async () => ({ ...persisted }) });
+    expect(out.body).toEqual({ success: true, gmail_send: false, calendar: true });
+  });
   it("user cancels at Google (error=access_denied + our state) is a cancel, not a forged link", async () => {
     const m = new Map<string, string>();
     const store = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };

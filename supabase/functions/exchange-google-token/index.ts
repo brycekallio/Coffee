@@ -68,7 +68,15 @@ Deno.serve(async (req: Request) => {
         clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
         clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
       },
-      { fetch, service: serviceClient },
+      {
+        fetch,
+        service: serviceClient,
+        readFlags: async (id) => {
+          const { data, error } = await serviceClient
+            .from("profiles").select("google_gmail_send, google_connected").eq("id", id).single();
+          return error || !data ? null : data;
+        },
+      },
     );
     return new Response(JSON.stringify(out.body), {
       status: out.status,
