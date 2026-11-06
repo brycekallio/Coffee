@@ -86,5 +86,9 @@ export async function exchangeAndStore(
   const { error } = await deps.service.from("profiles").update(values).eq("id", input.userId);
   // Postgres errors can quote the failing row, tokens included: never pass them on.
   if (error) return { status: 500, body: { error: "Couldn't save the Google connection. Try again." } };
-  return { status: 200, body: { success: true, gmail_send: gmailSend, calendar } };
+  // Report what was persisted: a scope Google granted is not "on" unless a flag was saved for it.
+  return {
+    status: 200,
+    body: { success: true, gmail_send: values.google_gmail_send === true, calendar: values.google_connected === true },
+  };
 }
