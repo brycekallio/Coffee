@@ -28,6 +28,8 @@ Deno.serve(async (req: Request) => {
     const out = await disconnectGoogle(appUserId as string, { fetch, service: service as unknown as ProfilesDb });
     return json(out.body, out.status);
   } catch (err: unknown) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    // The message could quote a token (a failing row): log the kind only.
+    console.error("google-disconnect failed", err instanceof Error ? err.name : typeof err);
+    return json({ error: "Couldn't disconnect Google. Try again." }, 500);
   }
 });

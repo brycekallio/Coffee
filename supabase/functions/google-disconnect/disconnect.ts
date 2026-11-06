@@ -28,7 +28,8 @@ export async function disconnectGoogle(
     .select("google_calendar_refresh_token, google_calendar_token")
     .eq("id", userId)
     .maybeSingle();
-  if (error) return { status: 500, body: { error: error.message } };
+  // Postgres errors can quote the failing row, tokens included: never pass them on.
+  if (error) return { status: 500, body: { error: "Couldn't disconnect Google. Try again." } };
 
   const token = (data?.google_calendar_refresh_token ?? data?.google_calendar_token) as string | null | undefined;
   let revoked = false;
@@ -59,6 +60,6 @@ export async function disconnectGoogle(
       google_gmail_send: false,
     })
     .eq("id", userId);
-  if (updateError) return { status: 500, body: { error: updateError.message } };
+  if (updateError) return { status: 500, body: { error: "Couldn't disconnect Google. Try again." } };
   return { status: 200, body: { success: true, revoked } };
 }
