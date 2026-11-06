@@ -40,6 +40,9 @@ export function gmailRefusalReason(status: number, body: string): string {
   return detail ? `Not sent: Gmail refused it (${status}: ${detail})` : `Not sent: Gmail refused it (${status})`;
 }
 
+/** One plain address: no whitespace, CR/LF, list separators or angle brackets (header injection). */
+const SIMPLE_ADDRESS = /^[^\s@,;<>()"\\]+@[^\s@,;<>()"\\]+\.[^\s@,;<>()"\\]+$/;
+
 export async function processDue(
   db: Db,
   opts: { now: Date; deliver: Deliver },
@@ -135,9 +138,13 @@ export async function processDue(
       .update({ status: "sending" })
       .eq("id", row.id)
       .eq("status", "scheduled")
-      .select("id");
+      // An Edit that moved it to the future between our read and now must not go out.
+      .lte("scheduled_at", now.toISOString())
+      .select("id, contact_id, subject, message");
     if (claimErr) throw new Error(claimErr.message);
     if (!claimed?.length) { results.skipped++; continue; }
+    // Send what the claim saw, not our earlier read: an Edit may have changed the text.
+    const live = claimed[0] as Pick<Due, "contact_id" | "subject" | "message">;
 
     // Guarded on 'sending': a row the user retried or the sweep moved is not overwritten.
     const finish = async (patch: Record<string, unknown>) => {
@@ -150,22 +157,32 @@ export async function processDue(
       results.failed++;
     };
 
-    let sent: Awaited<ReturnType<Deliver>>;
+    let to: string | null = null;
     try {
-      let to: string | null = null;
-      if (row.contact_id) {
+      if (live.contact_id) {
         // Scoped to the row's owner: the service role would otherwise read anyone's contact.
-        const { data: c } = await db
+        const { data: c, error: cErr } = await db
           .from("contacts").select("email")
-          .eq("id", row.contact_id).eq("owner_id", row.owner_id).single();
+          .eq("id", live.contact_id).eq("owner_id", row.owner_id).maybeSingle();
+        if (cErr) throw new Error(cErr.message);
         if (!c) { await fail("Not sent: contact not found"); continue; }
         to = c.email?.trim() || null;
       }
-      if (!to) { await fail("Not sent: this contact has no email address"); continue; }
-      sent = await deliver(tokens.get(row.owner_id)!, to, row.subject ?? "(no subject)", row.message);
     } catch (e) {
-      console.error("Send threw for", row.id, (e as Error).message);
-      await fail("Not sent: could not reach Gmail, try again");
+      console.error("Contact lookup failed for", row.id, (e as Error).message);
+      await fail("Not sent: something went wrong, try again");
+      continue;
+    }
+    if (!to) { await fail("Not sent: this contact has no email address"); continue; }
+    if (!SIMPLE_ADDRESS.test(to)) { await fail("Not sent: this contact's email address isn't valid"); continue; }
+
+    let sent: Awaited<ReturnType<Deliver>>;
+    try {
+      sent = await deliver(tokens.get(row.owner_id)!, to, live.subject ?? "(no subject)", live.message);
+    } catch (e) {
+      // The request may have reached Gmail before the connection died, so don't invite a blind Retry.
+      console.error("Send threw for", row.id, e instanceof Error ? e.message : "non-error");
+      await fail("Not sent: we lost contact with Gmail. Check your Sent folder before retrying");
       continue;
     }
     if (!sent.ok) { await fail(sent.reason); continue; }

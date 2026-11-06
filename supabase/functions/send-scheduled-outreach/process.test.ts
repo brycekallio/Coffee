@@ -41,6 +41,7 @@ function fakeDb(tables: Tables, errorOn: ErrorOn = () => undefined, inCalls: InC
       order: (c: string) => { orderCol = c; return b; },
       range: (a: number, z: number) => { offset = a; max = z - a + 1; return b; },
       single: async () => { const r = run(); return { data: r.rows[0] ?? null, error: r.error }; },
+      maybeSingle: async () => { const r = run(); return { data: r.rows[0] ?? null, error: r.error }; },
       then: (ok: (v: unknown) => unknown) => {
         const r = run();
         return Promise.resolve({ data: r.error ? null : r.rows, error: r.error }).then(ok);
@@ -201,7 +202,7 @@ describe("processDue", () => {
       return { ok: true } as const;
     });
     const res = await processDue(fakeDb(t), { now: NOW, deliver });
-    expect(get(t, "a")).toMatchObject({ status: "failed", failure_reason: "Not sent: could not reach Gmail, try again" });
+    expect(get(t, "a")).toMatchObject({ status: "failed", failure_reason: "Not sent: we lost contact with Gmail. Check your Sent folder before retrying" });
     expect(get(t, "b").status).toBe("sent");
     expect(res).toMatchObject({ sent: 1, failed: 1 });
   });

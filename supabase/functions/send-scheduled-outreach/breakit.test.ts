@@ -47,6 +47,7 @@ function fakeDb(tables: Tables, onRun: OnRun = () => undefined) {
       order: (c: string) => { orderCol = c; return b; },
       range: (a: number, z: number) => { offset = a; max = z - a + 1; return b; },
       single: async () => { const r = run(); return { data: r.rows[0] ?? null, error: r.error }; },
+      maybeSingle: async () => { const r = run(); return { data: r.rows[0] ?? null, error: r.error }; },
       then: (ok: (v: unknown) => unknown) => {
         const r = run();
         return Promise.resolve({ data: r.error ? null : r.rows, error: r.error }).then(ok);
@@ -126,7 +127,7 @@ describe("break-it (a): other users' contacts and tokens", () => {
   // "a@x.com, b@y.com" makes the owner's own Gmail send to extra people. Only the owner
   // can write their contacts (RLS), so this is self-inflicted unless contact emails are
   // ever filled from scraped/enriched data. Fix: validate a single plain address.
-  it.fails("A4 a contact email with CRLF or a second address is not handed to Gmail", async () => {
+  it("A4 a contact email with CRLF or a second address is not handed to Gmail", async () => {
     const t = world([row({})]);
     (t.contacts[0] as Row).email = "priya@example.com\r\nBcc: everyone@evil.example";
     const deliver = okDeliver();
@@ -190,7 +191,7 @@ describe("break-it (b): double sends", () => {
   // the OLD text goes out NOW. Window: the time spent delivering earlier rows in the same
   // batch (up to 49 Gmail round trips). Fix: claim with `.lte('scheduled_at', now)` and
   // return the row's subject/message from the claim (`.select('id, subject, message, contact_id')`).
-  it.fails("B5 an Edit that reschedules to tomorrow between read and claim is not sent now", async () => {
+  it("B5 an Edit that reschedules to tomorrow between read and claim is not sent now", async () => {
     const t = world([row({})]);
     let edited = false;
     const db = fakeDb(t, (_tb, mode, p) => {
@@ -237,7 +238,7 @@ describe("break-it (b): double sends", () => {
   // but fetch can throw AFTER Gmail accepted the message (connection reset while reading the
   // response). The reason invites Retry, and Retry sends it again. The stuck path already
   // says "Check your Sent folder before retrying"; the thrown path should say the same.
-  it.fails("B8 a send that threw (maybe delivered) warns the user to check Sent before retrying", async () => {
+  it("B8 a send that threw (maybe delivered) warns the user to check Sent before retrying", async () => {
     const t = world([row({})]);
     const deliver = vi.fn<Deliver>(async () => { throw new Error("connection reset"); });
     await processDue(fakeDb(t), { now: NOW, deliver });
@@ -326,7 +327,7 @@ describe("break-it (c): one bad row or owner stops everyone", () => {
   // reading the contact records "Not sent: contact not found" -- a false, permanent-looking
   // reason (the row is failed; the user must notice and Retry). Fix: on error, throw / fail
   // with a "try again" reason instead of "not found".
-  it.fails("C7 a transient contacts-query error is not reported as 'contact not found'", async () => {
+  it("C7 a transient contacts-query error is not reported as 'contact not found'", async () => {
     const t = world([row({})]);
     const db = fakeDb(t, (tb) => (tb === "contacts" ? "connection reset" : undefined));
     await processDue(db, { now: NOW, deliver: okDeliver() }).catch(() => undefined);

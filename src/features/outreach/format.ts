@@ -1,6 +1,6 @@
 /** A mailto: body is plain text, so the message goes through untouched. */
 export function buildMailto(to: string, subject: string, message: string): string {
-  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 }
 
 /** The reason shown under a row the cron could not send. Also rewrites reasons the old cron wrote. */

@@ -46,7 +46,7 @@ describe("break-it: mailto hand-off", () => {
   // "a@x.com?bcc=evil@y.com&" adds a Bcc to the draft. The user sees the draft in their
   // mail client before sending, and only they can write their contacts, so it is low.
   // Fix: encodeURIComponent(to) or reject addresses with ?, &, comma or whitespace.
-  it.fails("P6 a contact email cannot add a bcc to the mailto draft", () => {
+  it("P6 a contact email cannot add a bcc to the mailto draft", () => {
     const m = buildMailto("a@x.com?bcc=evil@y.com&", "Hi", "Body");
     expect(new URL(m).searchParams.get("bcc")).toBeNull();
   });

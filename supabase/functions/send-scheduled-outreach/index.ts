@@ -48,7 +48,7 @@ async function accessTokenFor(refreshToken: string): Promise<string | null> {
 /** RFC 2822 message, base64url encoded as Gmail requires. */
 function encodeMessage(to: string, from: string, subject: string, body: string): string {
   // Subjects are RFC 2047 encoded so accented names and em dashes survive.
-  const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
+  const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject.replace(/[\r\n]+/g, " "))))}?=`;
   const raw = [
     `To: ${to}`,
     `From: ${from}`,
