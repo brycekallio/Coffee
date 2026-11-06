@@ -135,7 +135,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
               <div className="rounded-input bg-depth-0/30 p-4">
                 <div className="text-sm font-medium text-white">Resume upload</div>
-                <div className="mt-1 text-xs text-white/30">
+                <div className="mt-1 text-xs text-white/60">
                   A PDF works best: Coffee reads it to tailor outreach and score job descriptions. Only you can open it.
                 </div>
 
@@ -143,7 +143,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,application/pdf"
-                    className="block w-full text-sm text-white/50 file:mr-4 file:cursor-pointer file:rounded-button file:border-0 file:bg-glow/[0.08] file:px-4 file:py-2 file:text-sm file:font-medium file:text-glow hover:file:bg-glow/15"
+                    className="block w-full text-sm text-white/60 file:mr-4 file:cursor-pointer file:rounded-button file:border-0 file:bg-glow/[0.08] file:px-4 file:py-2 file:text-sm file:font-medium file:text-glow hover:file:bg-glow/15"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) uploadResume(f);
@@ -152,7 +152,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   {profile?.resume_url ? (
                     <button
                       onClick={openResume}
-                      className="rounded-button bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
+                      className="inline-flex min-h-10 items-center justify-center rounded-button bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
                     >
                       View resume
                     </button>
@@ -164,7 +164,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 <button
                   onClick={saveProfile}
                   disabled={savingProfile}
-                  className="rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow disabled:opacity-50 cursor-pointer"
+                  className="inline-flex min-h-10 items-center justify-center rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition hover:bg-glow disabled:opacity-50 cursor-pointer"
                 >
                   {savingProfile ? "Saving..." : "Save profile"}
                 </button>
@@ -187,7 +187,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               </div>
               {/* Nothing to edit here on purpose: the address comes from the provider
                   on every sign-in, and Coffee never holds a password to change. */}
-              <p className="text-xs leading-relaxed text-white/25">
+              <p className="text-xs leading-relaxed text-white/60">
                 Change your email with your provider and it updates here next time you sign in.
                 Coffee never stores a password.
               </p>
@@ -206,15 +206,15 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 {/* Google Calendar icon */}
                 <div className="flex h-9 w-9 items-center justify-center rounded-button bg-white/[0.06]">
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-                    <rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-white/40" />
-                    <path d="M3 9h18" stroke="currentColor" strokeWidth="1.5" className="text-white/40" />
-                    <path d="M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-white/40" />
+                    <rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-white/60" />
+                    <path d="M3 9h18" stroke="currentColor" strokeWidth="1.5" className="text-white/60" />
+                    <path d="M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-white/60" />
                     <rect x="7" y="13" width="4" height="3" rx="0.5" fill="currentColor" className="text-glow/70" />
                   </svg>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-white">Google</div>
-                  <div className="mt-0.5 text-xs text-white/40">
+                  <div className="mt-0.5 text-xs text-white/60">
                     {googleLinked
                       ? profile?.google_gmail_send
                         ? "Connected. Outreach goes on your calendar, and scheduled email sends from your Gmail."
@@ -233,7 +233,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                     </span>
                     <button
                       onClick={onCalendarDisconnect}
-                      className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/50 transition-colors hover:bg-white/[0.08] hover:text-white/70 cursor-pointer"
+                      className="inline-flex min-h-10 items-center rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white/70 cursor-pointer"
                     >
                       Disconnect
                     </button>
@@ -241,7 +241,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 ) : (
                   <button
                     onClick={onCalendarConnect}
-                    className="rounded-button bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
+                    className="inline-flex min-h-10 items-center justify-center rounded-button bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.12] cursor-pointer"
                   >
                     Connect
                   </button>
@@ -262,7 +262,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
             )}
 
             {!googleLinked && (
-              <p className="mt-3 text-xs text-white/25">
+              <p className="mt-3 text-xs text-white/60">
                 You'll go to Google to approve. Coffee can add calendar events and send the email you schedule. It can't read your inbox or calendar. Keep "Send email on your behalf" ticked, or email won't send.
               </p>
             )}
@@ -284,7 +284,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
             title="Resume adjuster"
             subtitle="Paste a job description and get AI-powered keyword suggestions to tailor your resume."
             right={
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
                 {/* Reports the engine actually in use — see the AI engine card above. */}
                 <div className="flex items-center gap-1.5">
                   <div
@@ -292,7 +292,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                       isPowerTier ? "bg-glow" : "bg-glow/40"
                     }`}
                   />
-                  <span className="text-xs text-white/40">
+                  <span className="text-xs text-white/60">
                     {isPowerTier ? "Your key" : "Free engine"}
                   </span>
                 </div>
@@ -302,9 +302,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   <button
                     onClick={reparseResume}
                     disabled={savingProfile}
-                    className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] disabled:opacity-50 cursor-pointer"
+                    className="inline-flex min-h-10 items-center rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] disabled:opacity-50 cursor-pointer"
                   >
-                    Re-parse Resume
+                    Re-parse resume
                   </button>
                 )}
               </div>
@@ -314,16 +314,16 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               {/* Resume text display */}
               {profile?.resume_text ? (
                 <div className="rounded-input bg-depth-0/30 p-4">
-                  <div className="mb-2 text-xs font-medium text-white/40">Parsed resume text</div>
+                  <div className="mb-2 text-xs font-medium text-white/60">Parsed resume text</div>
                   <div className="max-h-48 overflow-y-auto text-sm text-white/60 whitespace-pre-wrap">
                     {profile.resume_text}
                   </div>
                 </div>
               ) : (
                 <div className="rounded-input bg-depth-0/30 p-4 text-center">
-                  <p className="text-sm text-white/40">
+                  <p className="text-sm text-white/60">
                     {profile?.resume_url
-                      ? "Resume uploaded but text not yet extracted. Click \"Re-parse Resume\" above."
+                      ? "Resume uploaded but text not yet extracted. Click \"Re-parse resume\" above."
                       : "No resume uploaded yet. Upload a PDF in the Profile section above."}
                   </p>
                 </div>
@@ -331,7 +331,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
 
               {/* Output mode — a full rewrite is a power-tier tool. */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/40">
+                <label className="mb-1 block text-xs font-medium text-white/60">
                   What should the AI produce?
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -340,11 +340,11 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                     className={`flex-1 rounded-input px-4 py-3 text-left transition-colors cursor-pointer ${
                       adjustMode === "suggestions"
                         ? "bg-glow/[0.08] text-white"
-                        : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
+                        : "bg-white/[0.04] text-white/60 hover:bg-white/[0.08]"
                     }`}
                   >
                     <div className="text-sm font-medium">Keyword suggestions</div>
-                    <div className="mt-0.5 text-xs text-white/30">
+                    <div className="mt-0.5 text-xs text-white/60">
                       5–10 targeted phrase swaps. Works on the free engine.
                     </div>
                   </button>
@@ -353,18 +353,18 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                     className={`flex-1 rounded-input px-4 py-3 text-left transition-colors cursor-pointer ${
                       adjustMode === "rewrite"
                         ? "bg-glow/[0.08] text-white"
-                        : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
+                        : "bg-white/[0.04] text-white/60 hover:bg-white/[0.08]"
                     }`}
                   >
                     <div className="flex items-center gap-2 text-sm font-medium">
                       Full rewrite
                       {!isPowerTier && (
-                        <span className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-normal text-white/40">
+                        <span className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-normal text-white/60">
                           Your key
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 text-xs text-white/30">
+                    <div className="mt-0.5 text-xs text-white/60">
                       The whole resume, retargeted at this one posting.
                     </div>
                   </button>
@@ -384,23 +384,23 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                 <button
                   onClick={handleAdjust}
                   disabled={adjusting || !profile?.resume_text}
-                  className="rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
+                  className="inline-flex min-h-10 items-center justify-center rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
                 >
                   {adjusting
                     ? adjustMode === "rewrite"
                       ? "Rewriting..."
                       : "Adjusting..."
                     : adjustMode === "rewrite"
-                    ? "Rewrite Resume"
-                    : "Adjust Resume"}
+                    ? "Rewrite resume"
+                    : "Adjust resume"}
                 </button>
 
                 {adjustResult && (
                   <button
                     onClick={copyResult}
-                    className="rounded-button bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
+                    className="inline-flex min-h-10 items-center justify-center rounded-button bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
                   >
-                    {adjustMode === "rewrite" ? "Copy Resume" : "Copy Suggestions"}
+                    {adjustMode === "rewrite" ? "Copy resume" : "Copy suggestions"}
                   </button>
                 )}
               </div>
@@ -409,11 +409,11 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               {adjustResult && (
                 <div className="rounded-input bg-depth-0/30 p-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium text-white/40">
-                      {adjustMode === "rewrite" ? "Rewritten Resume" : "AI Suggestions"}
+                    <span className="text-xs font-medium text-white/60">
+                      {adjustMode === "rewrite" ? "Rewritten resume" : "AI suggestions"}
                     </span>
                     {resultModel && (
-                      <span className="font-data text-[11px] text-white/25">
+                      <span className="font-data text-[11px] text-white/60">
                         {resultModel}
                       </span>
                     )}
@@ -435,7 +435,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               <input
                 type="file"
                 accept=".csv,text/csv"
-                className="block w-full text-sm text-white/50 file:mr-4 file:cursor-pointer file:rounded-button file:border-0 file:bg-glow/[0.08] file:px-4 file:py-2 file:text-sm file:font-medium file:text-glow hover:file:bg-glow/15"
+                className="block w-full text-sm text-white/60 file:mr-4 file:cursor-pointer file:rounded-button file:border-0 file:bg-glow/[0.08] file:px-4 file:py-2 file:text-sm file:font-medium file:text-glow hover:file:bg-glow/15"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
@@ -446,7 +446,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
               {importFileName ? (
                 <div className="rounded-input bg-depth-0/30 p-4">
                   <div className="text-sm font-medium text-white">Loaded: {importFileName}</div>
-                  <div className="mt-1 font-data text-xs text-white/30">
+                  <div className="mt-1 font-data text-xs text-white/60">
                     Detected mapping:{" "}
                     {Object.entries(importMap)
                       .filter(([, v]) => !!v)
@@ -455,9 +455,9 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                   </div>
 
                   <div className="mt-4 rounded-section bg-depth-0/40">
-                    <div className="px-4 py-2 text-xs text-white/30">Preview: {importRows.length} row(s)</div>
+                    <div className="px-4 py-2 text-xs text-white/60">Preview: {importRows.length} row(s)</div>
 
-                    <div className="grid grid-cols-5 gap-2 px-4 py-2 text-xs text-white/25 font-medium">
+                    <div className="grid grid-cols-5 gap-2 px-4 py-2 text-xs text-white/60 font-medium">
                       <div>Name</div>
                       <div>Company</div>
                       <div>Title</div>
@@ -482,7 +482,7 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                       const phone = map.phone ? r[map.phone] : "";
 
                       return (
-                        <div key={idx} className="grid grid-cols-5 gap-2 px-4 py-2 text-sm text-white/50">
+                        <div key={idx} className="grid grid-cols-5 gap-2 px-4 py-2 text-sm text-white/60">
                           <div className="truncate" title={name}>
                             {name || "\u2014"}
                           </div>
@@ -503,20 +503,20 @@ export default function SettingsPage({ onContactsImported }: SettingsPageProps) 
                       );
                     })}
 
-                    <div className="px-4 py-2 text-xs text-white/20">Showing first 10 rows. All rows will import.</div>
+                    <div className="px-4 py-2 text-xs text-white/60">Showing first 10 rows. All rows will import.</div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-end gap-2">
                     <button
                       disabled={importing || importRows.length === 0}
                       onClick={importIntoSupabase}
-                      className="rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
+                      className="inline-flex min-h-10 items-center justify-center rounded-button bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-50 cursor-pointer"
                     >
                       {importing ? "Importing..." : "Import into Coffee?"}
                     </button>
                   </div>
 
-                  <p className="mt-3 text-xs text-white/25">
+                  <p className="mt-3 text-xs text-white/60">
                     If LinkedIn doesn't import: Sheets often exports only visible hyperlink text, not the URL. Import, then add LinkedIn via Edit.
                   </p>
                 </div>
