@@ -112,7 +112,7 @@ export default function ApplicationsPage() {
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
-      <div className="lg:col-span-1">
+      <div className="order-2 lg:order-1 lg:col-span-1">
         <Card title={editingAppId ? "Edit application" : "Track application"} subtitle="Keep tabs on where you've applied.">
           <div className="grid gap-3">
             <div>
@@ -185,7 +185,7 @@ export default function ApplicationsPage() {
       </div>
 
       {/* List — 2/3 */}
-      <div className="lg:col-span-2">
+      <div className="order-1 lg:order-2 lg:col-span-2">
         <Card
           title="Applications"
           subtitle={loadingApps ? "Loading..." : `${applications.length} tracked`}
@@ -224,14 +224,14 @@ export default function ApplicationsPage() {
         >
           {viewMode === "table" ? (
             <div className="mt-2 rounded-section bg-depth-0/40">
-              <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/60 font-medium">
+              <div className="hidden md:grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/60 font-medium">
                 <div>Company</div>
                 <div>Link</div>
                 <div>Date</div>
                 <div>Status</div>
                 <div>Action</div>
               </div>
-              <div className="h-px w-full bg-white/[0.04]" />
+              <div className="hidden h-px w-full bg-white/[0.04] md:block" />
 
               {loadingApps ? (
                 <div className="px-4 py-8 text-center text-sm text-white/60">Loading applications...</div>
@@ -245,22 +245,22 @@ export default function ApplicationsPage() {
               ) : (
                 applications.map(app => (
                   <div key={app.id}>
-                    <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
-                      <div className="font-medium text-white truncate">{app.company}</div>
-                      <div className="min-w-0 truncate text-sm">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-white/[0.02] md:grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] md:gap-3">
+                      <div className="col-start-1 row-start-1 min-w-0 truncate font-medium text-white md:col-auto md:row-auto">{app.company}</div>
+                      <div className="col-span-2 row-start-3 min-w-0 truncate text-sm md:col-span-1 md:row-auto">
                         {app.link ? (
                           <a href={app.link} target="_blank" rel="noreferrer" className="text-glow hover:underline">
                             View link
                           </a>
                         ) : <span className="text-white/60">{"\u2014"}</span>}
                       </div>
-                      <div className="font-data text-white/60">{app.date_applied || "\u2014"}</div>
-                      <div className="text-sm">
+                      <div className="col-start-1 row-start-2 font-data text-sm text-white/60 md:col-auto md:row-auto">{app.date_applied || "\u2014"}</div>
+                      <div className="col-start-2 row-start-1 justify-self-end text-sm md:col-auto md:row-auto md:justify-self-auto">
                         <span className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[normalizeStatus(app.status)] ?? "bg-white/[0.04] text-white/60"}`}>
                           {normalizeStatus(app.status)}
                         </span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="col-start-2 row-start-2 flex gap-3 justify-self-end md:col-auto md:row-auto md:justify-self-auto md:gap-2">
                         <button
                           onClick={() => startEditApp(app)}
                           className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer"
