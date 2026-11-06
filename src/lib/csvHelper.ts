@@ -104,7 +104,7 @@ export function looksLikeName(v: unknown) {
   return true;
 }
 
-export const TITLE_HINTS = [
+const TITLE_HINTS = [
   "analyst",
   "associate",
   "intern",
@@ -131,7 +131,7 @@ export const TITLE_HINTS = [
   "portfolio",
 ];
 
-export function looksLikeTitle(v: unknown) {
+function looksLikeTitle(v: unknown) {
   const s = String(v ?? "").trim();
   const l = s.toLowerCase();
   if (!s) return false;
@@ -143,7 +143,7 @@ export function looksLikeTitle(v: unknown) {
   return keyword || plausibleWords;
 }
 
-export const COMPANY_HINTS = [
+const COMPANY_HINTS = [
   "capital",
   "partners",
   "group",
@@ -187,7 +187,7 @@ export function inferByHeader(headers: string[], candidates: string[]) {
   return null;
 }
 
-export function inferByContent(headers: string[], rows: Record<string, string>[], predicate: (v: unknown) => boolean) {
+function inferByContent(headers: string[], rows: Record<string, string>[], predicate: (v: unknown) => boolean) {
   const scores: Record<string, number> = {};
   for (const h of headers) scores[h] = 0;
 
