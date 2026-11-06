@@ -57,11 +57,14 @@ export async function exchangeAndStore(
     google_calendar_token_expiry: tokenData.expires_in ? new Date(now() + tokenData.expires_in * 1000).toISOString() : null,
   };
   // Google only returns a refresh token on a fresh consent. Never overwrite a good one with nothing.
+  const gmailSend = grantedGmailSend(tokenData.scope);
   if (tokenData.refresh_token) {
     values.google_calendar_refresh_token = tokenData.refresh_token;
-    values.google_connected = true;
+    // Outreach auto-sends through Gmail only when send was really granted.
+    values.google_gmail_send = gmailSend;
+    values.google_connected = gmailSend;
   }
   const { error } = await deps.service.from("profiles").update(values).eq("id", input.userId);
   if (error) return { status: 500, body: { error: error.message } };
-  return { status: 200, body: { success: true, gmail_send: grantedGmailSend(tokenData.scope) } };
+  return { status: 200, body: { success: true, gmail_send: gmailSend } };
 }

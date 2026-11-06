@@ -26,7 +26,8 @@ describe("exchange-google-token", () => {
     });
     expect(out.body).toEqual({ success: true, gmail_send: false });
     expect(saved).toHaveLength(1);
-    expect(saved[0].google_connected).toBe(true);
+    expect(saved[0].google_connected).toBe(false); // superseded: send not granted is not "connected" for auto-send
+    expect(saved[0].google_gmail_send).toBe(false);
   });
 
   it("does not mark the profile auto-send connected when Gmail send was not granted", async () => {

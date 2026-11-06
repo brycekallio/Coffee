@@ -56,6 +56,7 @@ export async function disconnectGoogle(
       google_calendar_refresh_token: null,
       google_calendar_token_expiry: null,
       google_connected: false,
+      google_gmail_send: false,
     })
     .eq("id", userId);
   if (updateError) return { status: 500, body: { error: updateError.message } };
