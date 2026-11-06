@@ -121,3 +121,14 @@ describe("inferByHeader", () => {
     expect(inferByHeader(["#", "Email"], ["email"])).toBe("Email");
   });
 });
+
+describe("detectors agree with the shared cleaners", () => {
+  it("isPhone / isLinkedInUrl accept exactly what the import would keep", async () => {
+    const { isPhone, isLinkedInUrl } = await import("./csvHelper");
+    expect(isPhone("(303) 555-0123")).toBe(true);
+    expect(isPhone("call me at 303-555-0123 maybe")).toBe(false);
+    expect(isLinkedInUrl("https://www.linkedin.com/in/jane-doe")).toBe(true);
+    expect(isLinkedInUrl("linkedin.com.evil.com/in/x")).toBe(false);
+    expect(isLinkedInUrl("https://www.linkedin.com/company/acme")).toBe(false);
+  });
+});
