@@ -18,11 +18,11 @@ import * as watchlistApi from "@/features/watchlist/api";
 import { errorMessage } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "not_contacted", label: "Not Contacted" },
+  { value: "not_contacted", label: "Not contacted" },
   { value: "contacted", label: "Contacted" },
   { value: "scheduled", label: "Scheduled" },
   { value: "completed", label: "Completed" },
-  { value: "follow_up_sent", label: "Follow-up Sent" },
+  { value: "follow_up_sent", label: "Follow-up sent" },
 ];
 
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(
@@ -30,7 +30,7 @@ const STATUS_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 const STATUS_STYLE: Record<string, string> = {
-  not_contacted: "bg-white/[0.04] text-white/40",
+  not_contacted: "bg-white/[0.04] text-white/60",
   contacted: "bg-glow/[0.06] text-glow/60",
   scheduled: "bg-glow/[0.08] text-glow/70",
   completed: "bg-glow/[0.12] text-glow",
@@ -229,14 +229,14 @@ export default function WatchlistPage() {
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
-      <div className="lg:col-span-1">
+      <div className="order-2 lg:order-1 lg:col-span-1">
         <Card
-          title={editingId ? "Edit Target" : "Add Target"}
+          title={editingId ? "Edit target" : "Add target"}
           subtitle="Track people you want to network with."
         >
           <div className="grid gap-3">
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Person Name</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Person name</div>
               <input
                 className={inputCls}
                 placeholder="e.g. Jane Smith"
@@ -246,7 +246,7 @@ export default function WatchlistPage() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Company</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Company</div>
               <input
                 className={inputCls}
                 placeholder="e.g. Evercore"
@@ -256,7 +256,7 @@ export default function WatchlistPage() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Role / Title (optional)</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Role / title (optional)</div>
               <input
                 className={inputCls}
                 placeholder="e.g. Engineering Manager"
@@ -267,7 +267,7 @@ export default function WatchlistPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="mb-1 text-xs font-medium text-white/35">Status</div>
+                <div className="mb-1 text-xs font-medium text-white/60">Status</div>
                 <select
                   className={selectCls}
                   value={status}
@@ -281,7 +281,7 @@ export default function WatchlistPage() {
                 </select>
               </div>
               <div>
-                <div className="mb-1 text-xs font-medium text-white/35">Next Action Date</div>
+                <div className="mb-1 text-xs font-medium text-white/60">Next action date</div>
                 <input
                   className={inputCls}
                   type="date"
@@ -292,7 +292,7 @@ export default function WatchlistPage() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Notes (optional)</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Notes (optional)</div>
               <textarea
                 className={inputCls + " min-h-[72px] resize-y"}
                 placeholder="Any context, talking points, etc."
@@ -307,7 +307,7 @@ export default function WatchlistPage() {
                 disabled={saving}
                 className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition duration-300 hover:bg-glow active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
-                {saving ? "Saving..." : editingId ? "Update" : "Add Target"}
+                {saving ? "Saving..." : editingId ? "Update" : "Add target"}
               </button>
               {editingId && (
                 <button
@@ -323,7 +323,7 @@ export default function WatchlistPage() {
       </div>
 
       {/* List — 2/3 */}
-      <div className="lg:col-span-2">
+      <div className="order-1 lg:order-2 lg:col-span-2">
         <Card
           title="Watchlist"
           subtitle={loading ? "Loading..." : `${allTargets.length} target${allTargets.length !== 1 ? "s" : ""}`}
@@ -373,12 +373,12 @@ export default function WatchlistPage() {
               ) : (
                 <>
                   <span className="text-xs text-white/60 md:hidden">Select all</span>
-                  <div className="hidden min-w-0 flex-1 grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 text-xs font-medium text-white/60 md:grid">
+                  <div className="hidden min-w-0 flex-1 grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 text-xs font-medium text-white/60 md:grid">
                     <div>Name</div>
                     <div>Company</div>
                     <div>Role</div>
                     <div>Status</div>
-                    <div>Next Action</div>
+                    <div>Next action</div>
                     <div>Actions</div>
                   </div>
                 </>
@@ -387,11 +387,11 @@ export default function WatchlistPage() {
             <div className="h-px w-full bg-white/[0.04]" />
 
             {loading ? (
-              <div className="px-4 py-8 text-center text-sm text-white/40">Loading watchlist...</div>
+              <div className="px-4 py-8 text-center text-sm text-white/60">Loading watchlist...</div>
             ) : targets.length === 0 ? (
               <div className="px-6 py-10 text-center">
-                <p className="text-sm text-white/50">No one on your radar yet.</p>
-                <p className="mt-1 text-xs text-white/25">
+                <p className="text-sm text-white/60">No one on your radar yet.</p>
+                <p className="mt-1 text-xs text-white/60">
                   Opportunity doesn't knock. It networks.
                 </p>
               </div>
@@ -400,7 +400,7 @@ export default function WatchlistPage() {
                 <div key={t.id}>
                   <div className={`flex items-center gap-3 px-4 transition-colors hover:bg-white/[0.02] ${sel.selected.has(t.id) ? "bg-white/[0.05]" : ""}`}>
                   <Checkbox state={sel.selected.has(t.id) ? "all" : "none"} label={`Select ${t.person_name}`} onToggle={(shift) => sel.onToggle(t.id, shift)} />
-                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
+                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate font-medium text-white" title={t.person_name}>
@@ -413,33 +413,33 @@ export default function WatchlistPage() {
                       </div>
                       <TagChips tags={t.tags} />
                     </div>
-                    <div className="hidden truncate text-sm text-white/50 md:block" title={t.company}>
+                    <div className="hidden truncate text-sm text-white/60 md:block" title={t.company}>
                       {t.company || "\u2014"}
                     </div>
-                    <div className="hidden truncate text-sm text-white/50 md:block" title={t.role ?? ""}>
+                    <div className="hidden truncate text-sm text-white/60 md:block" title={t.role ?? ""}>
                       {t.role ?? "\u2014"}
                     </div>
                     <div className="row-span-2 text-sm md:row-span-1">
                       <span
-                        className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[t.status] ?? "bg-white/[0.04] text-white/40"}`}
+                        className={`inline-block whitespace-nowrap rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[t.status] ?? "bg-white/[0.04] text-white/60"}`}
                       >
                         {STATUS_LABEL[t.status] ?? t.status}
                       </span>
                     </div>
                     <div className="col-span-2 flex items-center justify-between gap-4 md:contents">
-                      <div className="font-data text-sm text-white/60 md:text-white/40">
+                      <div className="font-data text-sm text-white/60">
                         {t.next_action_date ? <><span className="md:hidden">Next: </span>{t.next_action_date}</> : "\u2014"}
                       </div>
                       <div className="flex gap-3 md:gap-2">
                         <button
                           onClick={() => startEdit(t)}
-                          className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer md:text-white/35"
+                          className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => deleteTarget(t.id)}
-                          className="text-xs font-medium text-danger/70 transition-colors hover:text-danger cursor-pointer md:text-danger/50"
+                          className="text-xs font-medium text-danger/80 transition-colors hover:text-danger cursor-pointer"
                         >
                           Delete
                         </button>

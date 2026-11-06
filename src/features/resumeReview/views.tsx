@@ -14,7 +14,7 @@ import {
    test can render each step from plain props. */
 
 const card = "rounded-xl border border-white/[0.06] bg-depth-1/80";
-const eyebrow = "text-xs font-semibold text-white/40";
+const eyebrow = "text-xs font-semibold text-white/60";
 
 function ratioColor(ratio: number) {
   return bandTone(ratio * 100).bar;
@@ -35,7 +35,7 @@ function Spinner() {
 const primaryBtn =
   "w-full rounded-xl bg-glow py-3 text-sm font-semibold text-depth-0 transition duration-300 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer";
 const quietBtn =
-  "rounded-lg bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.10] hover:text-white cursor-pointer";
+  "inline-flex min-h-10 items-center rounded-lg bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.10] hover:text-white cursor-pointer";
 
 /* ── Step 0: who and what ────────────────────────────────────────── */
 
@@ -70,7 +70,7 @@ export function IntakeForm(props: {
   const postingTooLong = postingChars > LIMITS.posting;
   const hasResume = (showBox ? resumeChars >= 80 : hasProfileResume) && !resumeTooLong && !postingTooLong;
   const hint = (n: number, max: number) => (
-    <p className={`mt-1.5 text-xs ${n > max ? "text-red-400" : "text-white/40"}`}>
+    <p className={`mt-1.5 text-xs ${n > max ? "text-red-400" : "text-white/60"}`}>
       {fmt(n)} / {fmt(max)} characters{n > max ? ". Too long: trim it before sending." : ""}
     </p>
   );
@@ -82,7 +82,7 @@ export function IntakeForm(props: {
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-white/80">Resume loaded</p>
-              <p className="mt-0.5 text-xs text-white/50">{props.resumeWords.toLocaleString("en-US")} words · uploaded from your profile</p>
+              <p className="mt-0.5 text-xs text-white/60">{props.resumeWords.toLocaleString("en-US")} words · uploaded from your profile</p>
             </div>
             <button type="button" onClick={() => set({ useOwnText: true })} className={quietBtn}>Use different text</button>
           </div>
@@ -143,7 +143,7 @@ export function IntakeForm(props: {
       </div>
 
       <div>
-        <label htmlFor="rr-posting" className={`${eyebrow} mb-2 block`}>A real job posting <span className="font-normal text-white/30">(optional, but it sharpens the review)</span></label>
+        <label htmlFor="rr-posting" className={`${eyebrow} mb-2 block`}>A real job posting <span className="font-normal text-white/60">(optional, but it sharpens the review)</span></label>
         <textarea
           id="rr-posting"
           className={`${inputCls} h-40 resize-y`}
@@ -161,7 +161,7 @@ export function IntakeForm(props: {
           "Ask me the right questions"
         )}
       </button>
-      <p className="text-center text-xs text-white/40">
+      <p className="text-center text-xs text-white/60">
         Two steps: a few questions first, then your review. Each step uses one of your free AI requests for today (no limit with your own API key).
       </p>
     </div>
@@ -192,7 +192,7 @@ export function QuestionsForm(props: {
           <li key={i} className={`${card} p-4`}>
             {q.about ? <p className={`${eyebrow} mb-1`}>{q.about}</p> : null}
             <label htmlFor={`rr-q-${i}`} className="block text-sm font-medium leading-relaxed text-white/90">
-              <span className="mr-2 tabular-nums text-white/40">{i + 1}.</span>{q.q}
+              <span className="mr-2 tabular-nums text-white/60">{i + 1}.</span>{q.q}
             </label>
             <textarea
               id={`rr-q-${i}`}
@@ -214,7 +214,7 @@ export function QuestionsForm(props: {
       </button>
       <div className="flex items-center justify-between gap-3">
         <button type="button" onClick={props.onBack} disabled={props.busy} className={quietBtn}>← Change my details</button>
-        <p className="text-xs text-white/40">Uses one more free AI request.</p>
+        <p className="text-xs text-white/60">Uses one more free AI request.</p>
       </div>
     </div>
   );
@@ -232,12 +232,12 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function NumberedList({ items, empty }: { items: string[]; empty?: string }) {
-  if (items.length === 0) return <p className="text-sm text-white/40">{empty ?? "Nothing to add."}</p>;
+  if (items.length === 0) return <p className="text-sm text-white/60">{empty ?? "Nothing to add."}</p>;
   return (
     <ol className="space-y-2.5">
       {items.map((s, i) => (
         <li key={i} className="flex items-start gap-3 text-sm leading-relaxed text-white/70">
-          <span className="mt-0.5 w-4 flex-none tabular-nums text-white/40">{i + 1}</span>
+          <span className="mt-0.5 w-4 flex-none tabular-nums text-white/60">{i + 1}</span>
           <span className="min-w-0 break-words">{s}</span>
         </li>
       ))}
@@ -246,7 +246,7 @@ function NumberedList({ items, empty }: { items: string[]; empty?: string }) {
 }
 
 function Chips({ items, tone }: { items: string[]; tone: "good" | "gap" }) {
-  if (items.length === 0) return <p className="text-sm text-white/40">None found.</p>;
+  if (items.length === 0) return <p className="text-sm text-white/60">None found.</p>;
   return (
     <ul className="flex flex-wrap gap-1.5">
       {items.map((k, i) => (
@@ -270,7 +270,7 @@ export function ReviewReport({ review, onRestart }: { review: ReviewResult; onRe
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
           <div className="flex items-baseline gap-1.5">
             <span className={`text-6xl font-semibold tabular-nums tracking-tight ${ratioText(ratio)}`} aria-label={`Score ${review.score} out of 100`}>{review.score}</span>
-            <span className="text-lg text-white/40">/ 100</span>
+            <span className="text-lg text-white/60">/ 100</span>
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-base font-semibold text-white">{review.band}</p>
@@ -278,7 +278,7 @@ export function ReviewReport({ review, onRestart }: { review: ReviewResult; onRe
               {[STAGE_LABELS[review.stage], review.target_title || null].filter(Boolean).join(" · ")}
             </p>
             {review.segment ? (
-              <p className="mt-2 text-xs text-white/50">Reads as: <span className="text-white/80">{review.segment.name}</span></p>
+              <p className="mt-2 text-xs text-white/60">Reads as: <span className="text-white/80">{review.segment.name}</span></p>
             ) : null}
           </div>
         </div>
@@ -318,7 +318,7 @@ export function ReviewReport({ review, onRestart }: { review: ReviewResult; onRe
                       <span className={`w-12 flex-none text-right text-sm font-semibold tabular-nums ${ratioText(rr)}`}>{r.score}/{r.max}</span>
                     </div>
                   </td>
-                  <td className="block pt-1.5 text-xs leading-relaxed text-white/50 md:table-cell md:py-3 md:align-top md:text-sm">{r.note}</td>
+                  <td className="block pt-1.5 text-xs leading-relaxed text-white/60 md:table-cell md:py-3 md:align-top md:text-sm">{r.note}</td>
                 </tr>
               );
             })}
@@ -329,10 +329,10 @@ export function ReviewReport({ review, onRestart }: { review: ReviewResult; onRe
       {/* Rewrites */}
       <Section title="Line-by-line rewrites">
         {review.rewrites.length === 0 ? (
-          <p className="text-sm text-white/40">No lines needed rewriting.</p>
+          <p className="text-sm text-white/60">No lines needed rewriting.</p>
         ) : (
           <>
-            <p className="mb-4 text-xs leading-relaxed text-white/50">
+            <p className="mb-4 text-xs leading-relaxed text-white/60">
               Drafts, not final copy. Anything in [brackets] is a number or fact only you know. Answer the questions, fill the blanks, and make sure it is true.
             </p>
             <div className="hidden grid-cols-3 gap-4 border-b border-white/[0.06] pb-2 md:grid">
@@ -343,7 +343,7 @@ export function ReviewReport({ review, onRestart }: { review: ReviewResult; onRe
                 <li key={i} className="grid grid-cols-1 gap-3 py-4 md:grid-cols-3 md:gap-4">
                   <div className="min-w-0">
                     <p className={`${eyebrow} mb-1 md:hidden`}>Original</p>
-                    <p className="break-words text-sm leading-relaxed text-white/50">{w.original}</p>
+                    <p className="break-words text-sm leading-relaxed text-white/60">{w.original}</p>
                   </div>
                   <div className="min-w-0">
                     <p className={`${eyebrow} mb-1 md:hidden`}>Questions for you</p>
@@ -377,10 +377,10 @@ export function ReviewReport({ review, onRestart }: { review: ReviewResult; onRe
 
       <Section title={review.segment ? `Fit for ${review.segment.name}` : "Fit for the role"}>
         <div className="space-y-4">
-          <div><p className="mb-2 text-xs text-white/50">Keywords you already show</p><Chips items={review.keywords_present} tone="good" /></div>
-          <div><p className="mb-2 text-xs text-white/50">Keywords to add, only where they are true</p><Chips items={review.keywords_missing} tone="gap" /></div>
+          <div><p className="mb-2 text-xs text-white/60">Keywords you already show</p><Chips items={review.keywords_present} tone="good" /></div>
+          <div><p className="mb-2 text-xs text-white/60">Keywords to add, only where they are true</p><Chips items={review.keywords_missing} tone="gap" /></div>
           {review.red_flags.length > 0 ? (
-            <div><p className="mb-2 text-xs text-white/50">Red flags</p><NumberedList items={review.red_flags} /></div>
+            <div><p className="mb-2 text-xs text-white/60">Red flags</p><NumberedList items={review.red_flags} /></div>
           ) : null}
         </div>
       </Section>

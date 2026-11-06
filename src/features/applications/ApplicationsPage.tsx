@@ -11,8 +11,8 @@ import { useApplications } from "./useApplications";
 import { APPLICATION_STATUSES, normalizeStatus } from "./statuses";
 
 const STATUS_STYLE: Record<string, string> = {
-  Networking: "bg-white/[0.04] text-white/40",
-  Saved: "bg-white/[0.04] text-white/50",
+  Networking: "bg-white/[0.04] text-white/60",
+  Saved: "bg-white/[0.04] text-white/60",
   Applied: "bg-white/[0.06] text-white/60",
   Interviewing: "bg-glow/[0.08] text-glow/80",
   Offer: "bg-glow/[0.12] text-glow",
@@ -112,26 +112,26 @@ export default function ApplicationsPage() {
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-10 md:px-6 lg:grid-cols-3">
       {/* Form — 1/3 */}
-      <div className="lg:col-span-1">
-        <Card title={editingAppId ? "Edit Application" : "Track Application"} subtitle="Keep tabs on where you've applied.">
+      <div className="order-2 lg:order-1 lg:col-span-1">
+        <Card title={editingAppId ? "Edit application" : "Track application"} subtitle="Keep tabs on where you've applied.">
           <div className="grid gap-3">
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Company Name</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Company name</div>
               <input className={inputCls} placeholder="e.g. FTI Consulting" value={appCompany} onChange={(e) => setAppCompany(e.target.value)} />
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Application Link (optional)</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Application link (optional)</div>
               <input className={inputCls} placeholder="https://..." value={appLink} onChange={(e) => setAppLink(e.target.value)} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="mb-1 text-xs font-medium text-white/35">Date Applied</div>
+                <div className="mb-1 text-xs font-medium text-white/60">Date applied</div>
                 <input className={inputCls} type="date" value={appDate} onChange={(e) => setAppDate(e.target.value)} />
               </div>
               <div>
-                <div className="mb-1 text-xs font-medium text-white/35">Status</div>
+                <div className="mb-1 text-xs font-medium text-white/60">Status</div>
                 <select
                   className={selectCls}
                   value={appStatus}
@@ -145,7 +145,7 @@ export default function ApplicationsPage() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Linked Contact (optional)</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Linked contact (optional)</div>
               <select
                 className={selectCls}
                 value={appContactId}
@@ -169,7 +169,7 @@ export default function ApplicationsPage() {
                 disabled={savingApp}
                 className="w-full rounded-button bg-glow/90 px-4 py-2.5 text-sm font-semibold text-depth-0 transition duration-300 hover:bg-glow active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
-                {savingApp ? "Saving..." : editingAppId ? "Update" : "Add Application"}
+                {savingApp ? "Saving..." : editingAppId ? "Update" : "Add application"}
               </button>
               {editingAppId && (
                 <button
@@ -185,7 +185,7 @@ export default function ApplicationsPage() {
       </div>
 
       {/* List — 2/3 */}
-      <div className="lg:col-span-2">
+      <div className="order-1 lg:order-2 lg:col-span-2">
         <Card
           title="Applications"
           subtitle={loadingApps ? "Loading..." : `${applications.length} tracked`}
@@ -224,52 +224,52 @@ export default function ApplicationsPage() {
         >
           {viewMode === "table" ? (
             <div className="mt-2 rounded-section bg-depth-0/40">
-              <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/30 font-medium">
+              <div className="hidden md:grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 text-xs text-white/60 font-medium">
                 <div>Company</div>
                 <div>Link</div>
                 <div>Date</div>
                 <div>Status</div>
                 <div>Action</div>
               </div>
-              <div className="h-px w-full bg-white/[0.04]" />
+              <div className="hidden h-px w-full bg-white/[0.04] md:block" />
 
               {loadingApps ? (
-                <div className="px-4 py-8 text-center text-sm text-white/40">Loading applications...</div>
+                <div className="px-4 py-8 text-center text-sm text-white/60">Loading applications...</div>
               ) : applications.length === 0 ? (
                 <div className="px-6 py-10 text-center">
-                  <p className="text-sm text-white/50">No applications tracked yet.</p>
-                  <p className="mt-1 text-xs text-white/25">
+                  <p className="text-sm text-white/60">No applications tracked yet.</p>
+                  <p className="mt-1 text-xs text-white/60">
                     The process is the progress. Start tracking.
                   </p>
                 </div>
               ) : (
                 applications.map(app => (
                   <div key={app.id}>
-                    <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
-                      <div className="font-medium text-white truncate">{app.company}</div>
-                      <div className="min-w-0 truncate text-sm">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-white/[0.02] md:grid-cols-[1.5fr_1.5fr_1fr_1fr_0.8fr] md:gap-3">
+                      <div className="col-start-1 row-start-1 min-w-0 truncate font-medium text-white md:col-auto md:row-auto">{app.company}</div>
+                      <div className="col-span-2 row-start-3 min-w-0 truncate text-sm md:col-span-1 md:row-auto">
                         {app.link ? (
                           <a href={app.link} target="_blank" rel="noreferrer" className="text-glow hover:underline">
-                            View Link
+                            View link
                           </a>
-                        ) : <span className="text-white/20">{"\u2014"}</span>}
+                        ) : <span className="text-white/60">{"\u2014"}</span>}
                       </div>
-                      <div className="font-data text-white/40">{app.date_applied || "\u2014"}</div>
-                      <div className="text-sm">
-                        <span className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[normalizeStatus(app.status)] ?? "bg-white/[0.04] text-white/50"}`}>
+                      <div className="col-start-1 row-start-2 font-data text-sm text-white/60 md:col-auto md:row-auto">{app.date_applied || "\u2014"}</div>
+                      <div className="col-start-2 row-start-1 justify-self-end text-sm md:col-auto md:row-auto md:justify-self-auto">
+                        <span className={`inline-block rounded-badge px-2 py-1 text-xs font-medium ${STATUS_STYLE[normalizeStatus(app.status)] ?? "bg-white/[0.04] text-white/60"}`}>
                           {normalizeStatus(app.status)}
                         </span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="col-start-2 row-start-2 flex gap-3 justify-self-end md:col-auto md:row-auto md:justify-self-auto md:gap-2">
                         <button
                           onClick={() => startEditApp(app)}
-                          className="text-xs font-medium text-white/35 transition-colors hover:text-white cursor-pointer"
+                          className="text-xs font-medium text-white/60 transition-colors hover:text-white cursor-pointer"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => deleteApplication(app.id)}
-                          className="text-xs font-medium text-danger/50 transition-colors hover:text-danger cursor-pointer"
+                          className="text-xs font-medium text-danger/80 transition-colors hover:text-danger cursor-pointer"
                         >
                           Delete
                         </button>
@@ -283,11 +283,11 @@ export default function ApplicationsPage() {
           ) : (
             <div className="mt-4">
               {loadingApps ? (
-                <div className="text-center py-8 text-white/40">Loading applications...</div>
+                <div className="text-center py-8 text-white/60">Loading applications...</div>
               ) : applications.length === 0 ? (
                 <div className="px-6 py-10 text-center">
-                  <p className="text-sm text-white/50">No applications tracked yet.</p>
-                  <p className="mt-1 text-xs text-white/25">
+                  <p className="text-sm text-white/60">No applications tracked yet.</p>
+                  <p className="mt-1 text-xs text-white/60">
                     The process is the progress. Start tracking.
                   </p>
                 </div>
@@ -297,7 +297,7 @@ export default function ApplicationsPage() {
                     <div key={columnStatus} className="flex min-w-[160px] shrink-0 flex-col lg:min-w-0">
                       <div className="mb-3 flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-glow">{columnStatus}</h3>
-                        <span className="text-xs font-data text-white/40">
+                        <span className="text-xs font-data text-white/60">
                           {applications.filter((app) => normalizeStatus(app.status) === columnStatus).length}
                         </span>
                       </div>
@@ -322,7 +322,7 @@ export default function ApplicationsPage() {
                                   View Role
                                 </a>
                               )}
-                              <div className="text-xs text-white/40 mb-3 font-data">
+                              <div className="text-xs text-white/60 mb-3 font-data">
                                 {app.date_applied || "No date"}
                               </div>
                               <select
@@ -338,13 +338,13 @@ export default function ApplicationsPage() {
                               <div className="flex gap-2 mt-2 text-[11px]">
                                 <button
                                   onClick={() => startEditApp(app)}
-                                  className="text-white/35 hover:text-white transition-colors flex-1 cursor-pointer"
+                                  className="text-white/60 hover:text-white transition-colors flex-1 cursor-pointer"
                                 >
                                   Edit
                                 </button>
                                 <button
                                   onClick={() => deleteApplication(app.id)}
-                                  className="text-danger/50 hover:text-danger transition-colors flex-1 cursor-pointer"
+                                  className="text-danger/80 hover:text-danger transition-colors flex-1 cursor-pointer"
                                 >
                                   Delete
                                 </button>

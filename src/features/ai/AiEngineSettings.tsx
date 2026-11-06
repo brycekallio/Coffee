@@ -150,7 +150,7 @@ export default function AiEngineSettings({
                     : "Free tier · open-weight model"}
                 </span>
               </div>
-              <div className="mt-1 font-data text-xs text-white/40">
+              <div className="mt-1 font-data text-xs text-white/60">
                 {loading
                   ? "—"
                   : isPower
@@ -178,7 +178,7 @@ export default function AiEngineSettings({
           </div>
 
           {!isPower && !loading && (
-            <p className="mt-3 text-xs leading-relaxed text-white/30">
+            <p className="mt-3 text-xs leading-relaxed text-white/60">
               The free engine runs a free open-weight model on a shared key — no setup, but
               it's rate-limited (20 requests/minute, 50/day across everyone) and three tools
               stay locked.
@@ -188,7 +188,7 @@ export default function AiEngineSettings({
 
         {/* ── power tools ────────────────────────────────────────────── */}
         <div>
-          <div className="mb-2 text-xs font-medium text-white/40">
+          <div className="mb-2 text-xs font-medium text-white/60">
             {isPower ? "Unlocked" : "Unlocks with your own key"}
           </div>
           <div className="grid gap-2">
@@ -206,12 +206,12 @@ export default function AiEngineSettings({
                 <div>
                   <div
                     className={`text-sm font-medium ${
-                      isPower ? "text-white" : "text-white/50"
+                      isPower ? "text-white" : "text-white/60"
                     }`}
                   >
                     {tool.name}
                   </div>
-                  <div className="mt-0.5 text-xs leading-relaxed text-white/30">
+                  <div className="mt-0.5 text-xs leading-relaxed text-white/60">
                     {tool.blurb}
                   </div>
                 </div>
@@ -229,7 +229,7 @@ export default function AiEngineSettings({
 
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/40">
+                <label className="mb-1 block text-xs font-medium text-white/60">
                   Provider
                 </label>
                 <select
@@ -246,7 +246,7 @@ export default function AiEngineSettings({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/40">
+                <label className="mb-1 block text-xs font-medium text-white/60">
                   Model
                 </label>
                 <select
@@ -271,7 +271,7 @@ export default function AiEngineSettings({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-white/40">
+              <label className="mb-1 block text-xs font-medium text-white/60">
                 Model ID
               </label>
               <input
@@ -283,7 +283,7 @@ export default function AiEngineSettings({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-white/40">
+              <label className="mb-1 block text-xs font-medium text-white/60">
                 API key
               </label>
               <input
@@ -294,7 +294,7 @@ export default function AiEngineSettings({
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
-              <p className="mt-1.5 text-xs leading-relaxed text-white/30">
+              <p className="mt-1.5 text-xs leading-relaxed text-white/60">
                 {info.hint}{" "}
                 <a
                   href={info.keyUrl}
@@ -305,7 +305,7 @@ export default function AiEngineSettings({
                   Get a key →
                 </a>
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-white/25">
+              <p className="mt-1 text-xs leading-relaxed text-white/60">
                 Stored server-side and never sent back to the browser — Coffee only ever
                 shows you the last four characters.
               </p>

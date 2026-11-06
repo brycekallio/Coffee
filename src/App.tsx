@@ -78,7 +78,7 @@ export default function App() {
       <div className="flex min-h-screen items-center justify-center bg-depth-0 p-8 text-white">
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-2xl font-bold text-danger">Configuration Error</h1>
-          <p className="text-white/50">
+          <p className="text-white/60">
             Required environment variables are missing. Set the following in your{" "}
             <code className="rounded-badge bg-white/[0.06] px-1.5 py-0.5 text-sm text-glow">.env.local</code> file:
           </p>
@@ -86,7 +86,7 @@ export default function App() {
             <li>VITE_SUPABASE_URL</li>
             <li>VITE_SUPABASE_ANON_KEY</li>
           </ul>
-          <p className="text-sm text-white/30">
+          <p className="text-sm text-white/60">
             Copy <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">.env.example</code> to{" "}
             <code className="rounded-badge bg-white/[0.06] px-1 py-0.5">.env.local</code> and fill in the values.
           </p>

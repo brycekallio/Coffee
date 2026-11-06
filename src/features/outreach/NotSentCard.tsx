@@ -23,28 +23,28 @@ export default function NotSentCard({
                 <span className="text-sm font-medium text-white/70 truncate">
                   {contactNameById(item.contact_id)}
                 </span>
-                <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/30">
+                <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/60">
                   Email
                 </span>
               </div>
               {item.subject && (
-                <div className="mt-0.5 text-sm text-white/40 truncate">{item.subject}</div>
+                <div className="mt-0.5 text-sm text-white/60 truncate">{item.subject}</div>
               )}
               <div className="mt-1 text-xs font-medium text-danger">{failureLabel(item)}</div>
-              <div className="mt-0.5 font-data text-xs text-white/20">
+              <div className="mt-0.5 font-data text-xs text-white/60">
                 {formatWhen(item.scheduled_at)}
               </div>
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
               <button
                 onClick={() => markStatus(item.id, "scheduled", ["failed", "missed"])}
-                className="text-xs font-medium text-glow/80 transition-colors hover:text-glow cursor-pointer"
+                className="inline-flex min-h-10 items-center text-xs font-medium text-glow transition-colors hover:text-glow cursor-pointer"
               >
                 Retry
               </button>
               <button
                 onClick={() => deleteItem(item.id)}
-                className="text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
+                className="inline-flex min-h-10 items-center text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
               >
                 Delete
               </button>

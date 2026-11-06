@@ -545,7 +545,7 @@ export default function OutreachEmailsPage() {
           right={
             <button
               onClick={() => setShowTemplates((v) => !v)}
-              className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/50 transition-colors hover:bg-white/[0.08] cursor-pointer"
+              className="inline-flex min-h-10 items-center rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
             >
               {showTemplates ? "Hide" : "Show"}
             </button>
@@ -560,7 +560,7 @@ export default function OutreachEmailsPage() {
                   className="cursor-pointer rounded-input bg-depth-0/30 p-3 transition hover:bg-glow/[0.04]"
                 >
                   <div className="text-sm font-medium text-white">{tpl.title}</div>
-                  <div className="mt-0.5 text-xs text-white/30">{tpl.description}</div>
+                  <div className="mt-0.5 text-xs text-white/60">{tpl.description}</div>
                 </div>
               ))}
             </div>

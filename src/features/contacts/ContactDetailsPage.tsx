@@ -122,7 +122,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
             </button>
           }
         >
-          <p className="text-sm text-white/40">
+          <p className="text-sm text-white/60">
             Like a conversation you forgot to save. Return to Network and try again.
           </p>
         </Card>
@@ -147,15 +147,15 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
               <div className="grid gap-3">
                 <div className="grid gap-2 text-sm">
                   <div className="rounded-input bg-depth-0/30 p-3">
-                    <div className="text-xs text-white/30">Email</div>
+                    <div className="text-xs text-white/60">Email</div>
                     <div className="mt-1 font-data text-white/60">{selectedContact.email ?? "\u2014"}</div>
                   </div>
                   <div className="rounded-input bg-depth-0/30 p-3">
-                    <div className="text-xs text-white/30">Phone</div>
+                    <div className="text-xs text-white/60">Phone</div>
                     <div className="mt-1 font-data text-white/60">{selectedContact.phone ?? "\u2014"}</div>
                   </div>
                   <div className="rounded-input bg-depth-0/30 p-3">
-                    <div className="text-xs text-white/30">LinkedIn</div>
+                    <div className="text-xs text-white/60">LinkedIn</div>
                     <div className="mt-1">
                       {selectedContact.linkedin_url ? (
                         <a
@@ -264,11 +264,11 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
               <div className="rounded-input bg-depth-0/30 p-4">
                 <div className="grid gap-3 md:grid-cols-3 md:items-end">
                   <div>
-                    <div className="mb-1 text-xs font-medium text-white/35">Meeting date</div>
+                    <div className="mb-1 text-xs font-medium text-white/60">Meeting date</div>
                     <input className={inputCls} type="date" value={meetingDraftDate} onChange={(e) => setMeetingDraftDate(e.target.value)} />
                   </div>
                   <div className="md:col-span-2">
-                    <div className="mb-1 text-xs font-medium text-white/35">Label (optional)</div>
+                    <div className="mb-1 text-xs font-medium text-white/60">Label (optional)</div>
                     <input
                       className={inputCls}
                       placeholder='e.g. "Coffee chat" or "Follow-up call"'
@@ -291,11 +291,11 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
               {/* Meeting list */}
               <div className="mt-4 rounded-section bg-depth-0/30">
                 {loadingMeetings ? (
-                  <div className="px-4 py-8 text-center text-sm text-white/40">Loading meetings...</div>
+                  <div className="px-4 py-8 text-center text-sm text-white/60">Loading meetings...</div>
                 ) : meetings.length === 0 ? (
                   <div className="px-6 py-10 text-center">
-                    <p className="text-sm text-white/50">No meetings logged yet.</p>
-                    <p className="mt-1 text-xs text-white/25">
+                    <p className="text-sm text-white/60">No meetings logged yet.</p>
+                    <p className="mt-1 text-xs text-white/60">
                       Every great relationship started with one conversation.
                     </p>
                   </div>
@@ -357,7 +357,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
 
                           <div className="mt-3">
                             <textarea
-                              className="min-h-[160px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none transition duration-200 border border-white/[0.04] focus:border-glow/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-glow/10"
+                              className="min-h-[160px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/50 outline-none transition duration-200 border border-white/[0.04] focus:border-glow/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-glow/10"
                               placeholder="What you discussed, next steps, reminders, personal details, follow-ups..."
                               value={draft.notes}
                               onChange={(e) => setMeetingField(m.id, "notes", e.target.value)}
@@ -381,7 +381,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
         onClose={() => !importing && setImportModalOpen(false)}
       >
         <div className="grid gap-4">
-          <p className="text-sm text-white/50 leading-relaxed">
+          <p className="text-sm text-white/60 leading-relaxed">
             Paste a transcript from{" "}
             <span className="text-white/70 font-medium">Otter.ai, Granola, Zoom AI, Fathom, Fireflies</span>
             {" "}or any other tool. Claude will extract the key details and save them as a structured meeting note.
@@ -389,7 +389,7 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Meeting date</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Meeting date</div>
               <input
                 type="date"
                 className="w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none border border-white/[0.06] focus:border-glow/30"
@@ -398,9 +398,9 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
               />
             </div>
             <div>
-              <div className="mb-1 text-xs font-medium text-white/35">Label (optional)</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Label (optional)</div>
               <input
-                className="w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none border border-white/[0.06] focus:border-glow/30"
+                className="w-full rounded-input bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/50 outline-none border border-white/[0.06] focus:border-glow/30"
                 placeholder='e.g. "Coffee chat"'
                 value={importLabel}
                 onChange={(e) => setImportLabel(e.target.value)}
@@ -409,9 +409,9 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
           </div>
 
           <div>
-            <div className="mb-1 text-xs font-medium text-white/35">Transcript</div>
+            <div className="mb-1 text-xs font-medium text-white/60">Transcript</div>
             <textarea
-              className="min-h-[200px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none border border-white/[0.06] focus:border-glow/20 resize-y"
+              className="min-h-[200px] w-full rounded-input bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/50 outline-none border border-white/[0.06] focus:border-glow/20 resize-y"
               placeholder="Paste your full meeting transcript here..."
               value={importTranscript}
               onChange={(e) => setImportTranscript(e.target.value)}
@@ -419,8 +419,8 @@ export default function ContactDetailsPage({ contactId, onBack }: ContactDetails
           </div>
 
           {/* What Claude extracts */}
-          <div className="rounded-input bg-depth-0/40 px-4 py-3 text-xs text-white/40 space-y-1">
-            <div className="font-medium text-white/50 mb-1.5">Claude will extract:</div>
+          <div className="rounded-input bg-depth-0/40 px-4 py-3 text-xs text-white/60 space-y-1">
+            <div className="font-medium text-white/60 mb-1.5">Claude will extract:</div>
             <div className="flex items-center gap-2"><span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" /><span>Fun facts — memorable personal details about {selectedContact ? [selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(" ") : "your contact"}</span></div>
             <div className="flex items-center gap-2"><span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" /><span>Action items — specific follow-ups you need to do</span></div>
             <div className="flex items-center gap-2"><span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-white/50" /><span>Important details — professional context worth remembering</span></div>

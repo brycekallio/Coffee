@@ -35,11 +35,11 @@ export function UpcomingCard({
       }
     >
       {loading ? (
-        <div className="py-8 text-center text-sm text-white/40">Loading outreach...</div>
+        <div className="py-8 text-center text-sm text-white/60">Loading outreach...</div>
       ) : scheduledItems.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-sm text-white/50">No scheduled outreach yet.</p>
-          <p className="mt-1 text-xs text-white/25">
+          <p className="text-sm text-white/60">No scheduled outreach yet.</p>
+          <p className="mt-1 text-xs text-white/60">
             The follow-up is where the magic happens.
           </p>
         </div>
@@ -63,24 +63,24 @@ export function UpcomingCard({
                       <span className="font-medium text-white truncate">
                         {contactNameById(item.contact_id)}
                       </span>
-                      <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/40">
+                      <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/60">
                         {item.channel === "sms" ? "SMS" : item.channel.charAt(0).toUpperCase() + item.channel.slice(1)}
                       </span>
                       {due && (
                         <span className="inline-block rounded-badge bg-glow/[0.1] px-2 py-0.5 text-xs font-medium text-glow breathe">
-                          Due Now
+                          Due now
                         </span>
                       )}
                     </div>
                     {item.subject && (
-                      <div className="mt-1 text-sm text-white/50 truncate">
+                      <div className="mt-1 text-sm text-white/60 truncate">
                         {item.subject}
                       </div>
                     )}
-                    <div className="mt-1 text-xs text-white/25 line-clamp-2">
+                    <div className="mt-1 text-xs text-white/60 line-clamp-2">
                       {item.message}
                     </div>
-                    <div className="mt-2 font-data text-xs text-white/25">
+                    <div className="mt-2 font-data text-xs text-white/60">
                       {formatWhen(item.scheduled_at)}
                     </div>
                   </div>
@@ -89,7 +89,7 @@ export function UpcomingCard({
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => handleSendItem(item)}
-                    className={`rounded-button px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                    className={`inline-flex min-h-10 items-center rounded-button px-4 py-1.5 text-xs font-semibold transition cursor-pointer ${
                       due
                         ? "bg-white/[0.08] text-white hover:bg-white/[0.12]"
                         : "bg-glow/[0.08] text-glow hover:bg-glow/15"
@@ -99,19 +99,19 @@ export function UpcomingCard({
                   </button>
                   <button
                     onClick={() => markStatus(item.id, "skipped", "scheduled")}
-                    className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.08] cursor-pointer"
+                    className="inline-flex min-h-10 items-center rounded-button bg-white/[0.04] px-4 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
                   >
                     Skip
                   </button>
                   <button
                     onClick={() => startEdit(item)}
-                    className="rounded-button bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.08] cursor-pointer"
+                    className="inline-flex min-h-10 items-center rounded-button bg-white/[0.04] px-4 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] cursor-pointer"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => deleteItem(item.id)}
-                    className="rounded-button px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
+                    className="inline-flex min-h-10 items-center rounded-button px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
                   >
                     Delete
                   </button>
@@ -146,26 +146,26 @@ export function HistoryCard({
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-white/50 truncate">
+                <span className="text-sm font-medium text-white/60 truncate">
                   {contactNameById(item.contact_id)}
                 </span>
-                <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/30">
+                <span className="inline-block rounded-badge bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/60">
                   {item.channel === "sms" ? "SMS" : item.channel.charAt(0).toUpperCase() + item.channel.slice(1)}
                 </span>
                 <span className={`inline-block rounded-badge px-2 py-0.5 text-xs font-medium ${
                   item.status === "opened"
                     ? "bg-emerald-500/[0.12] text-emerald-400"
                     : item.status === "sent"
-                    ? "bg-glow/[0.08] text-glow/60"
-                    : "bg-white/[0.04] text-white/30"
+                    ? "bg-glow/[0.08] text-glow"
+                    : "bg-white/[0.04] text-white/60"
                 }`}>
                   {item.status === "opened" ? "Opened" : item.status === "sent" ? "Sent" : "Skipped"}
                 </span>
               </div>
-              <div className="mt-0.5 font-data text-xs text-white/20">
+              <div className="mt-0.5 font-data text-xs text-white/60">
                 {formatWhen(item.scheduled_at)}
                 {item.status === "opened" && item.opened_at && (
-                  <span className="ml-2 text-emerald-400/40">
+                  <span className="ml-2 text-emerald-400">
                     · opened {new Date(item.opened_at).toLocaleDateString()}
                   </span>
                 )}
@@ -175,14 +175,14 @@ export function HistoryCard({
               {item.status === "sent" && item.channel === "email" && (
                 <button
                   onClick={() => markStatus(item.id, "opened", "sent")}
-                  className="text-xs font-medium text-emerald-400/50 transition-colors hover:text-emerald-400 cursor-pointer whitespace-nowrap"
+                  className="inline-flex min-h-10 items-center text-xs font-medium text-emerald-400 transition-colors hover:text-emerald-400 cursor-pointer whitespace-nowrap"
                 >
-                  Mark Opened
+                  Mark opened
                 </button>
               )}
               <button
                 onClick={() => deleteItem(item.id)}
-                className="text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
+                className="inline-flex min-h-10 items-center text-xs font-medium text-white/60 transition-colors hover:text-danger cursor-pointer"
               >
                 Delete
               </button>
