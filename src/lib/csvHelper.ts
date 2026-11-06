@@ -1,6 +1,6 @@
 import type { ParsedCsv, FieldMap } from "../types";
 // One definition of a valid email, shared with the Edge Functions (see contactFields.ts).
-import { cleanEmail } from "../../supabase/functions/_shared/contactFields.ts";
+import { cleanEmail, cleanLinkedInUrl, cleanPhone } from "../../supabase/functions/_shared/contactFields.ts";
 
 export type { ParsedCsv, FieldMap };
 
@@ -82,14 +82,14 @@ export function isEmail(v: unknown) {
   return cleanEmail(v) !== "";
 }
 
+// Column guessing needs a US phone shape: cleanPhone alone accepts any 7+ digits, so ISO dates and IDs looked like phones.
 export function isPhone(v: unknown) {
   const s = String(v ?? "").trim();
-  return /(\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}/.test(s);
+  return /(\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}/.test(s) && cleanPhone(s) !== "";
 }
 
 export function isLinkedInUrl(v: unknown) {
-  const s = String(v ?? "").trim().toLowerCase();
-  return /linkedin\.com\/(in|company|pub)\//.test(s) || /^in\/[a-z0-9\-_%.]+/i.test(s);
+  return cleanLinkedInUrl(v) !== "";
 }
 
 export function looksLikeName(v: unknown) {
