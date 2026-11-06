@@ -121,16 +121,6 @@ export interface ContactFields {
   linkedin_url: string;
 }
 
-export const EMPTY_FIELDS: ContactFields = {
-  first_name: "",
-  last_name: "",
-  company: "",
-  title: "",
-  email: "",
-  phone: "",
-  linkedin_url: "",
-};
-
 /** Cleans a whole record; anything missing, mistyped or unsafe comes back as "". */
 export function cleanContactFields(raw: unknown): ContactFields {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;

@@ -1,5 +1,5 @@
 /** PostgREST puts `id=in.(…)` in the URL, so a long id list is sent in pieces. */
-export const IN_CHUNK = 100;
+const IN_CHUNK = 100;
 
 export function chunks<T>(items: readonly T[], size = IN_CHUNK): T[][] {
   const out: T[][] = [];

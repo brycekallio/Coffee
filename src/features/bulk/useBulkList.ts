@@ -5,9 +5,9 @@ import { errorMessage } from "@/lib/utils";
 import { createUndoQueue } from "./undoQueue";
 import { nextStarValue, planTagChange, starredFirst, type BulkRow, type TagGroup } from "./tags";
 
-export const UNDO_MS = 8000;
+const UNDO_MS = 8000;
 
-export interface BulkApi {
+interface BulkApi {
   remove(ids: string[]): Promise<void>;
   setStarred(ids: string[], starred: boolean): Promise<void>;
   setTags(group: TagGroup): Promise<void>;

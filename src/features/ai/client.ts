@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 export type AiTier = "free" | "power";
 export type AiProvider = "openrouter" | "anthropic";
 
-export interface AiSettingsRow {
+interface AiSettingsRow {
   provider: AiProvider;
   model: string;
   /** Masked tail of the saved key, e.g. "…a91f". The key itself is never sent here. */

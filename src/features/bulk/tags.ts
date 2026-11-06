@@ -1,5 +1,4 @@
 // Tags ("groups") and starring, as pure functions over rows.
-import type { Selection } from "./selection";
 
 export const MAX_TAG_LENGTH = 24;
 export const MAX_TAGS_PER_ROW = 20; // mirrors the check constraint in the migration
@@ -70,8 +69,4 @@ export function starredFirst<T extends { starred: boolean }>(rows: readonly T[])
 /** Star everything unless it's all starred already, then unstar (Gmail's behaviour). */
 export function nextStarValue(rows: readonly { starred: boolean }[]): boolean {
   return !(rows.length > 0 && rows.every((r) => r.starred));
-}
-
-export function pick<T extends { id: string }>(rows: readonly T[], selected: Selection): T[] {
-  return rows.filter((r) => selected.has(r.id));
 }
