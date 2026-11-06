@@ -256,7 +256,7 @@ export default function WatchlistPage() {
             </div>
 
             <div>
-              <div className="mb-1 text-xs font-medium text-white/60">Role or title (optional)</div>
+              <div className="mb-1 text-xs font-medium text-white/60">Role / title (optional)</div>
               <input
                 className={inputCls}
                 placeholder="e.g. Engineering Manager"
