@@ -12,6 +12,7 @@ import {
   type Provider,
   PROVIDER_DEFAULT_MODEL,
 } from "../_shared/llm.ts";
+import { dailyLimit, spendSettingsAttempt } from "./cap.ts";
 
 // Reads, validates and stores a user's bring-your-own API key.
 //
@@ -96,6 +97,14 @@ serve(async (req) => {
     if (!apiKey) {
       throw new HttpError("api_key is required", 400);
     }
+
+    // Each test/save spends a real provider call, so cap them per user per day: otherwise
+    // any account could use this function to check lists of stolen keys.
+    await spendSettingsAttempt(
+      (fn, args) => serviceClient().rpc(fn, args),
+      userId,
+      dailyLimit(Deno.env.get("AI_SETTINGS_DAILY_LIMIT")),
+    );
 
     const probe = await verifyKey(provider, model, apiKey);
 
