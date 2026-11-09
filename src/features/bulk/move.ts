@@ -11,9 +11,12 @@ type TargetRow = Tables<"watchlist_targets">;
 const FIELD_LINES = [
   ["Email", "email"],
   ["Phone", "phone"],
-  ["LinkedIn", "linkedin_url"],
   ["Last contacted", "last_touch_at"],
 ] as const;
+
+/** Labels still read out of a Watchlist notes field — LinkedIn lives in a column now, but
+ *  notes written before that column existed still carry "LinkedIn: …" lines. */
+const NOTE_LABELS = [...FIELD_LINES.map(([label]) => label), "LinkedIn"] as const;
 
 /** The Watchlist status, kept as a notes line on the Network side (contacts have no such column). */
 const STATUS_LABEL = "Watchlist status";
@@ -41,6 +44,7 @@ export function contactToTarget(c: ContactRow): TablesInsert<"watchlist_targets"
     person_name: [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || "Unnamed",
     company: c.company ?? "",
     role: c.title,
+    linkedin_url: c.linkedin_url,
     status: found[STATUS_LABEL] || DEFAULT_TARGET_STATUS,
     next_action_date: c.next_touch_at ? c.next_touch_at.slice(0, 10) : null,
     notes: notes || null,
@@ -51,10 +55,7 @@ export function contactToTarget(c: ContactRow): TablesInsert<"watchlist_targets"
 }
 
 export function targetToContact(t: TargetRow): TablesInsert<"contacts"> {
-  const { found, rest } = readLines(
-    t.notes,
-    FIELD_LINES.map(([label]) => label),
-  );
+  const { found, rest } = readLines(t.notes, NOTE_LABELS);
   const field = (k: (typeof FIELD_LINES)[number][1]) => found[FIELD_LINES.find(([, key]) => key === k)![0]] || null;
   const [first, ...others] = t.person_name.trim().split(/\s+/);
   const notes = [t.status && t.status !== DEFAULT_TARGET_STATUS ? `${STATUS_LABEL}: ${t.status}` : null, rest || null]
@@ -68,7 +69,7 @@ export function targetToContact(t: TargetRow): TablesInsert<"contacts"> {
     title: t.role,
     email: field("email"),
     phone: field("phone"),
-    linkedin_url: field("linkedin_url"),
+    linkedin_url: t.linkedin_url || found["LinkedIn"] || null,
     last_touch_at: field("last_touch_at"),
     notes: notes || null,
     status: "to_contact",

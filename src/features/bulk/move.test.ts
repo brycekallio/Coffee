@@ -37,7 +37,8 @@ describe("Network -> Watchlist mapping", () => {
     });
     expect(t.notes).toContain("Email: priya@fti.example");
     expect(t.notes).toContain("Phone: 303-555-0100");
-    expect(t.notes).toContain("LinkedIn: https://www.linkedin.com/in/demo-priya");
+    expect(t.linkedin_url).toBe("https://www.linkedin.com/in/demo-priya");
+    expect(t.notes).not.toContain("LinkedIn:");
     expect(t.notes).toContain("Met at the Leeds night.");
   });
 
@@ -68,7 +69,7 @@ describe("Network -> Watchlist mapping", () => {
   });
 
   it("splits a Watchlist name into first and last", () => {
-    const t = { owner_id: "u1", id: "t", person_name: "Mary Jane Watson", company: "", role: null, status: "contacted", next_action_date: null, notes: null, created_at: "x", starred: false, tags: [] };
+    const t = { owner_id: "u1", id: "t", person_name: "Mary Jane Watson", company: "", role: null, linkedin_url: null, status: "contacted", next_action_date: null, notes: null, created_at: "x", starred: false, tags: [] };
     expect(targetToContact(t)).toMatchObject({ first_name: "Mary", last_name: "Jane Watson", company: null });
   });
 
@@ -82,7 +83,7 @@ describe("Network -> Watchlist mapping", () => {
   });
 
   it("round trip keeps the Watchlist status (no column in the Network)", () => {
-    const t = { owner_id: "u1", id: "t", person_name: "Ana Diaz", company: "Bain", role: null, status: "contacted", next_action_date: null, notes: "Coffee chat soon", created_at: "x", starred: false, tags: [] };
+    const t = { owner_id: "u1", id: "t", person_name: "Ana Diaz", company: "Bain", role: null, linkedin_url: null, status: "contacted", next_action_date: null, notes: "Coffee chat soon", created_at: "x", starred: false, tags: [] };
     const c = targetToContact(t);
     expect(c.notes).toBe("Watchlist status: contacted\nCoffee chat soon");
     const again = contactToTarget({ ...contact, ...(c as Tables<"contacts">), email: null, phone: null, linkedin_url: null, last_touch_at: null });
@@ -91,7 +92,7 @@ describe("Network -> Watchlist mapping", () => {
   });
 
   it("a default status adds no line", () => {
-    const t = { owner_id: "u1", id: "t", person_name: "Ana", company: "", role: null, status: "not_contacted", next_action_date: null, notes: null, created_at: "x", starred: false, tags: [] };
+    const t = { owner_id: "u1", id: "t", person_name: "Ana", company: "", role: null, linkedin_url: null, status: "not_contacted", next_action_date: null, notes: null, created_at: "x", starred: false, tags: [] };
     expect(targetToContact(t).notes).toBeNull();
   });
 });

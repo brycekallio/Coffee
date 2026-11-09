@@ -15,7 +15,7 @@ import { allTags, hasTag, nextStarValue } from "@/features/bulk/tags";
 import { useBulkList } from "@/features/bulk/useBulkList";
 import { useSelection } from "@/features/bulk/useSelection";
 import * as watchlistApi from "@/features/watchlist/api";
-import { errorMessage } from "@/lib/utils";
+import { ensureUrl, errorMessage } from "@/lib/utils";
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_contacted", label: "Not contacted" },
@@ -47,6 +47,7 @@ export default function WatchlistPage() {
   const [personName, setPersonName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [status, setStatus] = useState("not_contacted");
   const [nextActionDate, setNextActionDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -59,6 +60,7 @@ export default function WatchlistPage() {
     setPersonName("");
     setCompany("");
     setRole("");
+    setLinkedinUrl("");
     setStatus("not_contacted");
     setNextActionDate("");
     setNotes("");
@@ -146,6 +148,7 @@ export default function WatchlistPage() {
       person_name: personName.trim(),
       company: company.trim(),
       role: role.trim() || null,
+      linkedin_url: linkedinUrl.trim() || null,
       status,
       next_action_date: nextActionDate || null,
       notes: notes.trim() || null,
@@ -175,6 +178,7 @@ export default function WatchlistPage() {
         person_name: personName.trim(),
         company: company.trim(),
         role: role.trim() || null,
+        linkedin_url: linkedinUrl.trim() || null,
         status,
         next_action_date: nextActionDate || null,
         notes: notes.trim() || null,
@@ -213,6 +217,7 @@ export default function WatchlistPage() {
     setPersonName(t.person_name);
     setCompany(t.company);
     setRole(t.role ?? "");
+    setLinkedinUrl(t.linkedin_url ?? "");
     setStatus(t.status);
     setNextActionDate(t.next_action_date ?? "");
     setNotes(t.notes ?? "");
@@ -262,6 +267,16 @@ export default function WatchlistPage() {
                 placeholder="e.g. Engineering Manager"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 text-xs font-medium text-white/60">LinkedIn URL (optional)</div>
+              <input name="linkedinUrl" aria-label="LinkedIn URL (optional)"
+                className={inputCls}
+                placeholder="https://www.linkedin.com/in/…"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
               />
             </div>
 
@@ -407,6 +422,17 @@ export default function WatchlistPage() {
                           {t.person_name}
                         </span>
                         {t.starred ? <StarMark /> : null}
+                        {t.linkedin_url ? (
+                          <a
+                            href={ensureUrl(t.linkedin_url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 text-xs font-medium text-glow/70 transition-colors hover:text-glow"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            LinkedIn
+                          </a>
+                        ) : null}
                       </div>
                       <div className="mt-0.5 truncate text-sm text-white/60 md:hidden">
                         {[t.company, t.role].filter(Boolean).join(" \u00b7 ") || "\u2014"}

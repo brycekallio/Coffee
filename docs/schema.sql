@@ -170,6 +170,7 @@ create table if not exists public.watchlist_targets (
   person_name text not null,
   company text not null,
   role text,
+  linkedin_url text,
   status text not null default 'not_contacted',
   next_action_date date,
   notes text,
