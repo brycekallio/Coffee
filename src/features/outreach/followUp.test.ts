@@ -188,3 +188,22 @@ describe("continue after connecting Google", () => {
     expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
   });
 });
+
+describe("Codex r1 findings", () => {
+  it("a picked time that is exactly midnight UTC (5 PM in Denver) keeps its time on the card", async () => {
+    const { followUpNote } = await import("./followUp");
+    const at = new Date("2026-11-20T00:00:00.000Z");
+    expect(followUpNote(at.toISOString(), new Date("2026-11-12T00:00:00Z"))).toBe(`Follow-up ${slotLabel(at)}`);
+    expect(followUpNote(at.toISOString(), new Date("2026-11-21T00:00:00Z"))).toBeNull();
+    expect(followUpNote(null, NOW)).toBeNull();
+  });
+
+  it("a cancelled or failed Google return drops the waiting follow-up", async () => {
+    const { clearPendingFollowUp } = await import("./followUp");
+    const m = new Map<string, string>();
+    const s = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+    savePendingFollowUp(s, { contactId: hannah.id, start: THU_1030, userId: ME }, NOW);
+    clearPendingFollowUp(s);
+    expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
+  });
+});

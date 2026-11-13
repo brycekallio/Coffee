@@ -49,6 +49,14 @@ export function slotLabel(d: Date): string {
   return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+/** The line on a card: "Follow-up Thu, Nov 19, 10:30 AM", or null when none is saved or it has passed. */
+export function followUpNote(atIso: string | null | undefined, now: Date): string | null {
+  if (!atIso) return null;
+  const at = new Date(atIso);
+  if (Number.isNaN(at.getTime()) || at.getTime() < now.getTime()) return null;
+  return `Follow-up ${slotLabel(at)}`;
+}
+
 export function contactName(c: Pick<Contact, "first_name" | "last_name">): string {
   return [c.first_name, c.last_name].filter(Boolean).join(" ");
 }
@@ -145,6 +153,11 @@ const PENDING_TTL_MS = 30 * 60_000;
 
 export function savePendingFollowUp(store: Store, p: { contactId: string; start: Date; userId: string }, now: Date): void {
   store.setItem(PENDING_KEY, JSON.stringify({ c: p.contactId, s: p.start.toISOString(), u: p.userId, t: now.getTime() }));
+}
+
+/** Google sent the user back without connecting (Cancel, failed exchange): the waiting pick is void. */
+export function clearPendingFollowUp(store: Store): void {
+  store.removeItem(PENDING_KEY);
 }
 
 export function hasPendingFollowUp(store: Store): boolean {

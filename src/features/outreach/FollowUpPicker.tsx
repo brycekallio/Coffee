@@ -48,11 +48,20 @@ export default function FollowUpPicker({
   const needsConnect = !connected || mustReconnect;
   const wrapRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLButtonElement>(null);
   const days = useMemo(() => (open ? followUpSlots(new Date()) : []), [open]);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    // Focus goes into the picker (the phone sheet sits at the end of <body>) and back to the button on Escape.
+    const raf = requestAnimationFrame(() =>
+      dialogRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"], button')?.focus(),
+    );
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      pillRef.current?.focus();
+    };
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (wrapRef.current?.contains(t) || dialogRef.current?.contains(t)) return;
@@ -61,6 +70,7 @@ export default function FollowUpPicker({
     document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onDown);
     return () => {
+      cancelAnimationFrame(raf);
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onDown);
     };
@@ -81,6 +91,7 @@ export default function FollowUpPicker({
   return (
     <div ref={wrapRef} className="relative">
       <button
+        ref={pillRef}
         type="button"
         onClick={() => { setOpen((o) => !o); setDone(null); }}
         aria-haspopup="dialog"
@@ -159,7 +170,7 @@ export default function FollowUpPicker({
                     {busy === "reminder" ? "Saving..." : "Just remind me"}
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-white/60">
+                <p className="mt-2 min-h-[2lh] text-xs text-white/60">
                   {!start
                     ? "Pick a time."
                     : needsConnect

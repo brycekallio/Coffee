@@ -8,6 +8,7 @@ import type { Contact, Profile, ScheduledOutreach } from "@/types";
 import FollowUpPicker from "./FollowUpPicker";
 import {
   contactName,
+  followUpNote as noteFor,
   isDueFollowUp,
   savePendingFollowUp,
   scheduleFollowUp,
@@ -111,14 +112,8 @@ export function useFollowUps(items: ScheduledOutreach[], contacts: Contact[], pr
     );
   };
 
-  const followUpNote = (item: ScheduledOutreach) => {
-    const at = item.contact_id ? followUpAt[item.contact_id] : undefined;
-    if (!at || new Date(at).getTime() < Date.now()) return null;
-    const d = new Date(at);
-    // A date carried over from the Watchlist is midnight UTC with no real time; show the day only.
-    const dateOnly = d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
-    return `Follow-up ${dateOnly ? d.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }) : slotLabel(d)}`;
-  };
+  const followUpNote = (item: ScheduledOutreach) =>
+    noteFor(item.contact_id ? followUpAt[item.contact_id] : undefined, new Date());
 
   return { renderFollowUp, followUpNote };
 }
