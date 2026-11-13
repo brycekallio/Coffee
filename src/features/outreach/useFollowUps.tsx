@@ -8,6 +8,7 @@ import type { Contact, Profile, ScheduledOutreach } from "@/types";
 import FollowUpPicker from "./FollowUpPicker";
 import {
   contactName,
+  FOLLOW_UP_READY_EVENT,
   followUpNote as noteFor,
   isDueFollowUp,
   savePendingFollowUp,
@@ -58,9 +59,10 @@ export function useFollowUps(items: ScheduledOutreach[], contacts: Contact[], pr
   }, [ids]);
 
   const schedule = useCallback(
-    async (contactId: string, mode: "calendar" | "reminder", start: Date): Promise<FollowUpResult> => {
+    async (contactId: string, mode: "calendar" | "reminder", start: Date, justConnected = false): Promise<FollowUpResult> => {
       const out = await scheduleFollowUp(
-        { contactId, start, mode, connected, ownContacts: contacts, userId, now: new Date() },
+        // justConnected: the Google callback has just granted Calendar; the profile may not have reloaded yet.
+        { contactId, start, mode, connected: connected || justConnected, ownContacts: contacts, userId, now: new Date() },
         deps,
       );
       if (out.kind === "scheduled") {
@@ -89,14 +91,20 @@ export function useFollowUps(items: ScheduledOutreach[], contacts: Contact[], pr
     [userId],
   );
 
-  // Back from Google with Calendar connected: finish the follow-up that was waiting.
+  // Back from Google with Calendar granted: finish the follow-up that was waiting. The callback marks it
+  // ready (and fires FOLLOW_UP_READY_EVENT); a profile that merely says "connected" is not enough.
   useEffect(() => {
-    const s = session();
-    if (!s || !userId || !connected || contacts.length === 0 || isDemoMode) return;
-    const pending = takePendingFollowUp(s, userId, new Date());
+    if (!userId || contacts.length === 0 || isDemoMode) return;
+    const resume = () => {
+      const s = session();
+      const pending = s ? takePendingFollowUp(s, userId, new Date()) : null;
+      if (pending) void schedule(pending.contactId, "calendar", pending.start, true);
+    };
     // After the effect, not inside it: schedule() sets state.
-    if (pending) void Promise.resolve().then(() => schedule(pending.contactId, "calendar", pending.start));
-  }, [userId, connected, contacts.length, schedule]);
+    void Promise.resolve().then(resume);
+    window.addEventListener(FOLLOW_UP_READY_EVENT, resume);
+    return () => window.removeEventListener(FOLLOW_UP_READY_EVENT, resume);
+  }, [userId, contacts.length, schedule]);
 
   const today = todayISODate();
   const renderFollowUp = (item: ScheduledOutreach) => {

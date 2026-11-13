@@ -9,6 +9,7 @@ import {
   scheduleFollowUp,
   slotLabel,
   takePendingFollowUp,
+  markPendingFollowUpReady,
   type FollowUpDeps,
 } from "./followUp";
 import type { Contact } from "@/types";
@@ -174,6 +175,7 @@ describe("continue after connecting Google", () => {
   it("round-trips the chosen contact and slot once, for the same user", () => {
     const s = memStore();
     savePendingFollowUp(s, { contactId: hannah.id, start: THU_1030, userId: ME }, NOW);
+    markPendingFollowUpReady(s);
     expect(takePendingFollowUp(s, ME, NOW)).toEqual({ contactId: hannah.id, start: THU_1030 });
     expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
   });
@@ -181,8 +183,10 @@ describe("continue after connecting Google", () => {
   it("is dropped for a different user, after 30 minutes, or when garbled", () => {
     const s = memStore();
     savePendingFollowUp(s, { contactId: hannah.id, start: THU_1030, userId: ME }, NOW);
+    markPendingFollowUpReady(s);
     expect(takePendingFollowUp(s, THEM, NOW)).toBeNull();
     savePendingFollowUp(s, { contactId: hannah.id, start: THU_1030, userId: ME }, NOW);
+    markPendingFollowUpReady(s);
     expect(takePendingFollowUp(s, ME, new Date(NOW.getTime() + 31 * 60_000))).toBeNull();
     s.setItem("coffee.pendingFollowUp", "{not json");
     expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
@@ -205,5 +209,25 @@ describe("Codex r1 findings", () => {
     savePendingFollowUp(s, { contactId: hannah.id, start: THU_1030, userId: ME }, NOW);
     clearPendingFollowUp(s);
     expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
+  });
+});
+
+describe("Codex r2: resume only after Google really connected Calendar", () => {
+  it("an already-connected profile (expired grant) does not resume or use up the waiting pick", () => {
+    const m = new Map<string, string>();
+    const s = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+    savePendingFollowUp(s, { contactId: hannah.id, start: THU_1030, userId: ME }, NOW);
+    // Profile loads (google_connected already true) before the token exchange finishes:
+    expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
+    // ...and the pick is still there for when it does.
+    markPendingFollowUpReady(s);
+    expect(takePendingFollowUp(s, ME, NOW)).toEqual({ contactId: hannah.id, start: THU_1030 });
+  });
+
+  it("marking ready with nothing waiting is a no-op", () => {
+    const m = new Map<string, string>();
+    const s = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+    markPendingFollowUpReady(s);
+    expect(m.size).toBe(0);
   });
 });

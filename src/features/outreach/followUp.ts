@@ -164,17 +164,38 @@ export function hasPendingFollowUp(store: Store): boolean {
   return store.getItem(PENDING_KEY) !== null;
 }
 
+/** Fired on window when the Google callback connected Calendar, so a waiting follow-up can finish. */
+export const FOLLOW_UP_READY_EVENT = "coffee:follow-up-ready";
+
+/**
+ * Only the Google callback calls this, and only when it reports Calendar connected. Until then the
+ * pick waits: a profile that already says "connected" (an expired grant being renewed) is not enough.
+ */
+export function markPendingFollowUpReady(store: Store): void {
+  const raw = store.getItem(PENDING_KEY);
+  if (!raw) return;
+  try {
+    store.setItem(PENDING_KEY, JSON.stringify({ ...(JSON.parse(raw) as object), r: true }));
+  } catch {
+    store.removeItem(PENDING_KEY);
+  }
+}
+
+/** The waiting pick, once and only once it is ready (see markPendingFollowUpReady); otherwise null and it stays. */
 export function takePendingFollowUp(store: Store, userId: string, now: Date): { contactId: string; start: Date } | null {
   const raw = store.getItem(PENDING_KEY);
-  store.removeItem(PENDING_KEY);
   if (!raw) return null;
+  let p: { c?: unknown; s?: unknown; u?: unknown; t?: unknown; r?: unknown };
   try {
-    const p = JSON.parse(raw) as { c?: unknown; s?: unknown; u?: unknown; t?: unknown };
-    if (p.u !== userId || typeof p.c !== "string" || typeof p.s !== "string" || typeof p.t !== "number") return null;
-    if (now.getTime() - p.t > PENDING_TTL_MS) return null;
-    const start = new Date(p.s);
-    return Number.isNaN(start.getTime()) ? null : { contactId: p.c, start };
+    p = JSON.parse(raw);
   } catch {
+    store.removeItem(PENDING_KEY);
     return null;
   }
+  if (p.r !== true) return null;
+  store.removeItem(PENDING_KEY);
+  if (p.u !== userId || typeof p.c !== "string" || typeof p.s !== "string" || typeof p.t !== "number") return null;
+  if (now.getTime() - p.t > PENDING_TTL_MS) return null;
+  const start = new Date(p.s);
+  return Number.isNaN(start.getTime()) ? null : { contactId: p.c, start };
 }

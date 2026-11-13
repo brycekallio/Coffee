@@ -4,7 +4,7 @@ import { useSession } from "@/app/session";
 import type { TablesUpdate } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 import { handleGoogleCallback } from "./googleCallback";
-import { clearPendingFollowUp } from "@/features/outreach/followUp";
+import { clearPendingFollowUp, FOLLOW_UP_READY_EVENT, markPendingFollowUpReady } from "@/features/outreach/followUp";
 import { resumeUploadValues } from "./resumeValues";
 import { errorMessage, resumeStoragePath } from "@/lib/utils";
 import type { Profile } from "@/types";
@@ -62,10 +62,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       supabase.functions.invoke("exchange-google-token", { body }),
       user.id,
     ).then((out) => {
-      // A follow-up waiting on "Connect Google Calendar" only continues after a real connect.
-      if (out.kind !== "connected" && out.kind !== "ignored") {
-        try { clearPendingFollowUp(window.sessionStorage); } catch { /* storage blocked */ }
-      }
+      // A follow-up waiting on "Connect Google Calendar" continues only when this return granted Calendar.
+      try {
+        if (out.kind === "connected" && out.calendar) {
+          markPendingFollowUpReady(window.sessionStorage);
+          window.dispatchEvent(new Event(FOLLOW_UP_READY_EVENT));
+        } else if (out.kind !== "ignored") clearPendingFollowUp(window.sessionStorage);
+      } catch { /* storage blocked */ }
       if (out.kind === "rejected") toast.error("That Google link didn't start here, so it was ignored. Try Connect again.");
       else if (out.kind === "failed") toast.error("Google connection failed: " + out.message);
       else if (out.kind === "notice") toast.info(out.message);
