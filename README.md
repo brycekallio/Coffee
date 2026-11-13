@@ -1,5 +1,9 @@
 # Coffee
 
+[![Coffee in 30 seconds: log a coffee chat, see who has gone quiet, track applications](docs/coffee-demo.gif)](https://coffee-app-network.netlify.app/media/coffee-demo.mp4)
+
+_30-second demo, sample data only. Click for the full video with sound._
+
 A relationship manager for people job searching. It flags contacts you haven't
 talked to in 30 days and hands you a draft to send.
 

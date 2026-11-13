@@ -1,0 +1,160 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      overflow: hidden;
+      font-family: "Inter", sans-serif;
+      color: #fff;
+    }
+    #ct-stage {
+      position: absolute;
+      inset: 0;
+    }
+    #ct-move {
+      position: absolute;
+      inset: 0;
+    }
+    #ct-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    #ct-cam img {
+      display: block;
+      width: 1920px;
+      height: 1080px;
+    }
+    #ct-scrim {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      opacity: 0;
+    }
+    /* Rebuilt at 1.6x from the meeting-notes panel on the contact page. */
+    #ct-card {
+      position: absolute;
+      left: 290px;
+      top: 150px;
+      width: 1340px;
+      padding: 40px 44px 44px;
+      background: #0b1f2a;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 26px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    }
+    #ct-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    #ct-title {
+      font-size: 34px;
+      font-weight: 600;
+    }
+    #ct-who {
+      font-size: 28px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    #ct-row {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin-top: 30px;
+    }
+    #ct-chip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      background: rgba(0, 229, 255, 0.08);
+      color: #00e5ff;
+      font-size: 28px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    #ct-chip i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00e5ff;
+    }
+    #ct-label {
+      flex: 1;
+      padding: 16px 24px;
+      border-radius: 18px;
+      background: #081418;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 28px;
+    }
+    #ct-notes {
+      margin-top: 22px;
+      min-height: 300px;
+      padding: 24px 28px;
+      border-radius: 18px;
+      background: #081418;
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      font-size: 30px;
+      line-height: 1.5;
+    }
+    #ct-notes .w {
+      opacity: 0;
+    }
+    #ct-notes p + p {
+      margin-top: 22px;
+    }
+  </style>
+  <div id="root" data-composition-id="contact" data-width="1920" data-height="1080">
+    <div id="ct-stage" class="clip" data-start="0" data-duration="4.7">
+      <div id="ct-move">
+      <div id="ct-cam"><img src="assets/shots/contact.jpg" alt="Priya Raman's contact page" /></div>
+      <div id="ct-scrim"></div>
+      <div id="ct-card">
+        <div id="ct-head">
+          <div id="ct-title">Meeting notes</div>
+          <div id="ct-who">Priya Raman · FTI Consulting</div>
+        </div>
+        <div id="ct-row">
+          <div id="ct-chip"><i></i>Oct 3, 2026</div>
+          <div id="ct-label">Coffee chat — D&amp;A practice</div>
+        </div>
+        <!-- The demo's own sample note for this meeting, word for word. -->
+        <div id="ct-notes">
+          <p><span class="w">Practice</span> <span class="w">splits</span> <span class="w">into</span> <span class="w">disputes</span> <span class="w">analytics</span> <span class="w">and</span> <span class="w">forensic</span> <span class="w">data.</span> <span class="w">Analysts</span> <span class="w">get</span> <span class="w">client</span> <span class="w">exposure</span> <span class="w">in</span> <span class="w">year</span> <span class="w">one.</span> <span class="w">She'll</span> <span class="w">intro</span> <span class="w">me</span> <span class="w">to</span> <span class="w">the</span> <span class="w">DC</span> <span class="w">recruiting</span> <span class="w">lead.</span></p>
+          <p><span class="w">Follow</span> <span class="w">up:</span> <span class="w">send</span> <span class="w">resume</span> <span class="w">by</span> <span class="w">Friday.</span></p>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // The new page lands slightly large and settles (match cut on the click).
+    tl.fromTo(
+      "#ct-cam",
+      { scale: 1.08, x: -77, y: -43, filter: "blur(8px)" },
+      { scale: 1, x: 0, y: 0, filter: "blur(0px)", duration: 0.5, ease: "expo.out" },
+      0,
+    );
+    // Push toward her meeting notes.
+    tl.to("#ct-cam", { scale: 1.3, x: -576, y: -324, duration: 0.55, ease: "power2.inOut" }, 0.5);
+    // The notes panel comes forward.
+    tl.to("#ct-scrim", { opacity: 0.6, duration: 0.35, ease: "power2.inOut" }, 1.0);
+    tl.fromTo(
+      "#ct-card",
+      { opacity: 0, y: 36, scale: 0.96 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "expo.out" },
+      1.0,
+    );
+    // Notes arrive word by word, like typing.
+    tl.fromTo("#ct-notes .w", { opacity: 0 }, { opacity: 1, duration: 0.05, ease: "none", stagger: 0.055 }, 1.4);
+    // Exit: whip left.
+    tl.to("#ct-move", { x: -320, opacity: 0, filter: "blur(18px)", duration: 0.28, ease: "power3.in" }, 4.4);
+    window.__timelines["contact"] = tl;
+  </script>
+</template>

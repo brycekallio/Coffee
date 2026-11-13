@@ -1,0 +1,96 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      font-family: "Inter", sans-serif;
+      color: #fff;
+      overflow: hidden;
+    }
+    #hook-stage {
+      position: absolute;
+      inset: 0;
+    }
+    #hook-title {
+      position: absolute;
+      left: 192px;
+      top: 168px;
+      font-size: 88px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+    #hook-title .w {
+      display: inline-block;
+      margin-right: 0.24em;
+    }
+    #hook-title .accent {
+      color: #00e5ff;
+    }
+    #hook-grid {
+      position: absolute;
+      left: 192px;
+      top: 360px;
+      width: 1536px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      row-gap: 44px;
+      column-gap: 48px;
+    }
+    .hook-p .n {
+      display: block;
+      font-size: 46px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .hook-p .c {
+      display: block;
+      margin-top: 8px;
+      font-size: 30px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+  </style>
+  <div id="root" data-composition-id="hook" data-width="1920" data-height="1080">
+    <div id="hook-stage" class="clip" data-start="0" data-duration="5.2">
+      <h1 id="hook-title">
+        <span class="w accent">12</span><span class="w">coffee</span><span class="w">chats</span><span class="w">this</span><span class="w">semester.</span>
+      </h1>
+      <!-- The demo account's real sample contacts (src/demo/sampleData.ts). -->
+      <div id="hook-grid">
+        <div class="hook-p"><span class="n">Priya Raman</span><span class="c">FTI Consulting</span></div>
+        <div class="hook-p"><span class="n">Daniel Choi</span><span class="c">Deloitte</span></div>
+        <div class="hook-p"><span class="n">Hannah Weiss</span><span class="c">Goldman Sachs</span></div>
+        <div class="hook-p"><span class="n">Marcus Bell</span><span class="c">Alvarez &amp; Marsal</span></div>
+        <div class="hook-p"><span class="n">Sofia Herrera</span><span class="c">Bain &amp; Company</span></div>
+        <div class="hook-p"><span class="n">Ethan Park</span><span class="c">Houlihan Lokey</span></div>
+        <div class="hook-p"><span class="n">Grace Liu</span><span class="c">Leeds School of Business</span></div>
+        <div class="hook-p"><span class="n">Owen Fitzgerald</span><span class="c">Guidehouse</span></div>
+        <div class="hook-p"><span class="n">Amara Nwosu</span><span class="c">J.P. Morgan</span></div>
+        <div class="hook-p"><span class="n">Lucas Moreno</span><span class="c">Accenture</span></div>
+        <div class="hook-p"><span class="n">Chloe Bennett</span><span class="c">Lazard</span></div>
+        <div class="hook-p"><span class="n">Ryan Takahashi</span><span class="c">Ankura</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // The title is already up at frame 0: it is the thumbnail.
+    // Names arrive grey to white, row by row.
+    tl.fromTo(
+      ".hook-p",
+      { opacity: 0, filter: "blur(4px)" },
+      { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "expo.out", stagger: 0.06 },
+      0.3,
+    );
+    // Then they fade, the way the details do. Fixed order, not random.
+    const order = [4, 9, 1, 11, 6, 2, 8, 0, 10, 5, 3, 7];
+    const people = gsap.utils.toArray(".hook-p");
+    order.forEach((i, k) => {
+      tl.to(people[i], { opacity: 0.1, filter: "blur(3px)", duration: 0.45, ease: "power2.inOut" }, 2.6 + k * 0.12);
+    });
+    // Exit: blur swap on one stage.
+    tl.to("#hook-title", { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power3.in" }, 4.95);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>

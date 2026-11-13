@@ -1,0 +1,77 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      overflow: hidden;
+    }
+    #net-stage {
+      position: absolute;
+      inset: 0;
+    }
+    #net-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    #net-cam img {
+      display: block;
+      width: 1920px;
+      height: 1080px;
+    }
+    #net-cursor {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 40px;
+      height: 58px;
+    }
+    #net-cursor svg {
+      display: block;
+    }
+    #net-fade {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      opacity: 0;
+    }
+  </style>
+  <div id="root" data-composition-id="network" data-width="1920" data-height="1080">
+    <div id="net-stage" class="clip" data-start="0" data-duration="5.2">
+      <!-- Real /demo screen, sample data only, captured at 3200x1800. -->
+      <div id="net-cam"><img id="net-shot" src="assets/shots/contacts.jpg" alt="Coffee Network page" /></div>
+      <div id="net-cursor">
+        <svg id="net-cursor-art" width="40" height="58" viewBox="0 0 20 29">
+          <path d="M1.5 1.5 L1.5 23 L7 17.8 L10.8 26.5 L14.2 25 L10.5 16.6 L18 16.6 Z" fill="#fff" stroke="#081418" stroke-width="1.6" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div id="net-fade"></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Arrive: the workspace settles in from slightly large and soft.
+    tl.fromTo(
+      "#net-cam",
+      { scale: 1.05, x: -48, y: -27, filter: "blur(10px)" },
+      { scale: 1, x: 0, y: 0, filter: "blur(0px)", duration: 0.55, ease: "expo.out" },
+      0,
+    );
+    // Punch in on the People list (Priya's row sits at 860,650 in the full frame).
+    tl.to("#net-cam", { scale: 1.45, x: -794, y: -475, duration: 0.6, ease: "power2.inOut" }, 1.3);
+    // Cursor comes in from below and lands on Priya Raman.
+    tl.fromTo("#net-cursor", { x: 1380, y: 1120 }, { x: 452, y: 452, duration: 0.9, ease: "power3.out" }, 2.9);
+    // Click: press, release; the click opens her page.
+    tl.to("#net-cursor-art", { scale: 0.86, transformOrigin: "10% 5%", duration: 0.06, ease: "power2.out" }, 4.1);
+    tl.to("#net-cursor-art", { scale: 1, duration: 0.1, ease: "power2.out" }, 4.16);
+    tl.to("#net-cursor", { opacity: 0, duration: 0.12, ease: "power2.in" }, 4.3);
+    // Zoom through her row into the next screen.
+    tl.to("#net-cam", { scale: 3.2, x: -1792, y: -1540, filter: "blur(6px)", duration: 0.75, ease: "power3.in" }, 4.3);
+    tl.to("#net-fade", { opacity: 1, duration: 0.3, ease: "power2.in" }, 4.75);
+    window.__timelines["network"] = tl;
+  </script>
+</template>

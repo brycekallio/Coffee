@@ -1,0 +1,77 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      overflow: hidden;
+    }
+    #fu-stage {
+      position: absolute;
+      inset: 0;
+    }
+    .fu-move {
+      position: absolute;
+      inset: 0;
+    }
+    .fu-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    .fu-cam img {
+      display: block;
+      width: 1920px;
+      height: 1080px;
+    }
+    /* Sits under "2 people are due a follow-up (30+ days since you met)" in screenshot pixels. */
+    #fu-underline {
+      position: absolute;
+      left: 752px;
+      top: 356px;
+      width: 422px;
+      height: 3px;
+      border-radius: 2px;
+      background: #00e5ff;
+    }
+    #fu-dip {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+    }
+  </style>
+  <div id="root" data-composition-id="followup" data-width="1920" data-height="1080">
+    <div id="fu-stage" class="clip" data-start="0" data-duration="5.5">
+      <div id="fu-a" class="fu-move">
+        <div id="fu-cam-a" class="fu-cam">
+          <img src="assets/shots/contacts.jpg" alt="Network page: 2 people are due a follow-up" />
+          <div id="fu-underline"></div>
+        </div>
+      </div>
+      <div id="fu-b" class="fu-move">
+        <div id="fu-cam-b" class="fu-cam"><img src="assets/shots/outreach.jpg" alt="Outreach page: scheduled follow-ups" /></div>
+      </div>
+      <div id="fu-dip"></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    gsap.set("#fu-cam-a", { scale: 1.5, x: -690, y: -135 });
+    gsap.set("#fu-cam-b", { scale: 1.4, x: -734, y: -258 });
+    // Whip in from the right, onto the follow-up flag.
+    tl.fromTo("#fu-a", { x: 340, opacity: 0, filter: "blur(18px)" }, { x: 0, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 0);
+    tl.set("#fu-b", { opacity: 0 }, 0);
+    // The flag gets underlined.
+    tl.fromTo("#fu-underline", { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 1, duration: 0.55, ease: "power2.inOut" }, 0.9);
+    // Whip to Outreach, where the follow-ups wait.
+    tl.to("#fu-a", { x: -340, opacity: 0, filter: "blur(18px)", duration: 0.25, ease: "power3.in" }, 2.45);
+    tl.fromTo("#fu-b", { x: 340, opacity: 0, filter: "blur(18px)" }, { x: 0, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 2.65);
+    // Dip before the cut.
+    tl.to("#fu-dip", { opacity: 0.45, duration: 0.1, ease: "none" }, 5.38);
+    window.__timelines["followup"] = tl;
+  </script>
+</template>

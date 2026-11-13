@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* Coffee's own tokens (src/index.css @theme). */
+      :root {
+        --depth-0: #081418;
+        --depth-1: #0b1f2a;
+        --glow: #00e5ff;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--depth-0);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080">
+      <!-- Scenes, in order. Each scene is its own file in compositions/. -->
+      <div id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html"
+        data-start="0" data-duration="5.2" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="network" data-composition-id="network" data-composition-src="compositions/network.html"
+        data-start="5.2" data-duration="5.2" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="contact" data-composition-id="contact" data-composition-src="compositions/contact.html"
+        data-start="10.4" data-duration="4.7" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="followup" data-composition-id="followup" data-composition-src="compositions/followup.html"
+        data-start="15.1" data-duration="5.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="apps" data-composition-id="apps" data-composition-src="compositions/apps.html"
+        data-start="20.6" data-duration="4.8" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="endcard" data-composition-id="endcard" data-composition-src="compositions/endcard.html"
+        data-start="25.4" data-duration="4.6" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+
+      <!-- Captions: one host for every caption group, timed to SCRIPT.md. -->
+      <div id="captions" data-composition-id="captions" data-composition-src="compositions/captions.html"
+        data-start="0" data-duration="30" data-track-index="2" data-track-kind="captions" data-width="1920" data-height="1080" style="z-index: 10"></div>
+
+      <!-- VOICEOVER SLOT: replace assets/voiceover.wav with Bryce's ElevenLabs take (same name, ~30 s), then re-time captions with npx hyperframes transcribe -->
+      <audio id="voiceover" src="assets/voiceover.wav" data-start="0" data-duration="30" data-track-index="3" data-volume="1"></audio>
+
+      <!-- Effects: each on a visible action. -->
+      <audio id="sfx-click" src="assets/sfx/click.mp3" data-start="9.33" data-duration="0.37" data-track-index="4" data-volume="0.6"></audio>
+      <audio id="sfx-keys" src="assets/sfx/typing.mp3" data-start="11.8" data-duration="1.5" data-fade-out="0.3" data-track-index="4" data-volume="0.25"></audio>
+      <audio id="sfx-pop-saved" src="assets/sfx/pop.mp3" data-start="22.23" data-duration="0.6" data-track-index="4" data-volume="0.3"></audio>
+      <audio id="sfx-pop-offer" src="assets/sfx/pop.mp3" data-start="23.13" data-duration="0.6" data-track-index="4" data-volume="0.4"></audio>
+      <audio id="sfx-riser" src="assets/sfx/riser.mp3" data-start="24.4" data-media-start="1.8" data-duration="2.2" data-track-index="4" data-volume="0.25" data-fade-out="0.4"></audio>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>
