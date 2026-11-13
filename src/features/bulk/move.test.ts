@@ -108,8 +108,13 @@ describe("Watchlist -> Network LinkedIn handling", () => {
   });
 
   it("dedupes when the old notes URL equals the column", () => {
-    const c = targetToContact({ ...base, linkedin_url: "https://linkedin.com/in/x", notes: "LinkedIn: https://LinkedIn.com/in/x/" });
+    const c = targetToContact({ ...base, linkedin_url: "https://linkedin.com/in/x", notes: "LinkedIn:  https://linkedin.com/in/x " });
     expect(c.notes).toBeNull();
+  });
+
+  it("does not dedupe URLs that differ only by case or query", () => {
+    const c = targetToContact({ ...base, linkedin_url: "https://x.com/?t=ABC", notes: "LinkedIn: https://x.com/?t=abc" });
+    expect(c.notes).toContain("LinkedIn: https://x.com/?t=abc");
   });
 
   it("uses the notes URL when the column is empty", () => {

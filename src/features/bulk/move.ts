@@ -54,10 +54,8 @@ export function contactToTarget(c: ContactRow): TablesInsert<"watchlist_targets"
   };
 }
 
-const sameUrl = (a: string, b: string) => {
-  const norm = (u: string) => u.trim().toLowerCase().replace(/\/+$/, "");
-  return norm(a) === norm(b);
-};
+// Exact match only (after trimming): URLs can be case- or slash-sensitive, and keeping a duplicate line is harmless.
+const sameUrl = (a: string, b: string) => a.trim() === b.trim();
 
 export function targetToContact(t: TargetRow): TablesInsert<"contacts"> {
   const { found, rest } = readLines(t.notes, NOTE_LABELS);
