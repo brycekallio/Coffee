@@ -231,3 +231,17 @@ describe("Codex r2: resume only after Google really connected Calendar", () => {
     expect(m.size).toBe(0);
   });
 });
+
+describe("Codex r3: malformed waiting pick", () => {
+  it("a stored JSON null / number / string is discarded, not thrown on", () => {
+    for (const bad of ["null", "42", '"x"']) {
+      const m = new Map<string, string>([["coffee.pendingFollowUp", bad]]);
+      const s = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+      expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
+      expect(m.size).toBe(0);
+      m.set("coffee.pendingFollowUp", bad);
+      markPendingFollowUpReady(s);
+      expect(takePendingFollowUp(s, ME, NOW)).toBeNull();
+    }
+  });
+});

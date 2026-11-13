@@ -175,10 +175,12 @@ export function markPendingFollowUpReady(store: Store): void {
   const raw = store.getItem(PENDING_KEY);
   if (!raw) return;
   try {
-    store.setItem(PENDING_KEY, JSON.stringify({ ...(JSON.parse(raw) as object), r: true }));
+    const p: unknown = JSON.parse(raw);
+    if (p && typeof p === "object") return store.setItem(PENDING_KEY, JSON.stringify({ ...p, r: true }));
   } catch {
-    store.removeItem(PENDING_KEY);
+    /* garbled */
   }
+  store.removeItem(PENDING_KEY);
 }
 
 /** The waiting pick, once and only once it is ready (see markPendingFollowUpReady); otherwise null and it stays. */
@@ -189,6 +191,9 @@ export function takePendingFollowUp(store: Store, userId: string, now: Date): { 
   try {
     p = JSON.parse(raw);
   } catch {
+    p = null as never;
+  }
+  if (!p || typeof p !== "object") {
     store.removeItem(PENDING_KEY);
     return null;
   }
