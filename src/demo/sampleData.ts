@@ -52,6 +52,7 @@ export const contact_meetings = [
   ["Raman", 41, "Coffee chat — D&A practice", "Practice splits into disputes analytics and forensic data. Analysts get client exposure in year one. She'll intro me to the DC recruiting lead.\n\nFollow up: send resume by Friday."],
   ["Raman", 12, "Resume review", "Lead with the Python/SQL projects, cut the coursework list. Mention the AI Club data pipeline."],
   ["Choi", 37, "Intro call", "Strategy & Analytics hires heavily from Leeds. Superday is two cases + a behavioral."],
+  ["Weiss", 45, "Leeds finance night", "Met her at the Leeds finance networking night. GS IBD analyst class is mostly target-school, but she said a referral plus a strong superday gets you in. Offered to look at my resume."],
   ["Bell", 44, "Phone call", "Restructuring vs. performance improvement — he moved from PI. Recommended reading on 13-week cash flow models."],
   ["Herrera", 35, "Coffee chat", "Bain case prep: practice market sizing out loud, structure first. Offered a mock case in two weeks."],
   ["Herrera", 6, "Mock case", "Struggled on the profitability math; structure was solid. Redo with a timer."],

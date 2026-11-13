@@ -10,6 +10,7 @@ import type { Page } from "@/types";
 import { useSession } from "./session";
 import NetworkToggle from "./NetworkToggle";
 import { useRoute } from "./useRoute";
+import { hasPendingFollowUp } from "@/features/outreach/followUp";
 
 // Contacts is the landing page, so it stays in the entry chunk. Everything else loads
 // on first visit — Analytics alone pulls in Recharts.
@@ -65,6 +66,16 @@ export default function AppShell({
     // replace, not push: Back from onboarding shouldn't land on a page the user never chose.
     if (needsOnboarding) navigate({ page: "onboarding" }, { replace: true });
   }
+
+  // Back from "Connect Google Calendar" on a follow-up: Google returns to "/", so go to Outreach,
+  // where useFollowUps finishes it.
+  const googleConnected = Boolean(profile?.google_connected);
+  useEffect(() => {
+    if (!googleConnected || page === "outreach_emails") return;
+    let pending = false;
+    try { pending = hasPendingFollowUp(window.sessionStorage); } catch { /* storage blocked */ }
+    if (pending) navigate({ page: "outreach_emails" }, { replace: true });
+  }, [googleConnected, page, navigate]);
 
   useEffect(() => {
     supabase

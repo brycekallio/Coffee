@@ -166,6 +166,8 @@ const canned: Record<string, (body: Row) => unknown> = {
         ? "MAYA OKAFOR\nB.S. Business Administration (Finance), Data Science minor — University of Colorado Boulder, 2027\n\nEXPERIENCE\nResearch Assistant, Leeds Finance Dept — Built a Python pipeline that cleans and normalizes 40,000 SEC filings for faculty research.\nAnalyst Intern, Boulder Community Foundation — Automated grant reporting with Tableau dashboards used by the board.\n\nSKILLS\nPython, SQL, Excel modeling (DCF, LBO), Tableau"
         : "• Lead with the Python/SQL pipeline project; the posting names both.\n• Add the words \"stakeholder reporting\" to the Foundation internship.\n• Move coursework below experience.\n• Quantify the dashboard work (how many board members, how often).",
   }),
+  // Only reachable in the writable preview harness (the public demo rejects it as a write above).
+  "create-calendar-event": () => ({ success: true }),
   // Obviously fake person and link (DESIGN.md: never a URL that could be a real profile).
   "fill-contact-from-text": () => ({
     tier: "free",

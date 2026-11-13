@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ScheduledOutreach } from "@/types";
 import Card from "@/components/ui/Card";
 import { formatWhen } from "./format";
@@ -10,6 +11,7 @@ type MarkStatus = (
 
 export function UpcomingCard({
   loading, scheduledItems, isDue, contactNameById, loadItems, handleSendItem, markStatus, startEdit, deleteItem,
+  renderFollowUp, followUpNote,
 }: {
   loading: boolean;
   scheduledItems: ScheduledOutreach[];
@@ -20,6 +22,10 @@ export function UpcomingCard({
   markStatus: MarkStatus;
   startEdit: (item: ScheduledOutreach) => void;
   deleteItem: (id: string) => void;
+  /** The "Schedule follow-up" button, for a card whose person is due one; null otherwise. */
+  renderFollowUp?: (item: ScheduledOutreach) => ReactNode;
+  /** "Follow-up Thu, Nov 19, 10:30 AM" when a date is saved for the person. */
+  followUpNote?: (item: ScheduledOutreach) => string | null;
 }) {
   return (
     <Card
@@ -83,10 +89,13 @@ export function UpcomingCard({
                     <div className="mt-2 font-data text-xs text-white/60">
                       {formatWhen(item.scheduled_at)}
                     </div>
+                    {followUpNote?.(item) ? (
+                      <div className="mt-1 font-data text-xs text-glow">{followUpNote(item)}</div>
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     onClick={() => handleSendItem(item)}
                     className={`inline-flex min-h-10 items-center rounded-button px-4 py-1.5 text-xs font-semibold transition cursor-pointer ${
@@ -115,6 +124,7 @@ export function UpcomingCard({
                   >
                     Delete
                   </button>
+                  {renderFollowUp?.(item)}
                 </div>
               </div>
             );
