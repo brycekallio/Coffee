@@ -21,8 +21,8 @@ interface ContactsPageProps {
   onFollowUp?: () => void;
 }
 
-/** A contact you haven't met in this many days is due a follow-up. */
-const STALE_DAYS = 30;
+// One rule for "due a follow-up", shared with the Outreach cards' Schedule follow-up button.
+import { STALE_DAYS } from "@/features/outreach/followUp";
 
 export default function ContactsPage({ openDetails, onFollowUp }: ContactsPageProps) {
   const user = useSession();

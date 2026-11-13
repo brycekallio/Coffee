@@ -17,6 +17,7 @@ import { buildMailto, movedOnMessage } from "@/features/outreach/format";
 import ScheduleForm from "@/features/outreach/ScheduleForm";
 import NotSentCard from "@/features/outreach/NotSentCard";
 import { UpcomingCard, HistoryCard } from "@/features/outreach/OutreachList";
+import { useFollowUps } from "@/features/outreach/useFollowUps";
 
 /* ── Templates ────────────────────────────────────────── */
 
@@ -523,6 +524,7 @@ export default function OutreachEmailsPage() {
   /* ── derived ────────────────────────────────────────── */
 
   const scheduledItems = items.filter((i) => i.status === "scheduled");
+  const { renderFollowUp, followUpNote } = useFollowUps(scheduledItems, contacts, profile);
   // Rows the cron could not send. They used to vanish from the page entirely.
   const failedItems = items.filter((i) => i.status === "failed" || i.status === "missed");
   const completedItems = items.filter(
@@ -570,7 +572,7 @@ export default function OutreachEmailsPage() {
 
       {/* Scheduled — 2/3 */}
       <div className="lg:col-span-2 space-y-6">
-        <UpcomingCard loading={loading} scheduledItems={scheduledItems} isDue={isDue} contactNameById={contactNameById} loadItems={loadItems} handleSendItem={handleSendItem} markStatus={markStatus} startEdit={startEdit} deleteItem={deleteItem} />
+        <UpcomingCard loading={loading} scheduledItems={scheduledItems} isDue={isDue} contactNameById={contactNameById} loadItems={loadItems} handleSendItem={handleSendItem} markStatus={markStatus} startEdit={startEdit} deleteItem={deleteItem} renderFollowUp={renderFollowUp} followUpNote={followUpNote} />
 
         {/* Not sent */}
         {failedItems.length > 0 && (
