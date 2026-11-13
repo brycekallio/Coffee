@@ -99,7 +99,23 @@ export async function createCalendarEvent(
     },
   });
 
-  if (error) {
-    throw new Error(error.message ?? "Failed to create calendar event.");
+  if (error) throw await calendarError(error);
+}
+
+/**
+ * The function's own reason and HTTP status, not supabase-js's "non-2xx status code": callers tell
+ * "connect Google" (400 not connected, 401 expired) apart from a real failure by `status`.
+ */
+export async function calendarError(error: { message?: string; context?: unknown }): Promise<Error & { status?: number }> {
+  const res = error.context instanceof Response ? error.context : null;
+  let message = error.message || "Failed to create calendar event.";
+  if (res) {
+    try {
+      const body = (await res.clone().json()) as { error?: unknown };
+      if (typeof body.error === "string" && body.error) message = body.error;
+    } catch {
+      /* not JSON: keep supabase-js's message */
+    }
   }
+  return Object.assign(new Error(message), res ? { status: res.status } : {});
 }
