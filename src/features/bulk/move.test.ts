@@ -96,3 +96,25 @@ describe("Network -> Watchlist mapping", () => {
     expect(targetToContact(t).notes).toBeNull();
   });
 });
+
+describe("Watchlist -> Network LinkedIn handling", () => {
+  const base = { ...contactToTarget(contact), id: "t1", created_at: "x" } as Tables<"watchlist_targets">;
+
+  it("keeps a differing old notes URL as a notes line", () => {
+    const c = targetToContact({ ...base, linkedin_url: "https://linkedin.com/in/new", notes: "LinkedIn: https://linkedin.com/in/old\nHi" });
+    expect(c.linkedin_url).toBe("https://linkedin.com/in/new");
+    expect(c.notes).toContain("LinkedIn: https://linkedin.com/in/old");
+    expect(c.notes).toContain("Hi");
+  });
+
+  it("dedupes when the old notes URL equals the column", () => {
+    const c = targetToContact({ ...base, linkedin_url: "https://linkedin.com/in/x", notes: "LinkedIn: https://LinkedIn.com/in/x/" });
+    expect(c.notes).toBeNull();
+  });
+
+  it("uses the notes URL when the column is empty", () => {
+    const c = targetToContact({ ...base, linkedin_url: null, notes: "LinkedIn: https://linkedin.com/in/old" });
+    expect(c.linkedin_url).toBe("https://linkedin.com/in/old");
+    expect(c.notes).toBeNull();
+  });
+});

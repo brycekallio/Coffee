@@ -54,11 +54,23 @@ export function contactToTarget(c: ContactRow): TablesInsert<"watchlist_targets"
   };
 }
 
+const sameUrl = (a: string, b: string) => {
+  const norm = (u: string) => u.trim().toLowerCase().replace(/\/+$/, "");
+  return norm(a) === norm(b);
+};
+
 export function targetToContact(t: TargetRow): TablesInsert<"contacts"> {
   const { found, rest } = readLines(t.notes, NOTE_LABELS);
   const field = (k: (typeof FIELD_LINES)[number][1]) => found[FIELD_LINES.find(([, key]) => key === k)![0]] || null;
   const [first, ...others] = t.person_name.trim().split(/\s+/);
-  const notes = [t.status && t.status !== DEFAULT_TARGET_STATUS ? `${STATUS_LABEL}: ${t.status}` : null, rest || null]
+  // An old "LinkedIn: …" notes line that differs from the real column is kept as a notes line, not dropped.
+  const oldLinkedin = found["LinkedIn"];
+  const keepOldLinkedin = oldLinkedin && t.linkedin_url && sameUrl(oldLinkedin, t.linkedin_url) === false;
+  const notes = [
+    t.status && t.status !== DEFAULT_TARGET_STATUS ? `${STATUS_LABEL}: ${t.status}` : null,
+    keepOldLinkedin ? `LinkedIn: ${oldLinkedin}` : null,
+    rest || null,
+  ]
     .filter(Boolean)
     .join("\n");
   return {
