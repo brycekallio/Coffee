@@ -8,7 +8,7 @@
 | 1 | 0.3 – 5.0 | "12 coffee chats this semester." The demo's 12 sample names fade out | You had coffee with twelve people this semester. What did each one tell you? | 14 |
 | 2 | 5.3 – 10.2 | Network page, punch in on the People list; cursor opens Priya Raman | Coffee keeps them in one place: where they work, and when you last met. | 14 |
 | 3 | 10.5 – 14.9 | Priya's page; the meeting-notes panel comes forward and fills in | After each chat, log a few notes. Next time, they're right there. | 12 |
-| 4 | 15.2 – 20.4 | "2 people are due a follow-up (30+ days since you met)" underlined; whip to Outreach, cursor clicks "Schedule follow-up" on Hannah Weiss and a calendar slot (Thu 19, 10:30) fills in (demo data only) | Thirty days without a chat, and Coffee flags them, so you can schedule a follow-up. | 15 |
+| 4 | 15.2 – 20.4 | "3 people are due a follow-up (30+ days since you met)" underlined; whip to Outreach, cursor clicks the real "Schedule follow-up" button on Hannah Weiss's card, the real slot picker opens and Thu 19, 10:30 is picked (real /demo captures, demo data only) | Thirty days without a chat, and Coffee flags them, so you can schedule a follow-up. | 15 |
 | 5 | 20.7 – 25.0 | Applications table; the Saved row, then the Offer row light up | Track each application, from saved to offer, beside your contacts. | 10 |
 | 6 | 25.6 – 28.8 | End card: Coffee? mark, tagline "Your network, in one place.", "Try the demo", coffee-app-network.netlify.app/demo | Try the demo. No sign-up needed. | 6 |
 
