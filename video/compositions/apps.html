@@ -1,0 +1,73 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      overflow: hidden;
+    }
+    #ap-stage {
+      position: absolute;
+      inset: 0;
+    }
+    #ap-move {
+      position: absolute;
+      inset: 0;
+    }
+    #ap-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    #ap-cam img {
+      display: block;
+      width: 1920px;
+      height: 1080px;
+    }
+    /* Row highlights, in screenshot pixels: Huron Consulting (Saved), then Deloitte (Offer). */
+    .ap-band {
+      position: absolute;
+      left: 754px;
+      width: 914px;
+      height: 58px;
+      background: rgba(0, 229, 255, 0.07);
+      border-left: 3px solid #00e5ff;
+      border-radius: 4px;
+    }
+    #ap-band-saved {
+      top: 447px;
+    }
+    #ap-band-offer {
+      top: 683px;
+    }
+  </style>
+  <div id="root" data-composition-id="apps" data-width="1920" data-height="1080">
+    <div id="ap-stage" class="clip" data-start="0" data-duration="4.8">
+      <div id="ap-move">
+        <div id="ap-cam">
+          <img src="assets/shots/applications.jpg" alt="Applications page with seven sample applications" />
+          <div id="ap-band-saved" class="ap-band"></div>
+          <div id="ap-band-offer" class="ap-band"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Hard cut in, settling from slightly large.
+    tl.fromTo("#ap-cam", { scale: 1.04, x: -38, y: -22 }, { scale: 1, x: 0, y: 0, duration: 0.45, ease: "expo.out" }, 0);
+    // Punch in on the table.
+    tl.to("#ap-cam", { scale: 1.6, x: -976, y: -372, duration: 0.6, ease: "power2.inOut" }, 0.75);
+    // "from saved..."
+    tl.fromTo("#ap-band-saved", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.45, ease: "power2.inOut" }, 1.6);
+    // "...to offer"
+    tl.to("#ap-band-saved", { opacity: 0.35, duration: 0.3, ease: "power2.inOut" }, 2.4);
+    tl.fromTo("#ap-band-offer", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.45, ease: "power2.inOut" }, 2.5);
+    // Exit: blur swap.
+    tl.to("#ap-move", { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 4.55);
+    window.__timelines["apps"] = tl;
+  </script>
+</template>

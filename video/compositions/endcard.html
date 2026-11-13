@@ -1,0 +1,100 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #081418;
+      overflow: hidden;
+      font-family: "Inter", sans-serif;
+      color: #fff;
+    }
+    #ec-stage {
+      position: absolute;
+      inset: 0;
+    }
+    #ec-lockup {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+    }
+    #ec-icon {
+      width: 132px;
+      height: 132px;
+      color: #00e5ff;
+      filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.5));
+    }
+    #ec-word {
+      font-size: 120px;
+      font-weight: 700;
+      letter-spacing: -0.035em;
+    }
+    #ec-sub {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 500px;
+      text-align: center;
+      font-size: 36px;
+      color: rgba(255, 255, 255, 0.62);
+    }
+    #ec-cta {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 612px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 26px;
+    }
+    #ec-btn {
+      padding: 20px 40px;
+      border-radius: 16px;
+      background: #00e5ff;
+      color: #081418;
+      font-size: 34px;
+      font-weight: 600;
+    }
+    #ec-url {
+      font-size: 32px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+  </style>
+  <div id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <div id="ec-stage" class="clip" data-start="0" data-duration="4.6">
+      <div id="ec-lockup">
+        <!-- Coffee's own cup mark (src/components/ui/Logo.tsx). -->
+        <svg id="ec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path class="ec-path" pathLength="1" d="M9 6 c-1,-1.5 1,-3 0,-4.5" />
+          <path class="ec-path" pathLength="1" d="M13 6 c-1,-1.5 1,-3 0,-4.5" />
+          <path class="ec-path" pathLength="1" d="M3 9h14v8a3 3 0 01-3 3H6a3 3 0 01-3-3V9z" />
+          <path class="ec-path" pathLength="1" d="M17 11c3 0 3 6 0 6" />
+        </svg>
+        <div id="ec-word">Coffee?</div>
+      </div>
+      <div id="ec-sub">Your network, in one place.</div>
+      <div id="ec-cta">
+        <div id="ec-btn">Try the demo</div>
+        <div id="ec-url">coffee-app-network.netlify.app/demo</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // The cup draws itself: body and handle first, then the steam.
+    const paths = gsap.utils.toArray(".ec-path");
+    tl.fromTo([paths[2], paths[3]], { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut" }, 0.15);
+    tl.fromTo([paths[0], paths[1]], { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.4, ease: "power2.out", stagger: 0.08, immediateRender: false }, 0.6);
+    // Wordmark wipes in beside it.
+    tl.fromTo("#ec-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, ease: "power3.out" }, 0.55);
+    // Line, then the call to action.
+    tl.fromTo("#ec-sub", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 1.15);
+    tl.fromTo("#ec-cta", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 1.5);
+    window.__timelines["endcard"] = tl;
+  </script>
+</template>
