@@ -46,11 +46,13 @@
       <div id="captions" data-composition-id="captions" data-composition-src="compositions/captions.html"
         data-start="0" data-duration="30" data-track-index="2" data-track-kind="captions" data-width="1920" data-height="1080" style="z-index: 10"></div>
 
-      <!-- VOICEOVER SLOT: replace assets/voiceover.wav with Bryce's ElevenLabs take (same name, ~30 s), then re-time captions with npx hyperframes transcribe -->
+      <!-- Voiceover: Bryce's ElevenLabs clone (voice 91jhZaqO949C1LvHzeUa), one take cut per line and placed at each scene start. Captions are timed from it (assets/transcript.json). -->
       <audio id="voiceover" src="assets/voiceover.wav" data-start="0" data-duration="30" data-track-index="3" data-volume="1"></audio>
 
       <!-- Effects: each on a visible action. -->
       <audio id="sfx-click" src="assets/sfx/click.mp3" data-start="9.33" data-duration="0.37" data-track-index="4" data-volume="0.6"></audio>
+      <audio id="sfx-sched-click" src="assets/sfx/click.mp3" data-start="18.72" data-duration="0.37" data-track-index="4" data-volume="0.6"></audio>
+      <audio id="sfx-sched-pop" src="assets/sfx/pop.mp3" data-start="19.5" data-duration="0.6" data-track-index="4" data-volume="0.3"></audio>
       <audio id="sfx-keys" src="assets/sfx/typing.mp3" data-start="11.8" data-duration="1.5" data-fade-out="0.3" data-track-index="4" data-volume="0.25"></audio>
       <audio id="sfx-pop-saved" src="assets/sfx/pop.mp3" data-start="22.23" data-duration="0.6" data-track-index="4" data-volume="0.3"></audio>
       <audio id="sfx-pop-offer" src="assets/sfx/pop.mp3" data-start="23.13" data-duration="0.6" data-track-index="4" data-volume="0.4"></audio>

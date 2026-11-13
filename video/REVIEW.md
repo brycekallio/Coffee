@@ -16,12 +16,14 @@ Regenerate the GIF after a re-render:
 
 ## Warnings kept on purpose
 
-- `audio_clip_silent` on `assets/voiceover.wav`: it is the silent timing track until the real take exists.
+- `text_below_floor` on the Outreach calendar popover: slot times are 24 px on screen (day names and the Scheduled line are larger); they are secondary data, the caption carries the line.
 - `line_unread` on the meeting note: it is product text being typed, skimmed, not read; the caption carries
   the line.
 - `overlapping_gsap_tweens` on `.ec-path`: two tweens on different paths of the cup; the linter groups them.
 
 ## Weakest shot
 
-The Outreach whip (17.6-20.6 s) is a camera hold on a still screen; nothing in the UI acts. With more time,
-rebuild one Outreach card and show it being scheduled.
+Outreach (17.6-20.6 s) was a still screen; it now acts: the cursor clicks a "Schedule follow-up" pill on Hannah Weiss's
+card (drawn over the real screenshot, demo data only) and a week calendar fills the Thu 19, 10:30 slot. The pill and
+popover are built in the scene, not captured from the app, because the real Outreach page has no such button yet.
+End card tagline is "Your network, in one place." Voiceover: Bryce's cloned voice, see SCRIPT.md.

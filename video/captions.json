@@ -1,19 +1,87 @@
 [
-  { "text": "You had coffee with", "start": 0.3, "end": 1.5 },
-  { "text": "twelve people this semester.", "start": 1.5, "end": 3.0 },
-  { "text": "What did each one tell you?", "start": 3.0, "end": 5.0 },
-  { "text": "Coffee keeps them in one place:", "start": 5.3, "end": 7.3 },
-  { "text": "where they work,", "start": 7.3, "end": 8.4 },
-  { "text": "and when you last met.", "start": 8.4, "end": 10.2 },
-  { "text": "After each chat,", "start": 10.5, "end": 11.6 },
-  { "text": "log a few notes.", "start": 11.6, "end": 12.8 },
-  { "text": "Next time, they're right there.", "start": 12.8, "end": 14.9 },
-  { "text": "Thirty days without a chat,", "start": 15.2, "end": 16.9 },
-  { "text": "and Coffee flags them,", "start": 16.9, "end": 18.3 },
-  { "text": "so you can schedule a follow-up.", "start": 18.3, "end": 20.4 },
-  { "text": "Track each application,", "start": 20.7, "end": 22.0 },
-  { "text": "from saved to offer,", "start": 22.0, "end": 23.4 },
-  { "text": "beside your contacts.", "start": 23.4, "end": 25.0 },
-  { "text": "Try the demo.", "start": 25.6, "end": 26.9 },
-  { "text": "No sign-up needed.", "start": 26.9, "end": 28.8 }
+ {
+  "text": "You had coffee with",
+  "start": 0.25,
+  "end": 1.38
+ },
+ {
+  "text": "twelve people this semester.",
+  "start": 1.35,
+  "end": 3.12
+ },
+ {
+  "text": "What did each one tell you?",
+  "start": 3.09,
+  "end": 4.92
+ },
+ {
+  "text": "Coffee keeps them in one place:",
+  "start": 5.25,
+  "end": 7.28
+ },
+ {
+  "text": "where they work,",
+  "start": 7.25,
+  "end": 8.23
+ },
+ {
+  "text": "and when you last met.",
+  "start": 8.2,
+  "end": 9.86
+ },
+ {
+  "text": "After each chat,",
+  "start": 10.45,
+  "end": 11.58
+ },
+ {
+  "text": "log a few notes.",
+  "start": 11.55,
+  "end": 12.8
+ },
+ {
+  "text": "Next time, they're right there.",
+  "start": 12.77,
+  "end": 14.99
+ },
+ {
+  "text": "Thirty days without a chat,",
+  "start": 15.15,
+  "end": 16.61
+ },
+ {
+  "text": "and Coffee flags them,",
+  "start": 16.58,
+  "end": 17.85
+ },
+ {
+  "text": "so you can schedule a follow-up.",
+  "start": 17.87,
+  "end": 19.7
+ },
+ {
+  "text": "Track each application,",
+  "start": 20.65,
+  "end": 22.11
+ },
+ {
+  "text": "from saved to offer,",
+  "start": 22.08,
+  "end": 23.29
+ },
+ {
+  "text": "beside your contacts.",
+  "start": 23.57,
+  "end": 25.12
+ },
+ {
+  "text": "Try the demo.",
+  "start": 25.55,
+  "end": 26.36
+ },
+ {
+  "text": "No sign-up needed.",
+  "start": 26.33,
+  "end": 27.86
+ }
 ]
